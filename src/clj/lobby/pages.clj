@@ -29,5 +29,5 @@
       [:div.container.my-3
         [:div.h4 "Clojure Generated"]
         [:div#app.h5 [:i "Not Generated"]]]]
-    [:script {:src "js/compiled/lobby.js"}]))
+    (h/include-js "/js/compiled/lobby.js")))
     

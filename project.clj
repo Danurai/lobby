@@ -7,7 +7,7 @@
   :uberjar-name "lobbycore-standalone.jar"
   
   :repl-options {:init-ns user
-                 :timeout 120000}
+                 :timeout 1200000}
   
   :dependencies [[org.clojure/clojure "1.10.0"]
                  [org.clojure/clojurescript "1.10.520"]
@@ -66,9 +66,9 @@
        ;; lein cljsbuild once min
       :min {
         :source-paths ["src/cljs"]
-        :compiler {:output-to "resources/public/js/compiled/getkanbanv2.js"
-                   :externs ["js/externs.js"]
-                   :main getkanbanv2.core
+        :compiler {:output-to "resources/public/js/compiled/lobby.js"
+                   ;:externs ["js/externs.js"]
+                   :main lobby.core
                    :optimizations :advanced
                    :pretty-print false}}}}
 
