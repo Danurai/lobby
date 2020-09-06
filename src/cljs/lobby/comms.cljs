@@ -1,6 +1,7 @@
 (ns lobby.comms
   (:require 
-    [taoensso.sente :as sente]))
+    [taoensso.sente :as sente]
+		[lobby.model :as model]))
 
 (defonce channel-socket
   (sente/make-channel-socket! "/chsk" {:type :auto :ws-kalive-ms 20000}))
@@ -9,13 +10,18 @@
 (defonce chsk-send! (:send-fn channel-socket))
 (defonce chsk-state (:state channel-socket))
 
+(defn sendone []
+	(chsk-send! [:lobby/check]
+							5000
+							(fn [cb-reply] (prn cb-reply) (reset! model/app cb-reply))))
+
 ;;;; Sente send functions
 
-(defn load-data! []
-  (chsk-send! [:gkv2/data] 
-              5000
-              (fn [cb-reply] 
-                 (prn cb-reply))))
+;(defn load-data! []
+;  (chsk-send! [:gkv2/data] 
+;              5000
+;              (fn [cb-reply] 
+;                 (prn cb-reply))))
                  
 ;;;; Sente event handlers
 
@@ -25,8 +31,7 @@
 
 (defmethod event-msg-handler :chsk/handshake [{:as ev-msg :keys [?data]}]
   (let [[?uid ?csrf-token ?handshake-data] ?data]
-    (println "Handshake:" ?data)
-    (load-data!)))
+    (println "Handshake:" ?data)))
     
 ;;;; Sente event router ('event-msg-handler' loop)
 (defonce router

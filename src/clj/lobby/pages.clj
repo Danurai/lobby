@@ -1,12 +1,13 @@
 (ns lobby.pages
   (:require 
-    [hiccup.page :as h]))
+    [hiccup.page :as h]
+    [cemerick.friend :as friend :refer [identity]]))
     
 (def header 
   [:head
     [:meta {:charset "UTF-8"}]
     [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-  
+		;[:meta {:csrf-token *anti-forgery-token*}]
     [:link {
       :rel "stylesheet" 
       :href "https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" 
@@ -20,14 +21,49 @@
       :src "https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" 
       :integrity "sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" 
       :crossorigin "anonymous"}]])
-  
+			
+(def loginform
+	[:form {:method "post" :action "/login"}
+		[:div.form-group
+			[:label {:for "username"} "User Name"]
+			[:input#username.form-control {:name "username" :type "text" :autofocus true}]]
+		[:div.form-group	
+			[:label {:for "password"} "Password"]
+			[:input#password.form-control {:name "password" :type "password"}]]
+		[:button.btn-primary {:role "submit"} "Login"]])
+
+
+(defn navbar [ req ]
+	[:nav.navbar.navbar-expand-sm.navbar-dark.bg-dark
+		[:a.navbar-brand {:href "#"} "Portal"]
+		[:button.navbar-toggler {:type "button" :data-toggle "collapse" :data-target "#navbarNav"}
+			[:span.navbar-toggler-icon]]
+		[:div#navbarNav.collapse.navbar-collapse
+			[:a.nav-link.active.text-white {:href "/play"} "Play"]
+			[:span.ml-auto.text-white 
+				(if-let [identity (friend/identity req)] 
+					[:span (str "Logged in as " (:current identity)) [:a.btn.btn-danger.btn-sm.ml-2 {:href "/logout" :title "Logout"} "&times"]]
+					"Not logged in")]]])
+
+(defn login [ req ]
+	(h/html5
+		header
+		[:body
+			(navbar req)
+			[:div.container.my-3
+				[:div.row
+					[:div.col-sm-6.offset-3
+						loginform]]]]))
                   
-(defn home [ req ]
+(defn lobby [ req ]
   (h/html5 
     header
     [:body 
+			(navbar req)
       [:div.container.my-3
         [:div.h4 "Clojure Generated"]
         [:div#app.h5 [:i "Not Generated"]]]]
     (h/include-js "/js/compiled/lobby.js")))
     
+		
+		
