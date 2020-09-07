@@ -4,3 +4,6 @@
 	(atom {
 		:user-hash {}
 		}))
+    
+(defn obfuscate-state [ uid ]
+  @appstate)

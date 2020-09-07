@@ -21,19 +21,25 @@
 		[lobby.users :as users :refer [users]]
 		[lobby.model :as model]
 		))   
-    
-;;;; Sente channel-socket            
-(declare channel-socket)
-
-(defn start-websocket []
-  (defonce channel-socket
-    (sente/make-channel-socket! (get-sch-adapter) {:user-id-fn (fn [ring-req] (:client-id ring-req))})))
-    
+        
+; sente
+(let [{:keys [ch-recv 
+              send-fn
+              connected-uids
+              ajax-post-fn
+              ajax-get-or-ws-handshake-fn]}
+     (sente/make-channel-socket! (get-sch-adapter) {:user-id-fn (fn [ring-req] (:client-id ring-req))})]
+  (def ring-ajax-post                ajax-post-fn)
+  (def ring-ajax-get-or-ws-handshake   ajax-get-or-ws-handshake-fn)
+  (def ch-chsk                      ch-recv) ; ChannelSocket's receive channel
+  (def chsk-send!                   send-fn) ; ChannelSocket's send API fn
+  (def connected-uids                connected-uids) ; Watchable, read-only atom
+)
     
 (defroutes app-routes
 ;sente
-  (GET  "/chsk"    req ((:ajax-get-or-ws-handshake-fn channel-socket) req))
-  (POST "/chsk"    req ((:ajax-post-fn channel-socket) req))
+  (GET  "/chsk"    [] ring-ajax-get-or-ws-handshake) ; ((:ajax-get-or-ws-handshake-fn channel-socket) req))
+  (POST "/chsk"    [] ring-ajax-post)
 ;standard
   (GET "/" 		  [] (redirect "/play"))
 	(GET "/login" [] pages/login)
@@ -62,6 +68,12 @@
     ))
     
     
+; Sente broadcast
+(defn broadcast []
+  (prn (:any @connected-uids))
+  (doseq [uid (:any @connected-uids)]
+    (chsk-send! uid [:core/game @model/appstate])))
+    
 ;; multi to handle Sente 'events'
 (defmulti event :id)
 ;
@@ -71,30 +83,26 @@
 
 (defmethod event :chsk/ws-ping      [_])
 
+(defmethod event :lobby/getstate [{:as ev-msg :keys [?reply-fn]}]
+  (when ?reply-fn
+    (?reply-fn @model/appstate)))
+
 (defmethod event :chsk/uidport-open [{:as ev-msg :keys [ring-req uid]}] 
 	(when-let [user (-> ring-req friend/identity :current)]
-		(swap! model/appstate assoc-in [:user-hash user] uid)
+    (swap! model/appstate assoc-in [:user-hash user] uid)
 		(prn (:user-hash @model/appstate))
-		))
+		(broadcast)))
     
 (defmethod event :chsk/uidport-close [{:as ev-msg :keys [ring-req uid]}]
   (when-let [u (->> @model/appstate :user-hash (filter #(= (val %) uid)) first)]
     (swap! model/appstate update-in [:user-hash] dissoc (key u))
-    (prn (:user-hash @model/appstate))))
+    (prn (:user-hash @model/appstate))
+    (broadcast)))
 
 (defmethod event :lobby/check [{:as ev-msg :keys [event ?data ?reply-fn]}]
 	(when ?reply-fn
-		(?reply-fn {:data "From the server"})))
-
-;;(defmethod event :gkv2/data [{:as ev-msg :keys [event ?data ?reply-fn]}]
-;  (when ?reply-fn
-;    (?reply-fn (model/get-data))))
+		(?reply-fn @model/appstate)))
 
 ; Sente event router ('event' loop)
-(defn start-router []
-  (defonce router
-    (sente/start-chsk-router! (:ch-recv channel-socket) event)))
-    
-;; Initalisation
-(start-websocket)
-(start-router)  
+(defonce router
+  (sente/start-chsk-router! ch-chsk event))

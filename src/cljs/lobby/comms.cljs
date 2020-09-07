@@ -31,9 +31,14 @@
 
 (defmethod event-msg-handler :default [_])
 
+(defmethod event-msg-handler :core/game [{:as ev-msg :keys [?data]}]
+  (println ?data))
+
 (defmethod event-msg-handler :chsk/handshake [{:as ev-msg :keys [?data]}]
   (let [[?uid ?csrf-token ?handshake-data] ?data]
-    (println "Handshake:" ?data)))
+    (println "Handshake:" ?data)
+    (chsk-send! [:lobby/getstate] 5000 (fn [cb-reply] (prn cb-reply) (reset! model/app cb-reply)))
+    ))
     
 ;;;; Sente event router ('event-msg-handler' loop)
 (defonce router
