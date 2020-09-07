@@ -1,13 +1,14 @@
 (ns lobby.pages
   (:require 
     [hiccup.page :as h]
-    [cemerick.friend :as friend :refer [identity]]))
+    [cemerick.friend :as friend :refer [identity]]
+    [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
+    [ring.util.anti-forgery :refer [anti-forgery-field]]))
     
 (def header 
   [:head
     [:meta {:charset "UTF-8"}]
     [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
-		;[:meta {:csrf-token *anti-forgery-token*}]
     [:link {
       :rel "stylesheet" 
       :href "https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" 
@@ -22,7 +23,7 @@
       :integrity "sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" 
       :crossorigin "anonymous"}]])
 			
-(def loginform
+(defn loginform []
 	[:form {:method "post" :action "/login"}
 		[:div.form-group
 			[:label {:for "username"} "User Name"]
@@ -30,6 +31,7 @@
 		[:div.form-group	
 			[:label {:for "password"} "Password"]
 			[:input#password.form-control {:name "password" :type "password"}]]
+    (anti-forgery-field)
 		[:button.btn-primary {:role "submit"} "Login"]])
 
 
@@ -47,17 +49,18 @@
 
 (defn login [ req ]
 	(h/html5
-		header
+    header
 		[:body
 			(navbar req)
 			[:div.container.my-3
 				[:div.row
 					[:div.col-sm-6.offset-3
-						loginform]]]]))
+						(loginform)]]]]))
                   
 (defn lobby [ req ]
   (h/html5 
     header
+    ;(into header [[:meta {:name "csrf-token" :content *anti-forgery-token*}]])
     [:body 
 			(navbar req)
       [:div.container.my-3

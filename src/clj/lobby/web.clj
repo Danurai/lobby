@@ -54,11 +54,11 @@
 	
 (def app 
   (-> app-routes
+    (wrap-anti-forgery)
     (friend/authenticate friend-authentication-hash)
     (wrap-keyword-params)
     (wrap-params)
     (wrap-session)
-    ;(wrap-anti-forgery)
     ))
     
     
@@ -76,9 +76,13 @@
 		(swap! model/appstate assoc-in [:user-hash user] uid)
 		(prn (:user-hash @model/appstate))
 		))
+    
+(defmethod event :chsk/uidport-close [{:as ev-msg :keys [ring-req uid]}]
+  (when-let [u (->> @model/appstate :user-hash (filter #(= (val %) uid)) first)]
+    (swap! model/appstate update-in [:user-hash] dissoc (key u))
+    (prn (:user-hash @model/appstate))))
 
 (defmethod event :lobby/check [{:as ev-msg :keys [event ?data ?reply-fn]}]
-	(prn ev-msg)
 	(when ?reply-fn
 		(?reply-fn {:data "From the server"})))
 

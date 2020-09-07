@@ -55,7 +55,7 @@
         :compiler {:main lobby.core
                    ;:externs ["js/externs.js"]
                    :asset-path "js/compiled/out"
-                   :output-to "resources/public/js/compiled/lobby.js"
+                   :output-to  "resources/public/js/compiled/lobby.js"
                    :output-dir "resources/public/js/compiled/out"
                    :source-map-timestamp true
                    ;; To console.log CLJS data-structures make sure you enable devtools in Chrome

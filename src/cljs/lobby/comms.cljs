@@ -1,6 +1,6 @@
 (ns lobby.comms
   (:require 
-    [taoensso.sente :as sente]
+    [taoensso.sente :as sente :refer [cb-success?]]
 		[lobby.model :as model]))
 
 (defonce channel-socket
@@ -9,6 +9,8 @@
 (defonce ch-chsk (:ch-recv channel-socket))
 (defonce chsk-send! (:send-fn channel-socket))
 (defonce chsk-state (:state channel-socket))
+
+ ; (prn (:csrf-token @chsk-state))
 
 (defn sendone []
 	(chsk-send! [:lobby/check]
