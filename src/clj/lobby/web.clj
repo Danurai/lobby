@@ -70,9 +70,8 @@
     
 ; Sente broadcast
 (defn broadcast []
-  (prn (:any @connected-uids))
   (doseq [uid (:any @connected-uids)]
-    (chsk-send! uid [:core/game @model/appstate])))
+    (chsk-send! uid [:lobby/appstate @model/appstate])))
     
 ;; multi to handle Sente 'events'
 (defmulti event :id)
@@ -90,13 +89,11 @@
 (defmethod event :chsk/uidport-open [{:as ev-msg :keys [ring-req uid]}] 
 	(when-let [user (-> ring-req friend/identity :current)]
     (swap! model/appstate assoc-in [:user-hash user] uid)
-		(prn (:user-hash @model/appstate))
 		(broadcast)))
     
 (defmethod event :chsk/uidport-close [{:as ev-msg :keys [ring-req uid]}]
   (when-let [u (->> @model/appstate :user-hash (filter #(= (val %) uid)) first)]
     (swap! model/appstate update-in [:user-hash] dissoc (key u))
-    (prn (:user-hash @model/appstate))
     (broadcast)))
 
 (defmethod event :lobby/check [{:as ev-msg :keys [event ?data ?reply-fn]}]
