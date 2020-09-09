@@ -16,6 +16,15 @@
 	(chsk-send! [:lobby/check]
 							5000
 							(fn [cb-reply] (prn cb-reply) (reset! model/app cb-reply))))
+              
+(defn creategame [ ?data ]
+  (chsk-send! [:lobby/create ?data] 5000 nil)) 
+(defn joingame [ gid ]
+  (chsk-send! [:lobby/join gid] 5000 nil))
+(defn leavegame [ gid ]
+  (chsk-send! [:lobby/leave gid] 5000 nil))
+(defn startgame [ gid ]
+  (chsk-send! [:lobby/start gid] 5000 nil))
 
 ;;;; Sente send functions
 
@@ -31,14 +40,16 @@
 
 (defmethod event-msg-handler :default [_])
 
+; Receiver for server (chsk-send! uid [message]
+
 (defmethod event-msg-handler :chsk/recv [{:as ev-msg :keys [?data]}]
-  (println ?data)
+  (prn "chsk/recv" ?data)
 	(if (= :lobby/appstate (first ?data))
 			(reset! model/app (second ?data))))
 
 (defmethod event-msg-handler :chsk/handshake [{:as ev-msg :keys [?data]}]
   (let [[?uid ?csrf-token ?handshake-data] ?data]
-    (println "Handshake:" ?data)
+    (println "Handshake" ?data)
     ;(chsk-send! [:lobby/getstate] 5000 (fn [cb-reply] (prn cb-reply) (reset! model/app cb-reply)))
     ))
     

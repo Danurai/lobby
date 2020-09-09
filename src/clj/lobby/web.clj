@@ -82,10 +82,31 @@
 
 (defmethod event :chsk/ws-ping      [_])
 
+;TEST
 (defmethod event :lobby/getstate [{:as ev-msg :keys [?reply-fn]}]
   (when ?reply-fn
     (?reply-fn @model/appstate)))
+;TEST
 
+(defmethod event :lobby/create [{:keys [?data uid ring-req]}]
+ 	(when-let [user (-> ring-req friend/identity :current)]
+    (model/creategame user ?data)
+    (broadcast)))
+    
+(defmethod event :lobby/leave [{:keys [?data ring-req]}]
+ 	(when-let [user (-> ring-req friend/identity :current)]
+    (model/leavegame user ?data)
+    (broadcast)))
+;  ; destroy any game created by user
+;    (swap! @model/appstate assoc :games
+;      (conj 
+;        (->> @model/appstate
+;            :games
+;            (remove #(= (:owner %) user)))
+;        (hash-map :owner user :gid (gensym "gm") :title (:formdata ?data) :plyrs #{user})))))
+    
+    
+; Connection Management
 (defmethod event :chsk/uidport-open [{:as ev-msg :keys [ring-req uid]}] 
 	(when-let [user (-> ring-req friend/identity :current)]
     (swap! model/appstate assoc-in [:user-hash user] uid)
@@ -95,11 +116,8 @@
   (when-let [u (->> @model/appstate :user-hash (filter #(= (val %) uid)) first)]
     (swap! model/appstate update-in [:user-hash] dissoc (key u))
     (broadcast)))
-
-(defmethod event :lobby/check [{:as ev-msg :keys [event ?data ?reply-fn]}]
-	(when ?reply-fn
-		(?reply-fn @model/appstate)))
-
+    
+    
 ; Sente event router ('event' loop)
 (defonce router
   (sente/start-chsk-router! ch-chsk event))
