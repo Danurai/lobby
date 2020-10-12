@@ -46,8 +46,8 @@
                   [:span.mr-2 (:title g)]
                   [:small.mr-2 (str "Host: " (:owner g))]
                   (for [p (:plyrs g)]
-                    [:i.fas.fa-user {:key (gensym) :title p :class (if (= p (:owner g)) "text-primary")}])]
-                (if (false? (:private? g))
+                    [:i.fas.fa-user.mr-2 {:key (gensym) :title p :class (if (= p (:owner g)) "text-primary")}])]
+                (if (and (-> g :status nil?) (-> g :private? false?))
                     [:button.btn.btn-sm.btn-primary.ml-auto 
                       {:on-click #(comms/joingame (:gid g))}
                       "Join"])]])]]]))
@@ -65,7 +65,7 @@
       [:h4.ml-auto [:span.badge.badge-warning (:game gm)]]]
     [:div.d-flex.mb-3
       (for [p (:plyrs gm)]
-        [:div {:key p}
+        [:div.mr-2 {:key p}
           [:div.d-flex [:i.fas.fa-user.fa-lg.mx-auto {:class (if (= uname p) "text-primary")}]]
           [:div p]])]
     [:div.d-flex

@@ -18,7 +18,13 @@
           :owner uname
           :gid (gensym "gm")
           :plyrs #{uname})))))
-          
+
+(defn joingame [ uname gid ]
+	(swap! appstate assoc :games
+		(mapv #(if (= (:gid %) gid)
+								(update % :plyrs conj uname)
+								%) (:games @appstate))))
+
 (defn leavegame [ uname gid ]
   (swap! appstate assoc :games 
     (->> @appstate

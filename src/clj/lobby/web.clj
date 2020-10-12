@@ -97,6 +97,12 @@
  	(when-let [user (-> ring-req friend/identity :current)]
     (model/leavegame user ?data)
     (broadcast)))
+
+(defmethod event :lobby/join [{:keys [?data ring-req]}]
+ 	(when-let [user (-> ring-req friend/identity :current)]
+    (model/joingame user ?data)
+    (broadcast)))
+	
 ;  ; destroy any game created by user
 ;    (swap! @model/appstate assoc :games
 ;      (conj 
