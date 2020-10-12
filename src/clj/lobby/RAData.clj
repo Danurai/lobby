@@ -8,16 +8,16 @@
       :magicitems 8
     }
     :mages [
-      {:id "ma1"  :name "Druid" :type "Mage" :collect [:life] :action {:desc "[turn]>[unturncreature]" :fn #(turn unturn :creature)}}
-      {:id "ma2"  :name "Duelist" :collect [:elan] :action {:desc "[turn]+[discard :death 1]>[place :gold]" :fn #((turn)(discard :death)(place :gold))}
-      {:id "ma3"  :name "Transmuter" :collect [] :action {:desc "[turn]+[discard :any 2]>[gain :any 3 notgold]" :fn #((turn)(discard :any 2)(gain :any 3 :notgold))}}
-      {:id "ma4"  :name "" :collect [] :action []}
-      {:id "ma5"  :name "" :collect [] :action []}
-      {:id "ma6"  :name "" :collect [] :action []}
-      {:id "ma7"  :name "" :collect [] :action []}
-      {:id "ma8"  :name "" :collect [] :action []}
-      {:id "ma9"  :name "" :collect [] :action []}
-      {:id "ma10" :name "" :collect [] :action []}
+      {:id "ma1"  :imgid 0 :name "Necromancer" :type "Mage" :collect [:death] :action {}}
+      {:id "ma2"  :imgid 1 :name "Duelist" :type "Mage" :collect [:elan] :action {:desc "[turn]+[discard :death 1]>[place :gold]" :fn #((turn)(discard :death)(place :gold))}
+      {:id "ma3"  :imgid 2 :name "Transmuter" :type "Mage" :collect [] :action {:desc "[turn]+[discard :any 2]>[gain :any 3 notgold]" :fn #((turn)(discard :any 2)(gain :any 3 :notgold))}}
+      {:id "ma4"  :imgid 3 :name "Druid" :type "Mage" :collect [:life] :action {:desc "[turn]>[unturncreature]" :fn #(turn unturn :creature)}}
+      {:id "ma5"  :imgid 4 :name "Artificer" :type "Mage" :collect [] :action []}
+      {:id "ma6"  :imgid 5 :name "Healer" :type "Mage" :collect [] :action []}
+      {:id "ma7"  :imgid 6 :name "Alchemist" :collect [] :action []}
+      {:id "ma8"  :imgid 7 :name "Witch" :type "Mage" :collect [] :action []}
+      {:id "ma9"  :imgid 8 :name "Scholar" :type "Mage" :collect [] :action []}
+      {:id "ma10" :imgid 9 :name "Seer" :type "Mage" :collect [:elan] :action []}
     ]
     :monuments [
       {:id "mo1"  :name "Great Pyramid" :type "Monument" :cost {:gold 4} :action [] :vp 3}
@@ -54,45 +54,49 @@
       {:id "mi8" :name "Transmutation" :action {:desc "[turn]+[discard :any 3]>[gain :any 3][not :gold]" :fn #()}}
     ]
     :artifacts [
-      {:id "ar1"  :name "Ring of Midas" :cost {:life 1 :gold 1} :collect nil :action [{:desc "[discard :life 2]>[place :gold]" :fn #()}{:desc "[tap]>[place gold]" :fn #()}] :vp 1}
-      {:id "ar2"  :name "Hawk" :type "Creature" :cost {:life 1 :calm 1} :collect nil :action [] :vp nil}
-      {:id "ar3"  :name "Fire Dragon" :type "Dragon" :cost {:elan 6} :collect nil :action [] :vp nil}
-      {:id "ar4"  :name "Guard Dog" :type "Creature" :cost {:elan 1} :collect nil :action [] :vp nil}
-      {:id "ar5"  :name "Fiery Whip" :type nil :cost [] :collect [] :action [] :vp nil}
-      {:id "ar6"  :name "Sea Serpent" :type ["Dragon" "Creature"] :cost {} :collect nil :action [] :vp 1}
-      {:id "ar7"  :name "Nightingale" :type "Creature" :cost {:life 1 :calm 1} :collect nil :action [] :vp nil}
-      {:id "ar8"  :name "Celestial Horse" :type "Creature" :cost {:calm 2 :elan 1} :collect nil :action [] :vp nil}
-      {:id "ar9"  :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar10" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar11" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar12" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar13" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar14" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar15" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar16" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar17" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar18" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar19" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar20" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar21" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar22" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar23" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar24" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar25" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar26" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar27" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar28" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar29" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar30" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar31" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar32" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar33" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar34" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar35" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar36" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar37" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar38" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar39" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
-      {:id "ar40" :name "" :type "" :cost [] :collect [] :action [] :vp nil}
+      {:id 0  :name "Athanor" :cost {:gold 1 :elan 1} :action []}
+      {:id 1  :name "Bone Dragon" :type "Dragon" :cost {:death 4 :life 1} :action [] :vp 1}
+      {:id 2  :name "Celestial Horse" :type "Creature" :cost {:calm 2 :elan 1} :collect []}
+      {:id 3  :name "Chalice of Fire" :cost {:gold 1 :elan 1} :collect {:elan 2}}
+      {:id 4  :name "Chalice of Life" :cost {:gold 1 :elan 1} :collect {:calm 1 :life 1}}
+      {:id 5  :name "Corrupt Altar" :cost {:any 3 :death 2} :collect {:life 1 :death 1}}
+      {:id 6  :name "Crypt" :cost {:any 3 :death 2} :action []}
+      {:id 7  :name "Cursed Skull" :cost {:death 2} :action []}
+      {:id 8  :name "Dancing Sword" :cost {:gold 1 :elan 1} :collect {:death 1 :elan 1} :action []}
+      {:id 9  :name "Dragon Bridle" :cost {:elan 1 :life 1 :calm 1 :death 1} :action [] :react []}
+      
+      {:id 10 :name "Dragon Egg" :cost {:gold 1} :vp 1}
+      {:id 11 :name "Dragon Teeth" :cost {:elan 1 :death 1}}
+      {:id 12 :name "Dwarven Pickaxe" :cost {:elan 1}}
+      {:id 13 :name "Earth Dragon" :type "Dragon" :cost {:elan 4 :life 3} :vp 1}
+      {:id 14 :name "Elemental Spring" :cost {:elan 2 :life 1 :calm 1}}
+      {:id 15 :name "Elvish Bow" :cost {:elan 2 :life 1}}
+      {:id 16 :name "Fiery Whip" :cost {:elan 2 :death 2}}
+      {:id 17 :name "Fire Dragon" :type "Dragon" :cost {:elan 6} :vp 1}
+      {:id 18 :name "Flaming Pit" :cost {:elan 2}}
+      {:id 19 :name "Fountain of Youth" :cost {:calm 1 :death 1}}
+      
+      {:id 20 :name "Guard Dog" :type "Creature" :cost {:elan 1}}
+      {:id 21 :name "Hand of Glory" :cost {:life 1 :death 1}}
+      {:id 22 :name "Hawk" :type "Creature" :cost {:life 1 :calm 1}}
+      {:id 23 :name "Horn of Plenty" :cost {:gold 2}}
+      {:id 24 :name "Hypnotic Basin"}
+      {:id 25 :name "Magical Shard"}
+      {:id 26 :name "Jeweled Statuette"}
+      {:id 27 :name "Mermaid" :type "Creature"}
+      {:id 28 :name "Nightingale" :type "Creature"}
+      {:id 29 :name "Philosopher's Stone" :vp 1}
+      
+      {:id 30 :name "Prism"}
+      {:id 31 :name "Ring of Midas"}
+      {:id 32 :name "Sacrificial Dagger"}
+      {:id 33 :name "Sea Serpent"}
+      {:id 34 :name "Treant"}
+      {:id 35 :name "Tree of Life"}
+      {:id 36 :name "Vault"}
+      {:id 37 :name "Water Dragon"}
+      {:id 38 :name "Wind Dragon"}
+      {:id 39 :name "Windup Man"}
+      
     ]}}
     
