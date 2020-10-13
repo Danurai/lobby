@@ -67,8 +67,7 @@
     ;(into header [[:meta {:name "csrf-token" :content *anti-forgery-token*}]])
     [:body 
 			(navbar req)
-      [:div.container.my-3
-        [:div#app "No app connection"]]]
+      [:div#app "No app connection"]]
     (h/include-js "/js/compiled/lobby.js")))
     
 		

@@ -32,3 +32,9 @@
         (map #(if (not= (:owner %) uname) (update % :plyrs disj uname)))
         (remove nil?)
         vec)))
+        
+(defn startgame [ uid ]
+  (swap! appstate assoc :games 
+    (->> @appstate
+         :games
+         (map #(if (= (:gid %) uid) (assoc % :status :setup) %)))))

@@ -2,18 +2,18 @@
 	(:require 
     [reagent.core :as r]
 		[lobby.model :as model]
-		[lobby.comms :as comms]))
+		[lobby.comms :as comms]
+    [lobby.ramodel :refer [ramain]]))
     
 (defn createform []
-  (let [formdata (r/atom {:game "GSC" :title (str (.. js/document (getElementById "loginname") -textContent) "'s Game") :private? false})]
+  (let [formdata (r/atom {:game "Res Arcana" :title (str (.. js/document (getElementById "loginname") -textContent) "'s Game") :private? false})]
     (fn []
       [:form.form-inline {:on-submit #(.preventDefault %)}
         [:label.my-auto.mr-1 "Game"]
         [:select.form-control.form-control-sm.mr-2 {
           :value (:game @formdata)
           :on-change #(swap! formdata assoc :game (.. % -target -value))}
-          [:option "GSC"]
-          [:option "RA"]]
+          [:option "Res Arcana"]]
         [:label.my-auto.mr-1 "Title"]
         [:input.form-control.form-control-sm.mr-2 {
           :data-lpignore true
@@ -74,19 +74,29 @@
           [:button.btn.btn-primary.ml-auto {:on-click #(comms/startgame (:gid gm))} "Start"])]
     ])
     
+(defn gamehooks [ gm ]
+  (case (:game gm)
+    "Res Arcana" (ramain gm)
+    [:div.row-fluid
+      [:h5 "Game not found"]
+      [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame (:gid gm))} "Leave"]]))
           
 (defn main []
-  (let [uname (.. js/document (getElementById "loginname") -textContent)]
+  (let [uname (.. js/document (getElementById "loginname") -textContent)
+        gm    (->> @model/app :games (filter #(contains? (-> % :plyrs set) uname)) first)]
     [:div
-      [:div.row
-        (if-let [gm (->> @model/app :games (filter #(contains? (-> % :plyrs set) uname)) first)]
-          (gamelobby uname gm)
-          (createjoin))
-        [:div.col-sm-4
-          [:div.p-2.border.rounded
-            [:h5 "Connected"]
-            (for [conn (:user-hash @model/app)]
-              [:div {:key (gensym)} (key conn)])]]]
-      [:div [:small (str @model/app)]]
-      [:button.btn {:on-click #(comms/sendone)} "Send Req"]
-      ]))
+      (if (:status gm)
+        (gamehooks gm)
+        [:div.container.my-3
+          [:div.row 
+            (if gm
+              (gamelobby uname gm)
+              (createjoin))
+            [:div.col-sm-4
+              [:div.p-2.border.rounded
+                [:h5 "Connected"]
+                (for [conn (:user-hash @model/app)]
+                  [:div {:key (gensym)} (key conn)])]]]])
+      [:div [:small (str @model/app)]]  
+      ;[:button.btn {:on-click #(comms/sendone)} "Send Req"]
+    ]))
