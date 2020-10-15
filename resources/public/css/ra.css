@@ -10,6 +10,13 @@
   -moz-box-shadow:    0px 0px 39px 0px rgba(218,165,32,0.75);
   box-shadow:         0px 0px 39px 0px rgba(218,165,32,0.75);
 }
+
+.card.active {
+  border: 2px solid blue;
+  -webkit-box-shadow: 0px 0px 39px 0px rgba(0,0,255,0.75);
+  -moz-box-shadow:    0px 0px 39px 0px rgba(0,0,255,0.75);
+  box-shadow:         0px 0px 39px 0px rgba(0,0,255,0.75);
+}
   
 .preview {
   position: fixed;
@@ -17,6 +24,7 @@
   right: 5px;
   width: 250px;
   height: 350px;
+  z-index: 99;
 }
   
 .settings {

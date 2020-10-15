@@ -89,28 +89,28 @@
 ;TEST
 
 (defmethod event :lobby/create [{:keys [?data uid ring-req]}]
- 	(when-let [user (-> ring-req friend/identity :current)]
+  (when-let [user (-> ring-req friend/identity :current)]
     (model/creategame user ?data)
     (broadcast)))
     
 (defmethod event :lobby/leave [{:keys [?data ring-req]}]
- 	(when-let [user (-> ring-req friend/identity :current)]
+  (when-let [user (-> ring-req friend/identity :current)]
     (model/leavegame user ?data)
     (broadcast)))
 
 (defmethod event :lobby/join [{:keys [?data ring-req]}]
- 	(when-let [user (-> ring-req friend/identity :current)]
+  (when-let [user (-> ring-req friend/identity :current)]
     (model/joingame user ?data)
     (broadcast)))
     
 (defmethod event :lobby/start [{:keys [?data ring-req]}]
- 	(when-let [user (-> ring-req friend/identity :current)]
+  (when-let [user (-> ring-req friend/identity :current)]
     (model/startgame ?data)
     (broadcast)))
     
 ; Connection Management
 (defmethod event :chsk/uidport-open [{:as ev-msg :keys [ring-req uid]}] 
-	(when-let [user (-> ring-req friend/identity :current)]
+  (when-let [user (-> ring-req friend/identity :current)]
     (swap! model/appstate assoc-in [:user-hash user] uid)
 		(broadcast)))
     

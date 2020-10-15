@@ -19,8 +19,8 @@
                       :let [mgid (:id mage) imgsrc (getimgfile "mage" mgid)]]
           ^{:key (gensym)}[:div.card.mr-2 {
             :class (if (= (str "mage" mgid) (:selected @ra-app)) "active")
-            :on-mouse-enter #(swap! ra-app assoc :preview imgsrc)
-            :on-mouse-leave #(swap! ra-app assoc :preview nil)
+            :on-mouse-over #(swap! ra-app assoc :preview imgsrc)
+            :on-mouse-out #(swap! ra-app assoc :preview nil)
             :on-click #(swap! ra-app assoc :selected (str "mage" mgid))}
             [:img.img-fluid {:width (:w @cardsize) :height (:h @cardsize) :src imgsrc}]]))]
       [:div.row ;artifacts

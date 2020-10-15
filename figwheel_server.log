@@ -46,3 +46,58 @@ notifying browser that file changed:  resources\public\js\compiled\out\lobby\vie
 [0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
 [32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 1.164 seconds.[0m
 notifying browser that file changed:  resources\public\js\compiled\out\lobby\view.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.534 seconds.[0m
+notifying browser that file changed:  resources/public/js/compiled/out/goog/deps.js
+notifying browser that file changed:  resources/public/js/compiled/out/cljs_deps.js
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\comms.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.544 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\comms.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[36m----  Compiler Warning on   src/cljs/lobby/view.cljs   line:72  column:109  ----[0m
+
+  [1mUse of undeclared Var lobby.view/gid[0m
+
+  [36m68[0m  [36m          [:div p]])][0m
+  [36m69[0m  [36m    [:div.d-flex[0m
+  [36m70[0m  [36m      [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame (:gid gm))} "Leave"][0m
+  [36m71[0m  [36m      (if (= uname (:owner gm))[0m
+  [33m72[0m  [1m          [:button.btn.btn-primary.ml-auto {:on-click #(comms/startgame (:game gm) (:gid gm))} (str "Start" gid)])][0m
+  [0m  [0m  [33m                                                                                                            ^--- Use of undeclared Var lobby.view/gid[0m
+  [36m73[0m  [36m    ])[0m
+  [36m74[0m  [36m    [0m
+  [36m75[0m  [36m(defn gamehooks [ gm uname ][0m
+  [36m76[0m  [36m  (case (:game gm)[0m
+  [36m77[0m  [36m    "Res Arcana" (ramain gm uname)[0m
+
+[36m----  Compiler Warning : Please see src/cljs/lobby/view.cljs  ----[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.558 seconds.[0m
+notifying browser that file changed:  resources/public/js/compiled/out/goog/deps.js
+notifying browser that file changed:  resources/public/js/compiled/out/cljs_deps.js
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\view.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.505 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\view.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.525 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\comms.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.496 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\comms.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.523 seconds.[0m
+notifying browser that file changed:  resources/public/js/compiled/out/goog/deps.js
+notifying browser that file changed:  resources/public/js/compiled/out/cljs_deps.js
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\comms.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.428 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\view.js
+Notifying browser that CSS file changed: resources/public/css/ra.css
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.456 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.449 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+Notifying browser that CSS file changed: resources/public/css/ra.css
