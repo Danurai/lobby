@@ -25,6 +25,7 @@
     [:script {
       :src "https://kit.fontawesome.com/3e3abf4a33.js"
       :crossorigin "anonymous"}]
+    (h/include-css "/css/ra.css")
   ])
 			
 (defn loginform []
@@ -40,7 +41,7 @@
 
 
 (defn navbar [ req ]
-	[:nav.navbar.navbar-expand-sm.navbar-dark.bg-dark
+	[:nav#navbar.navbar.navbar-expand-sm.navbar-dark.bg-dark.py-0
 		[:a.navbar-brand {:href "#"} "Portal"]
 		[:button.navbar-toggler {:type "button" :data-toggle "collapse" :data-target "#navbarNav"}
 			[:span.navbar-toggler-icon]]
@@ -48,7 +49,7 @@
 			[:a.nav-link.active.text-white {:href "/play"} "Play"]
 			[:span.ml-auto.text-white 
 				(if-let [identity (friend/identity req)] 
-					[:div [:span "Logged in as "][:span#loginname.mr-2 (:current identity)][:a.btn.btn-sm.btn-danger {:href "/logout" :title "Logout"} "&times"]]
+					[:div [:span "Logged in as "][:span#loginname.mr-2 (:current identity)][:a.btn.btn-sm.btn-danger.py-=0 {:href "/logout" :title "Logout"} [:i.fa.fa-times]]]
 					"Not logged in")]]])
 
 (defn login [ req ]

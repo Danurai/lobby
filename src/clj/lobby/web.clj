@@ -72,7 +72,7 @@
 (defn broadcast []
   (doseq [uid (:any @connected-uids)]
     (chsk-send! uid [:lobby/appstate @model/appstate])))
-    
+        
 ;; multi to handle Sente 'events'
 (defmulti event :id)
 ;
@@ -107,15 +107,6 @@
  	(when-let [user (-> ring-req friend/identity :current)]
     (model/startgame ?data)
     (broadcast)))
-	
-;  ; destroy any game created by user
-;    (swap! @model/appstate assoc :games
-;      (conj 
-;        (->> @model/appstate
-;            :games
-;            (remove #(= (:owner %) user)))
-;        (hash-map :owner user :gid (gensym "gm") :title (:formdata ?data) :plyrs #{user})))))
-    
     
 ; Connection Management
 (defmethod event :chsk/uidport-open [{:as ev-msg :keys [ring-req uid]}] 

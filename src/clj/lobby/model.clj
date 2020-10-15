@@ -1,13 +1,15 @@
-(ns lobby.model)
+(ns lobby.model
+  (:require 
+    [lobby.ramodel :as ramodel]))
 
 (defonce appstate 
 	(atom {
 		:user-hash {}
-    :games []
+    :games {}
 	}))
     
-(defn obfuscate-state [ uid ]
-  @appstate)
+;(defn obfuscate-state [ uid ]
+;  @appstate)
   
 (defn creategame [ uname data ]
   (let [gid (gensym "gm")]    
@@ -33,8 +35,16 @@
         (remove nil?)
         vec)))
         
-(defn startgame [ uid ]
-  (swap! appstate assoc :games 
-    (->> @appstate
-         :games
-         (map #(if (= (:gid %) uid) (assoc % :status :setup) %)))))
+(defn gamesetup [ gname plyrs ]
+  (case gname 
+    "Res Arcana" (ramodel/setup plyrs)
+    {}))
+        
+(defn startgame [?data]
+  (let [gid (:gid ?data) 
+        gname (:gname ?data)]
+    (println "Starting" gname gid)
+    (swap! appstate assoc :games 
+      (->> @appstate
+           :games
+           (map #(if (= (:gid %) gid) (assoc % :state (gamesetup gname (-> % :plyrs vec))) %))))))

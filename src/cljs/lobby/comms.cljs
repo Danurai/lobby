@@ -1,7 +1,8 @@
 (ns lobby.comms
   (:require 
     [taoensso.sente :as sente :refer [cb-success?]]
-		[lobby.model :as model]))
+		[lobby.model :as model]
+    [lobby.ramodel :as ra :refer [gamestate]]))
 
 (defonce channel-socket
   (sente/make-channel-socket! "/chsk" {:type :auto :ws-kalive-ms 20000}))
@@ -12,10 +13,7 @@
 
 ; (prn (:csrf-token @chsk-state))
 
-(defn sendone []
-	(chsk-send! [:lobby/check]
-							5000
-							(fn [cb-reply] (prn cb-reply) (reset! model/app cb-reply))))
+; Lobby
               
 (defn creategame [ ?data ]
   (chsk-send! [:lobby/create ?data] 5000 nil)) 
@@ -23,8 +21,12 @@
   (chsk-send! [:lobby/join gid] 5000 nil))
 (defn leavegame [ gid ]
   (chsk-send! [:lobby/leave gid] 5000 nil))
-(defn startgame [ gid ]
-  (chsk-send! [:lobby/start gid] 5000 nil))
+(defn startgame [ gname gid ]
+  (chsk-send! [:lobby/start {:gid gid :gname gname}] 5000 nil))
+
+
+(defn ra-send [ ?data ]
+  (chsk-send! [:lobby/ra-action ?data] 5000 nil))
 
 ;;;; Sente send functions
 
@@ -43,15 +45,17 @@
 ; Receiver for server (chsk-send! uid [message]
 
 (defmethod event-msg-handler :chsk/recv [{:as ev-msg :keys [?data]}]
-  (prn "chsk/recv" ?data)
-	(if (= :lobby/appstate (first ?data))
-			(reset! model/app (second ?data))))
+  (let [chan (first ?data)]
+    ;(prn "chsk/recv" ?data)
+    (case chan
+      :lobby/appstate (reset! model/app (second ?data))
+      :lobby/ragame   (reset! ra/gamestate (second ?data))
+      (prn "unhandled" chan)
+      )))
 
 (defmethod event-msg-handler :chsk/handshake [{:as ev-msg :keys [?data]}]
   (let [[?uid ?csrf-token ?handshake-data] ?data]
-    (println "Handshake" ?data)
-    ;(chsk-send! [:lobby/getstate] 5000 (fn [cb-reply] (prn cb-reply) (reset! model/app cb-reply)))
-    ))
+    (println "Handshake" ?data)))
     
 ;;;; Sente event router ('event-msg-handler' loop)
 (defonce router

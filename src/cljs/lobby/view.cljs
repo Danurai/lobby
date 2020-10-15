@@ -3,7 +3,7 @@
     [reagent.core :as r]
 		[lobby.model :as model]
 		[lobby.comms :as comms]
-    [lobby.ramodel :refer [ramain]]))
+    [lobby.raview :refer [ramain]]))
     
 (defn createform []
   (let [formdata (r/atom {:game "Res Arcana" :title (str (.. js/document (getElementById "loginname") -textContent) "'s Game") :private? false})]
@@ -25,11 +25,9 @@
 (defn create []
   [:div.row.mb-2
     [:div.col
-      [:div.d-flex.mb-1
-        [:h5 "Create"]
-        [:button.btn.btn-sm.btn-light.ml-auto {:data-toggle "collapse" :data-target "#createform" :on-click #(.toggleClass ((js* "$") "#collapsebtn") "fa-plus fa-minus")}
-          [:i#collapsebtn.fas.fa-minus]]]
-      [:div#createform.collapse.show
+      [:div.mb-1
+        [:h5 "Create"]]
+      [:div#createform
         [createform]]]])
       
 (defn join []
@@ -71,12 +69,12 @@
     [:div.d-flex
       [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame (:gid gm))} "Leave"]
       (if (= uname (:owner gm))
-          [:button.btn.btn-primary.ml-auto {:on-click #(comms/startgame (:gid gm))} "Start"])]
+          [:button.btn.btn-primary.ml-auto {:on-click #(comms/startgame (:game gm) (:gid gm))} "Start"])]
     ])
     
-(defn gamehooks [ gm ]
+(defn gamehooks [ gm uname ]
   (case (:game gm)
-    "Res Arcana" (ramain gm)
+    "Res Arcana" (ramain gm uname)
     [:div.row-fluid
       [:h5 "Game not found"]
       [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame (:gid gm))} "Leave"]]))
@@ -84,9 +82,10 @@
 (defn main []
   (let [uname (.. js/document (getElementById "loginname") -textContent)
         gm    (->> @model/app :games (filter #(contains? (-> % :plyrs set) uname)) first)]
+    (-> ((js* "$") "body") (.removeAttr "style"))
     [:div
-      (if (:status gm)
-        (gamehooks gm)
+      (if (:state gm)
+        (gamehooks gm uname)
         [:div.container.my-3
           [:div.row 
             (if gm
