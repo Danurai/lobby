@@ -14,6 +14,7 @@
     [:div.col.mx-2
       [:div.row
         [:div.h5.mr-2 "Setup"][:div "Choose your Mage"]]
+      [:div.row.mb-2.tip "Tip: Do you have dragons, creatures, or ways to make gold? This may suggest Places of Power that will work well for you or if you can buy several monuments."]
       [:div.row ;mage choice
         (doall (for [mage (-> mydata :private :mages) 
                       :let [mgid (:id mage) imgsrc (getimgfile "mage" mgid)]]

@@ -36,16 +36,20 @@
     {:id 7 :name "Transmutation"  :action []}
   ]
   :placesofpower [
-    {:id 0 :root 3 :name "Alchemists Tower"       :type "Place of Power" :cost {:gold 3}  :action [] :vp nil}
-    {:id 0 :root 1 :name "Catacombs of the Dead"  :type "Place of Power" :cost {:death 9} :action [] :vp nil}
-    {:id 0 :root 2 :name "Cursed Forge"           :type "Place of Power" :cost {:elan 5 :life 5 :calm 5} :action [] :vp nil}
-    {:id 0 :root 3 :name "Dragon's Lair"          :type "Place of Power" :cost {:elan 6 :death 3} :action [] :vp nil}
-    {:id 0 :root 2 :name "Coral Castle"           :type "Place of Power" :cost {:elan 3 :life 3 :calm 3 :death 3} :action [] :vp nil}
-    {:id 0 :root 4 :name "Swarven Mines"          :type "Place of Power" :cost {:elan 4 :life 2 :gold 1} :action [] :vp nil}
-    {:id 0 :root 1 :name "Sacred Grove"           :type "Place of Power" :cost {:life 8 :calm 4} :action [] :vp nil}
-    {:id 0 :root 4 :name "Sacrificial Pit"        :type "Place of Power" :cost {:elan 8 :death 4} :action [] :vp nil}
-    {:id 0 :root 5 :name "Sorcerer's Bestiary"    :type "Place of Power" :cost {:life 4 :elan 2 :calm 2 :death 2} :action [] :vp nil}
-    {:id 0 :root 5 :name "Sunken Reef"            :type "Place of Power" :cost {:calm 5 :elan 2 :life 2} :action [] :vp nil}
+    {:id 6 :base 6 :name "Sacred Grove"          :type "Place of Power" :cost {:life 8 :calm 4} :action [] :vp nil}
+    {:id 0 :base 6 :name "Alchemists Tower"      :type "Place of Power" :cost {:gold 3}  :action [] :vp nil}
+    
+    {:id 1 :base 1 :name "Catacombs of the Dead" :type "Place of Power" :cost {:death 9} :action [] :vp nil}
+    {:id 7 :base 1 :name "Sacrificial Pit"       :type "Place of Power" :cost {:elan 8 :death 4} :action [] :vp nil}
+    
+    {:id 3 :base 3 :name "Cursed Forge"          :type "Place of Power" :cost {:elan 5 :life 5 :calm 5} :action [] :vp nil}
+    {:id 5 :base 3 :name "Dwarven Mines"         :type "Place of Power" :cost {:elan 4 :life 2 :gold 1} :action [] :vp nil}
+    
+    {:id 2 :base 2 :name "Coral Castle"          :type "Place of Power" :cost {:elan 3 :life 3 :calm 3 :death 3} :action [] :vp nil}
+    {:id 9 :base 2 :name "Sunken Reef"           :type "Place of Power" :cost {:calm 5 :elan 2 :life 2} :action [] :vp nil}
+    
+    {:id 4 :base 4 :name "Dragon's Lair"         :type "Place of Power" :cost {:elan 6 :death 3} :action [] :vp nil}
+    {:id 8 :base 4 :name "Sorcerer's Bestiary"   :type "Place of Power" :cost {:life 4 :elan 2 :calm 2 :death 2} :action [] :vp nil}
   ]
   
   :artifacts [

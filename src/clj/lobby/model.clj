@@ -7,10 +7,16 @@
 		:user-hash {}
     :games {}
 	}))
-    
-;(defn obfuscate-state [ uid ]
-;  @appstate)
   
+(defn obfuscate-gm [ gm uname ]
+  (assoc gm :state (ramodel/obfuscate uname)))
+    
+(defn obfuscate-state [ uid ]
+  (let [reverseuidlookup (reduce-kv #(assoc %1 %3 %2) {} (:user-hash @appstate))
+        uname (get reverseuidlookup uid)]
+    (prn uid uname (assoc @appstate :games (mapv #(obfuscate-gm % uname) (:game @appstate))))
+    @appstate))
+    
 (defn creategame [ uname data ]
   (let [gid (gensym "gm")]    
     (swap! appstate assoc :games

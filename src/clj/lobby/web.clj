@@ -69,9 +69,10 @@
     
     
 ; Sente broadcast
+
 (defn broadcast []
   (doseq [uid (:any @connected-uids)]
-    (chsk-send! uid [:lobby/appstate @model/appstate])))
+    (chsk-send! uid [:lobby/appstate (model/obfuscate-state uid)])))
         
 ;; multi to handle Sente 'events'
 (defmulti event :id)

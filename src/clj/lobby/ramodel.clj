@@ -26,13 +26,34 @@
     :discard nil
   }})
   
+  ;(reduce-kv (fn [m k v] (assoc m k (count v))) {} t)
+  
+(defn obfuscate [ state plyr ]
+  (-> state 
+      (assoc-in [:monuments :secret] (-> state :monuments :secret count))
+      (assoc :players
+        (reduce-kv 
+          (fn [m k v]
+            (-> m 
+              (assoc-in [k :public] (:public v))
+              (assoc-in [k :private] 
+                (if (= k plyr)
+                    (:private v)
+                    (reduce-kv #(assoc %1 %2 (count %3)) {} (:private v))))
+              (assoc-in [k :secret] (reduce-kv #(assoc %1 %2 (count %3)) {} (:secret v))))
+          ) {} (:players state)))))
+  
 (defn setup [ plyrs ]
   (let [mages (-> @data :mages shuffle)
-        artifacts (-> @data :artifacts shuffle)]
+        artifacts (-> @data :artifacts shuffle)
+        monuments (-> @data :monuments shuffle)
+        pops (-> @data :placesofpower)]
     (reset! gamestate {
       :status :setup
-      :monuments (-> @data :monuments shuffle)
-      :pops (->> @data :monuments shuffle (take 5))
+      :pops (map (fn [base] (rand-nth (filter #(= (:base %) base) pops))) (->> pops (map :base) frequencies keys))
+      :monuments {
+        :public (take 2 monuments)
+        :secret (nthrest monuments 2)}
       :players (zipmap 
         plyrs 
         (map-indexed  
