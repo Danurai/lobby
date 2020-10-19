@@ -36,3 +36,9 @@
   border-radius: 5px;
   z-index: 99;
 }
+
+.tip {
+  font-style: italic;
+  color: darkblue;
+}
+    

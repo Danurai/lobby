@@ -2,7 +2,7 @@
   (:require 
     [lobby.radata :refer [data]]))
   
-(defonce gamestate (atom {}))
+;(defonce gamestate (atom {}))
 
 (def playerdata {
   :public {
@@ -48,7 +48,8 @@
         artifacts (-> @data :artifacts shuffle)
         monuments (-> @data :monuments shuffle)
         pops (-> @data :placesofpower)]
-    (reset! gamestate {
+    {
+      :ready #{}
       :status :setup
       :pops (map (fn [base] (rand-nth (filter #(= (:base %) base) pops))) (->> pops (map :base) frequencies keys))
       :monuments {
@@ -63,5 +64,10 @@
                   (assoc-in [:private :mages] (subvec mages mstart (+ mstart 2)))
                   (assoc-in [:private :artifacts] (subvec artifacts astart (+ astart 8))))))
           plyrs))
-    })))
+    }))
     
+    
+(defn parseaction [ gamestate ?data uname ]
+  (case (:action ?data)
+    :ready [newstate (update gamestate :ready conj uname)]
+    gamestate))

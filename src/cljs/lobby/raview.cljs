@@ -11,7 +11,9 @@
   (let [imgsrc (str "/img/ra/" type "-" (:id card) ext)]
     [:img.img-fluid.card.mr-2 {
       :key (gensym)
-      :width (:w @cardsize) :height (:h @cardsize) 
+      :style {:display "inline-block"}
+      :width (:w @cardsize) 
+      :height (:h @cardsize)
       :src imgsrc
       ;:class (if (= (str "mage" ) (:selected @ra-app)) "active")
       ;:on-click #(swap! ra-app assoc :selected (str "mage" mgid))}
@@ -49,13 +51,23 @@
         [:div.h5.mr-2 "Setup: Choose your Mage"]]
       [:div.row.mb-2.tip "Tip: Do you have dragons, creatures, or ways to make gold? This may suggest Places of Power that will work well for you or if you can buy several monuments."]
       [:div.row ;mage choice
-        (doall (for [mage (-> mydata :private :mages)]
-          (rendercard "mage" mage ".jpg")))]
+        [:div.col
+          (doall (for [mage (-> mydata :private :mages)]
+            (rendercard "mage" mage ".jpg")))]
+        [:div.col ]
+        [:div.col
+          [:div.d-flex.justify-content-center
+            (for [plyr (-> gm :plyrs)]
+              [:div.mr-3
+                [:div [:i.fa-user.fa-2x {:class (if (contains? (-> gm :state :ready) plyr) "fas" "far")}]]
+                [:div plyr]])]
+          [:div.d-flex [:button.btn.btn-primary.mx-auto {:on-click #(comms/ra-send {:action :ready})} "Ready"]]]]
       [:div.row ;artifacts
         (doall (for [artifact (-> mydata :private :artifacts) ]
-          (rendercard "artifact" artifact ".jpg")))]
-      [:div.row ;Ready
-        [:button.btn "Ready"]]]))
+          (rendercard "artifact" artifact ".jpg")))]]))
+          
+;(defn ra-send [ ?data ]
+;  (chsk-send! [:lobby/ra-action ?data] 5000 nil))
     
 (defn ramain [ gm uname ]
   (-> ((js* "$") "body") 

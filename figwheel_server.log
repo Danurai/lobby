@@ -101,3 +101,281 @@ notifying browser that file changed:  resources\public\js\compiled\out\lobby\rav
 [32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.449 seconds.[0m
 notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
 Notifying browser that CSS file changed: resources/public/css/ra.css
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.595 seconds.[0m
+notifying browser that file changed:  resources/public/js/compiled/out/goog/deps.js
+notifying browser that file changed:  resources/public/js/compiled/out/cljs_deps.js
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[31mFailed to compile "resources/public/js/compiled/lobby.js" in 0.196 seconds.[0m
+[36m----  Could not Read  src/cljs/lobby/raview.cljs   line:14 ----[0m
+
+  [1mD:\Projects\lobby\src\cljs\lobby\raview.cljs [line 14, col 15] Invalid keyword: :.[0m
+
+  [36m12[0m  [36m[:img.img-fluid.card.mr-2 {[0m
+  [36m13[0m  [36m  :key (gensym)[0m
+  [33m14[0m  [1m  :style :{width (:w @cardsize) :height (:h @cardsize)}[0m
+  [0m  [0m  [33m  D:\Projects\lobby\src\cljs\lobby\raview.cljs [line 14, col 15] Invalid keyword: :.[0m
+  [36m15[0m  [36m  :src imgsrc[0m
+  [36m16[0m  [36m  ;:class (if (= (str "mage" ) (:selected @ra-app)) "active")[0m
+  [36m17[0m  [36m  ;:on-click #(swap! ra-app assoc :selected (str "mage" mgid))}[0m
+
+[36m----  Reader Error : Please see src/cljs/lobby/raview.cljs  ----[0m
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[31mFailed to compile "resources/public/js/compiled/lobby.js" in 0.209 seconds.[0m
+[36m----  Could not Read  src/cljs/lobby/raview.cljs   line:14 ----[0m
+
+  [1mD:\Projects\lobby\src\cljs\lobby\raview.cljs [line 14, col 15] Invalid keyword: :.[0m
+
+  [36m12[0m  [36m[:img.img-fluid.card.mr-2 {[0m
+  [36m13[0m  [36m  :key (gensym)[0m
+  [33m14[0m  [1m  :style :{width (:w @cardsize) :height (:h @cardsize)}[0m
+  [0m  [0m  [33m  D:\Projects\lobby\src\cljs\lobby\raview.cljs [line 14, col 15] Invalid keyword: :.[0m
+  [36m15[0m  [36m  :src imgsrc[0m
+  [36m16[0m  [36m  ;:class (if (= (str "mage" ) (:selected @ra-app)) "active")[0m
+  [36m17[0m  [36m  ;:on-click #(swap! ra-app assoc :selected (str "mage" mgid))}[0m
+
+[36m----  Reader Error : Please see src/cljs/lobby/raview.cljs  ----[0m
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.537 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.52 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.494 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.519 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.508 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.484 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+Notifying browser that CSS file changed: resources/public/css/ra.css
+Notifying browser that CSS file changed: resources/public/css/ra.css
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.464 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.449 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.449 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.462 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.446 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.46 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.439 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.437 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.452 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.442 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.448 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+Notifying browser that CSS file changed: resources/public/css/ra.css
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.46 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.443 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.436 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.463 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.435 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.447 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.449 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.433 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.433 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.412 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.429 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.426 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.403 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.415 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.425 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+Notifying browser that CSS file changed: resources/public/css/ra.css
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.44 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.419 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.418 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[36m----  Compiler Warning on   src/cljs/lobby/raview.cljs   line:62  column:21  ----[0m
+
+  [1mUse of undeclared Var lobby.raview/user[0m
+
+  [36m58[0m  [36m  [:div.col[0m
+  [36m59[0m  [36m    (for [plyr (-> gm :plyrs)][0m
+  [36m60[0m  [36m      [:div [0m
+  [36m61[0m  [36m        [:div [:i.fa-user.fa-2x]][0m
+  [33m62[0m  [1m        [:div user]])]][0m
+  [0m  [0m  [33m              ^--- Use of undeclared Var lobby.raview/user[0m
+  [36m63[0m  [36m[:div.row ;artifacts[0m
+  [36m64[0m  [36m  (doall (for [artifact (-> mydata :private :artifacts) ][0m
+  [36m65[0m  [36m    (rendercard "artifact" artifact ".jpg")))][0m
+  [36m66[0m  [36m[:div.row ;Ready[0m
+  [36m67[0m  [36m  [:button.btn "Ready"]]]))[0m
+
+[36m----  Compiler Warning : Please see src/cljs/lobby/raview.cljs  ----[0m
+[36m----  Compiler Warning on   src/cljs/lobby/raview.cljs   line:62  column:21  ----[0m
+
+  [1mUse of undeclared Var lobby.raview/user[0m
+
+  [36m58[0m  [36m  [:div.col[0m
+  [36m59[0m  [36m    (for [plyr (-> gm :plyrs)][0m
+  [36m60[0m  [36m      [:div [0m
+  [36m61[0m  [36m        [:div [:i.fa-user.fa-2x]][0m
+  [33m62[0m  [1m        [:div user]])]][0m
+  [0m  [0m  [33m              ^--- Use of undeclared Var lobby.raview/user[0m
+  [36m63[0m  [36m[:div.row ;artifacts[0m
+  [36m64[0m  [36m  (doall (for [artifact (-> mydata :private :artifacts) ][0m
+  [36m65[0m  [36m    (rendercard "artifact" artifact ".jpg")))][0m
+  [36m66[0m  [36m[:div.row ;Ready[0m
+  [36m67[0m  [36m  [:button.btn "Ready"]]]))[0m
+
+[36m----  Compiler Warning : Please see src/cljs/lobby/raview.cljs  ----[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.47 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.444 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.43 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.444 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.422 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.456 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.428 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.434 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[31mFailed to compile "resources/public/js/compiled/lobby.js" in 0.167 seconds.[0m
+[36m----  Could not Read  src/cljs/lobby/raview.cljs   line:67 ----[0m
+
+  [1mD:\Projects\lobby\src\cljs\lobby\raview.cljs [line 67, col 55] Unmatched delimiter ).[0m
+
+  [36m65[0m  [36m      [:div.row ;artifacts[0m
+  [36m66[0m  [36m        (doall (for [artifact (-> mydata :private :artifacts) ][0m
+  [33m67[0m  [1m          (rendercard "artifact" artifact ".jpg")))]]))[0m
+  [0m  [0m  [33m          D:\Projects\lobby\src\cljs\lobby\raview.cljs [line 67, col 55] Unmatched delimiter ).[0m
+  [36m68[0m  [36m    [0m
+  [36m69[0m  [36m(defn ramain [ gm uname ][0m
+  [36m70[0m  [36m  (-> ((js* "$") "body") [0m
+
+[36m----  Reader Error : Please see src/cljs/lobby/raview.cljs  ----[0m
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.45 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.416 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[31mFailed to compile "resources/public/js/compiled/lobby.js" in 0.185 seconds.[0m
+[36m----  Could not Read  src/cljs/lobby/raview.cljs   line:64 ----[0m
+
+  [1mD:\Projects\lobby\src\cljs\lobby\raview.cljs [line 64, col 110] Unmatched delimiter ].[0m
+
+  [36m62[0m  [36m          [:div [:i.fa-user.fa-2x {:class (if (contains? (-> gm :state :ready) plyr) "fas" "far")}]][0m
+  [36m63[0m  [36m          [:div plyr]])][0m
+  [33m64[0m  [1m    [:div.d-flex [:button.btn.btn-primary.mx-auto {:on-click #(model/ra-send {:action :ready}) "Ready"]]]][0m
+  [0m  [0m  [33m    D:\Projects\lobby\src\cljs\lobby\raview.cljs [line 64, col 110] Unmatched delimiter ].[0m
+  [36m65[0m  [36m[:div.row ;artifacts[0m
+  [36m66[0m  [36m  (doall (for [artifact (-> mydata :private :artifacts) ][0m
+  [36m67[0m  [36m    (rendercard "artifact" artifact ".jpg")))]]))[0m
+
+[36m----  Reader Error : Please see src/cljs/lobby/raview.cljs  ----[0m
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[36m----  Compiler Warning on   src/cljs/lobby/raview.cljs   line:64  column:70  ----[0m
+
+  [1mNo such namespace: model, could not locate model.cljs, model.cljc, or JavaScript source providing "model"[0m
+
+  [36m60[0m  [36m            (for [plyr (-> gm :plyrs)][0m
+  [36m61[0m  [36m              [:div.mr-3[0m
+  [36m62[0m  [36m                [:div [:i.fa-user.fa-2x {:class (if (contains? (-> gm :state :ready) plyr) "fas" "far")}]][0m
+  [36m63[0m  [36m                [:div plyr]])][0m
+  [33m64[0m  [1m          [:div.d-flex [:button.btn.btn-primary.mx-auto {:on-click #(model/ra-send {:action :ready})} "Ready"]]]][0m
+  [0m  [0m  [33m                                                                     ^--- No such namespace: model, could not locate model.cljs, model.cljc, or JavaScript source providing "model"[0m
+  [36m65[0m  [36m      [:div.row ;artifacts[0m
+  [36m66[0m  [36m        (doall (for [artifact (-> mydata :private :artifacts) ][0m
+  [36m67[0m  [36m          (rendercard "artifact" artifact ".jpg")))]]))[0m
+  [36m68[0m  [36m          [0m
+  [36m69[0m  [36m;(defn ra-send [ ?data ][0m
+
+[36m----  Compiler Warning : Please see src/cljs/lobby/raview.cljs  ----[0m
+[36m----  Compiler Warning on   src/cljs/lobby/raview.cljs   line:64  column:70  ----[0m
+
+  [1mUse of undeclared Var model/ra-send[0m
+
+  [36m60[0m  [36m            (for [plyr (-> gm :plyrs)][0m
+  [36m61[0m  [36m              [:div.mr-3[0m
+  [36m62[0m  [36m                [:div [:i.fa-user.fa-2x {:class (if (contains? (-> gm :state :ready) plyr) "fas" "far")}]][0m
+  [36m63[0m  [36m                [:div plyr]])][0m
+  [33m64[0m  [1m          [:div.d-flex [:button.btn.btn-primary.mx-auto {:on-click #(model/ra-send {:action :ready})} "Ready"]]]][0m
+  [0m  [0m  [33m                                                                     ^--- Use of undeclared Var model/ra-send[0m
+  [36m65[0m  [36m      [:div.row ;artifacts[0m
+  [36m66[0m  [36m        (doall (for [artifact (-> mydata :private :artifacts) ][0m
+  [36m67[0m  [36m          (rendercard "artifact" artifact ".jpg")))]]))[0m
+  [36m68[0m  [36m          [0m
+  [36m69[0m  [36m;(defn ra-send [ ?data ][0m
+
+[36m----  Compiler Warning : Please see src/cljs/lobby/raview.cljs  ----[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.481 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js
+[0mCompiling "resources/public/js/compiled/lobby.js" from ["src/cljs"]...[0m
+[32mSuccessfully compiled "resources/public/js/compiled/lobby.js" in 0.447 seconds.[0m
+notifying browser that file changed:  resources\public\js\compiled\out\lobby\raview.js

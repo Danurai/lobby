@@ -53,3 +53,12 @@
       (->> @appstate
            :games
            (map #(if (= (:gid %) gid) (assoc % :state (gamesetup gname (-> % :plyrs vec))) %))))))
+           
+(defn updategame [ func ?data uname ]
+  (swap! appstate assoc :games
+    (mapv #(if (contains? (:plyrs %) uname) (assoc % :state (func (:state %) ?data uname)) %) (:games @appstate))))
+    
+    
+    
+    
+    
