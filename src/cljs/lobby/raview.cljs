@@ -4,37 +4,58 @@
     [lobby.comms :as comms]))
     
 (def ra-app (r/atom {}))
-(def cardsize (r/atom {:base 5 :w 125 :h 175}))
+(def cardsize (r/atom {:base 4 :w 80 :h 112}))
 
-(defn getimgfile [ type id ]
-  (str "/img/ra/" type "-" id ".jpg"))
+  
+(defn rendercard [ type card ext ]
+  (let [imgsrc (str "/img/ra/" type "-" (:id card) ext)]
+    [:img.img-fluid.card.mr-2 {
+      :key (gensym)
+      :width (:w @cardsize) :height (:h @cardsize) 
+      :src imgsrc
+      ;:class (if (= (str "mage" ) (:selected @ra-app)) "active")
+      ;:on-click #(swap! ra-app assoc :selected (str "mage" mgid))}
+      :on-mouse-over #(swap! ra-app assoc :preview imgsrc)
+      :on-mouse-out #(swap! ra-app assoc :preview nil)}]))
+  
+(defn rendercardback [ type ]
+  [:img.img-fluid.mr-2 {
+    :width (:w @cardsize) :height (:h @cardsize)
+    :src (str "/img/ra/" type "-back.png")}])
+  
+(defn placesofpower [ gm ]
+  [:div.mx-2
+    [:div.h5.text-center "Places of Power"]
+    [:div.d-flex
+      (doall (for [pop (-> gm :state :pops)]
+        (rendercard "pop" pop ".png")))]])
+    
+(defn monuments [ gm ]
+  [:div.mx-2
+    [:div.h5.text-center "Monuments"]
+    [:div.d-flex
+      (rendercardback "monument")
+      (doall (for [monument (-> gm :state :monuments :public)]
+        (rendercard "monument" monument ".jpg")))]])
+    
     
 (defn setup [ gm uname ]
   (let [mydata (get-in gm [:state :players uname])]
     [:div.col.mx-2
-      [:div.row
-        [:div.h5.mr-2 "Setup"][:div "Choose your Mage"]]
+      [:div.row.mb-3
+        (placesofpower gm)
+        (monuments gm)]
+      [:div.row.mr-2
+        [:div.h5.mr-2 "Setup: Choose your Mage"]]
       [:div.row.mb-2.tip "Tip: Do you have dragons, creatures, or ways to make gold? This may suggest Places of Power that will work well for you or if you can buy several monuments."]
       [:div.row ;mage choice
-        (doall (for [mage (-> mydata :private :mages) 
-                      :let [mgid (:id mage) imgsrc (getimgfile "mage" mgid)]]
-          ^{:key (gensym)}[:div.card.mr-2 {
-            :class (if (= (str "mage" mgid) (:selected @ra-app)) "active")
-            :on-mouse-over #(swap! ra-app assoc :preview imgsrc)
-            :on-mouse-out #(swap! ra-app assoc :preview nil)
-            :on-click #(swap! ra-app assoc :selected (str "mage" mgid))}
-            [:img.img-fluid {:width (:w @cardsize) :height (:h @cardsize) :src imgsrc}]]))]
+        (doall (for [mage (-> mydata :private :mages)]
+          (rendercard "mage" mage ".jpg")))]
       [:div.row ;artifacts
-        (doall (for [artifact (-> mydata :private :artifacts) 
-                      :let [artifactid (:id artifact) imgsrc (getimgfile "artifact" artifactid)]]
-          ^{:key (gensym)}[:div.card.mr-2 {
-            :on-mouse-enter #(swap! ra-app assoc :preview imgsrc)
-            :on-mouse-leave #(swap! ra-app assoc :preview nil)}
-            [:img.img-fluid {:width (:w @cardsize) :height (:h @cardsize) :src imgsrc}]]))]
+        (doall (for [artifact (-> mydata :private :artifacts) ]
+          (rendercard "artifact" artifact ".jpg")))]
       [:div.row ;Ready
-        [:button.btn "Ready"]
-        ]
-      ]))
+        [:button.btn "Ready"]]]))
     
 (defn ramain [ gm uname ]
   (-> ((js* "$") "body") 

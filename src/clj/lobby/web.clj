@@ -2,6 +2,7 @@
   (:require
     [compojure.core :refer [defroutes GET POST ANY context]]
     [compojure.route :refer [not-found resources]]
+    [clojure.data.json :as json]
 		[hiccup.page :as h]
     (ring.middleware
       [defaults :refer :all]
@@ -46,6 +47,7 @@
 	(GET "/play"  [] 
 		;pages/lobby)
 		(friend/wrap-authorize pages/lobby #{::users/user}))
+  (GET "/appdata" [] (json/write-str @model/appstate))
   (friend/logout 
 		(ANY "/logout" [] (redirect "/play")))
   (resources "/"))

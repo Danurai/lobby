@@ -14,7 +14,7 @@
 (defn obfuscate-state [ uid ]
   (let [reverseuidlookup (reduce-kv #(assoc %1 %3 %2) {} (:user-hash @appstate))
         uname (get reverseuidlookup uid)]
-    (prn uid uname (assoc @appstate :games (mapv #(obfuscate-gm % uname) (:game @appstate))))
+    ;(prn uid uname (assoc @appstate :games (mapv #(obfuscate-gm % uname) (:game @appstate))))
     @appstate))
     
 (defn creategame [ uname data ]
@@ -49,7 +49,6 @@
 (defn startgame [?data]
   (let [gid (:gid ?data) 
         gname (:gname ?data)]
-    (println "Starting" gname gid)
     (swap! appstate assoc :games 
       (->> @appstate
            :games
