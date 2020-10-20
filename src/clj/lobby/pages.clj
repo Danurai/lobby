@@ -1,7 +1,7 @@
 (ns lobby.pages
   (:require 
     [hiccup.page :as h]
-    [cemerick.friend :as friend :refer [identity]]
+    [cemerick.friend :as friend]
     [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
     [ring.util.anti-forgery :refer [anti-forgery-field]]))
     

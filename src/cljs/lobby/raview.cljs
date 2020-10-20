@@ -15,8 +15,11 @@
       :width (:w @cardsize) 
       :height (:h @cardsize)
       :src imgsrc
-      ;:class (if (= (str "mage" ) (:selected @ra-app)) "active")
-      ;:on-click #(swap! ra-app assoc :selected (str "mage" mgid))}
+      ;:class (if (= (str type (:id card)) (:selected @ra-app)) "active")
+      ;:on-click #(let [sel (str type (:id card))] 
+      ;            (if (= sel (:selected @ra-app))
+      ;              (swap! ra-app dissoc :selected)
+      ;              (swap! ra-app assoc :selected sel)))
       :on-mouse-over #(swap! ra-app assoc :preview imgsrc)
       :on-mouse-out #(swap! ra-app assoc :preview nil)}]))
   
@@ -47,24 +50,34 @@
       [:div.row.mb-3
         (placesofpower gm)
         (monuments gm)]
-      [:div.row.mr-2
-        [:div.h5.mr-2 "Setup: Choose your Mage"]]
-      [:div.row.mb-2.tip "Tip: Do you have dragons, creatures, or ways to make gold? This may suggest Places of Power that will work well for you or if you can buy several monuments."]
       [:div.row ;mage choice
         [:div.col
-          (doall (for [mage (-> mydata :private :mages)]
-            (rendercard "mage" mage ".jpg")))]
-        [:div.col ]
+          [:div.h5.text-center "Setup: Choose your Mage"]
+          [:div.d-flex
+            (doall (for [mage (-> mydata :private :mages)]
+              (rendercard "mage" mage ".jpg")))]]
+        [:div.col 
+          [:div.h5 "Selected"]
+          ;(if (some? selectedmage)
+          ;  (rendercard "mage" {:id selectedmage}  ".jpg"))
+          ]
         [:div.col
           [:div.d-flex.justify-content-center
             (for [plyr (-> gm :plyrs)]
-              [:div.mr-3
+              [:div.mr-3 {:key plyr}
                 [:div [:i.fa-user.fa-2x {:class (if (contains? (-> gm :state :ready) plyr) "fas" "far")}]]
                 [:div plyr]])]
-          [:div.d-flex [:button.btn.btn-primary.mx-auto {:on-click #(comms/ra-send {:action :ready})} "Ready"]]]]
+          [:div.d-flex 
+            [:button.btn.btn-primary.mx-auto {
+              :on-click #(comms/ra-send {:action :toggleready})
+              ;:disabled (nil? selectedmage)
+              } 
+              (if (contains? (-> gm :state :ready) uname) "Cancel" "Ready")
+              ]]]]
       [:div.row ;artifacts
         (doall (for [artifact (-> mydata :private :artifacts) ]
-          (rendercard "artifact" artifact ".jpg")))]]))
+          (rendercard "artifact" artifact ".jpg")))]
+      [:div.row.mb-2.tip "Tip: Do you have dragons, creatures, or ways to make gold? This may suggest Places of Power that will work well for you or if you can buy several monuments."]]))
           
 ;(defn ra-send [ ?data ]
 ;  (chsk-send! [:lobby/ra-action ?data] 5000 nil))
@@ -74,19 +87,14 @@
       (.css "background-image" "url(/img/ra/ra-bg.png")
       (.css "background-size" "100%"))
   ;(-> ((js* "$") "#navbar") (.attr "hidden" true))
-  [:div.container-fluid.my-2 {:style {:position "relative"}}
-    [:div.preview {:hidden (-> @ra-app :preview nil?)}
-      [:img.img-fluid {:src (:preview @ra-app)}]]
-    ;[:div.settings.mr-1.p-2
-    ;  [:div [:i.fas.fa-cog.text-secondary]]
-    ;  [:label "Image Size: " (get ["" "" "" "Tiny" "XS" "Small" "Medium" "Large" "XL" "Huge" "Full"] (:base @cardsize))]
-    ;  [:input.custom-range.w-100 {
-    ;    :type "range" :min 3 :max 10 :value (:base @cardsize) 
-    ;    :on-change (fn [e] (let [base (js/parseInt (.. e -target -value)) mult (/ base 10)] (reset! cardsize {:base base :w (* 250 mult) :h (* 350 mult)})))
-    ;    }]]
-    [:div.row.mb-2
-      (case (-> gm :state :status)
-        :setup (setup gm uname)
-        [:h5 "Unmapped Status"])]
-    [:div.row
-      [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame (:gid gm))} "Leave"]]])
+  [:div.container-fluid.my-2
+    [:div.row 
+      [:div.col-sm-9        
+        (case (-> gm :state :status)
+          :setup (setup gm uname)
+          [:h5 "Unmapped Status"])]
+      [:div.col-sm-3
+        [:div {:style {:height "400px"}}
+          (let [preview (:preview @ra-app)]
+            [:img.img-fluid {:hidden (nil? preview) :src preview}])]
+        [:div#chat.h-100 {:style {:background-color "white" :opacity "0.8" :border "1px solid grey" :border-radius "5px"}}]]]])

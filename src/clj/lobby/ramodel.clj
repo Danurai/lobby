@@ -69,5 +69,5 @@
     
 (defn parseaction [ gamestate ?data uname ]
   (case (:action ?data)
-    :ready [newstate (update gamestate :ready conj uname)]
+    :toggleready (update gamestate :ready (if (contains? (:ready gamestate) uname) disj conj) uname)
     gamestate))
