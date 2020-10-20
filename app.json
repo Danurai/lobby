@@ -1,0 +1,9 @@
+{
+  "environments": {
+    "test": {
+      "scripts": {
+        "test": "lein do clean, test"
+      }
+    }
+  }
+}
