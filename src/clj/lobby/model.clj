@@ -14,51 +14,36 @@
 (defn obfuscate-state [ uid ]
   (let [reverseuidlookup (reduce-kv #(assoc %1 %3 %2) {} (:user-hash @appstate))
         uname (get reverseuidlookup uid)]
-    ;(prn uid uname (assoc @appstate :games (mapv #(obfuscate-gm % uname) (:game @appstate))))
-    @appstate))
+    (assoc @appstate :games (mapv #(obfuscate-gm % uname) (:game @appstate)))
+  ))
     
 (defn creategame [ uname data ]
-  (let [gid (gensym "gm")]    
+  (let [gid (-> "gm" gensym keyword)]
+    (println "creating game " gid " owner " uname)
     (swap! appstate assoc :games
-      (conj
-        (vec (filter #(not= (:owner %) uname) (:games @appstate)))
-        (assoc data 
-          :owner uname
-          :gid (gensym "gm")
-          :plyrs #{uname})))))
+      (assoc 
+  ; delete any game associated with uname
+        (reduce-kv (fn [m k v] (if (= (:owner v) uname) (dissoc m k) (assoc m k v))) {} (:games @appstate))
+        gid (assoc data :owner uname :plyrs #{uname})))))
 
 (defn joingame [ uname gid ]
-	(swap! appstate assoc :games
-		(mapv #(if (= (:gid %) gid)
-								(update % :plyrs conj uname)
-								%) (:games @appstate))))
+	(swap! appstate update-in [:games gid :plyrs] conj uname))
 
 (defn leavegame [ uname gid ]
-  (swap! appstate assoc :games 
-    (->> @appstate
-        :games
-        (map #(if (not= (:owner %) uname) (update % :plyrs disj uname)))
-        (remove nil?)
-        vec)))
+	(swap! appstate assoc :games
+    (reduce-kv (fn [m k v] (if (= (:owner v) uname) (dissoc m k) (update-in m [k :plyrs] disj uname))) {} (:games @appstate))))
         
 (defn gamesetup [ gname plyrs ]
   (case gname 
     "Res Arcana" (ramodel/setup plyrs)
     {}))
         
-(defn startgame [?data]
-  (let [gid (:gid ?data) 
-        gname (:gname ?data)]
-    (swap! appstate assoc :games 
-      (->> @appstate
-           :games
-           (map #(if (= (:gid %) gid) (assoc % :state (gamesetup gname (-> % :plyrs vec))) %))))))
+(defn startgame [ gid ]
+  (let [gname (-> @appstate :games gid :game)]
+    (swap! appstate assoc-in [:games gid :state] (gamesetup gname (-> @appstate :games gid :plyrs vec)))))
+           
+           
            
 (defn updategame [ func ?data uname ]
   (swap! appstate assoc :games
     (mapv #(if (contains? (:plyrs %) uname) (assoc % :state (func (:state %) ?data uname)) %) (:games @appstate))))
-    
-    
-    
-    
-    

@@ -75,7 +75,7 @@
 
 (defn broadcast []
   (doseq [uid (:any @connected-uids)]
-    (chsk-send! uid [:lobby/appstate (model/obfuscate-state uid)])))
+    (chsk-send! uid [:lobby/appstate @model/appstate]))); (model/obfuscate-state uid)])))
         
 ;; multi to handle Sente 'events'
 (defmulti event :id)
@@ -90,6 +90,10 @@
 (defmethod event :lobby/getstate [{:as ev-msg :keys [?reply-fn]}]
   (when ?reply-fn
     (?reply-fn @model/appstate)))
+    
+(defmethod event :lobby/reset [req]
+  (swap! model/appstate assoc :games {})
+  (broadcast))
 ;TEST
 
 (defmethod event :lobby/create [{:keys [?data uid ring-req]}]

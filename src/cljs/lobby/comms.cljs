@@ -13,6 +13,9 @@
 
 ; (prn (:csrf-token @chsk-state))
 
+(defn reset []
+  (chsk-send! [:lobby/reset] 5000 nil))
+
 ; Lobby
               
 (defn creategame [ ?data ]
@@ -21,8 +24,8 @@
   (chsk-send! [:lobby/join gid] 5000 nil))
 (defn leavegame [ gid ]
   (chsk-send! [:lobby/leave gid] 5000 nil))
-(defn startgame [ gname gid ]
-  (chsk-send! [:lobby/start {:gid gid :gname gname}] 5000 nil))
+(defn startgame [ gid ]
+  (chsk-send! [:lobby/start gid] 5000 nil))
 
 
 (defn ra-send [ ?data ]

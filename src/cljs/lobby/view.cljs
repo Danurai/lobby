@@ -36,8 +36,8 @@
       [:div.col 
         [:div [:span.h5.mr-2 "Join"][:span (str "(" (count gms) ")")]]
         [:div.list-group
-          (for [g gms]
-            [:div.list-group-item.list-group-item-action {:key (:gid g)} 
+          (for [[k g] gms]
+            [:div.list-group-item.list-group-item-action {:key k}
               [:div.d-flex
                 [:div 
                   [:span.badge.badge-warning.mr-2 (:game g)]
@@ -55,7 +55,7 @@
     (create)
     (join)])
     
-(defn gamelobby [ uname gm ]
+(defn gamelobby [ gid gm uname ]
   [:div.col-sm-8
     [:div.d-flex
       [:h4 (:title gm)
@@ -64,38 +64,39 @@
     [:div.d-flex.mb-3
       (for [p (:plyrs gm)]
         [:div.mr-2 {:key p}
-          [:div.d-flex [:i.fas.fa-user.fa-lg.mx-auto {:class (if (= uname p) "text-primary")}]]
+          [:div.d-flex [:i.fas.fa-user.fa-lg.mx-auto {:class (if (= (:owner gm) p) "text-primary")}]]
           [:div p]])]
     [:div.d-flex
-      [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame (:gid gm))} "Leave"]
+      [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]
       (if (= uname (:owner gm))
-          [:button.btn.btn-primary.ml-auto {:on-click #(comms/startgame (:game gm) (:gid gm))} "Start"])]
+          [:button.btn.btn-primary.ml-auto {:on-click #(comms/startgame gid)} "Start"])]
     ])
     
-(defn gamehooks [ gm uname ]
+(defn gamehooks [ gid gm uname ]
   (case (:game gm)
     "Res Arcana" (ramain gm uname)
     [:div.row-fluid
       [:h5 "Game not found"]
-      [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame (:gid gm))} "Leave"]]))
+      [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]]))
           
 (defn main []
   (let [uname (.. js/document (getElementById "loginname") -textContent)
-        gm    (->> @model/app :games (filter #(contains? (-> % :plyrs set) uname)) first)]
+        gid   (reduce-kv #(if (contains? (:plyrs %3) uname) %2) {} (:games @model/app))
+        gm    (-> @model/app :games gid)]
     (-> ((js* "$") "body") (.removeAttr "style"))
-    [:div
+    [:di
       (if (:state gm)
-        (gamehooks gm uname)
+        (gamehooks gid gm uname)
         [:div.container.my-3
           [:div.row 
             (if gm
-              (gamelobby uname gm)
+              (gamelobby gid gm uname)
               (createjoin))
             [:div.col-sm-4
               [:div.p-2.border.rounded
                 [:h5 "Connected"]
                 (for [conn (:user-hash @model/app)]
                   [:div {:key (gensym)} (key conn)])]]]])
-      [:div [:small (str @model/app)]]  
-      ;[:button.btn {:on-click #(comms/sendone)} "Send Req"]
+      [:div [:small (str @model/app)]]
+      [:button.btn.btn-sm.btn-danger {:on-click #(comms/reset)} "Reset"]
     ]))
