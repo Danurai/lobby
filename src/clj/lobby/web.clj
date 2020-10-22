@@ -116,9 +116,10 @@
     (model/startgame ?data)
     (broadcast)))
     
+; RA Handler
 (defmethod event :lobby/ra-action [{:keys [?data ring-req]}]
   (when-let [user (-> ring-req friend/identity :current)]
-    (model/updategame ramodel/parseaction ?data user)
+    (model/updategame! ramodel/parseaction ?data user)
     (broadcast)))
     
 ; Connection Management

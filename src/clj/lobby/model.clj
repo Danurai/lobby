@@ -42,8 +42,7 @@
   (let [gname (-> @appstate :games gid :game)]
     (swap! appstate assoc-in [:games gid :state] (gamesetup gname (-> @appstate :games gid :plyrs vec)))))
            
-           
-           
-(defn updategame [ func ?data uname ]
-  (swap! appstate assoc :games
-    (mapv #(if (contains? (:plyrs %) uname) (assoc % :state (func (:state %) ?data uname)) %) (:games @appstate))))
+(defn updategame! [ func ?data uname ]
+  (if-let [gid (:gid ?data)]
+    (swap! appstate assoc-in [:games gid]
+      (func (-> @appstate :games gid) ?data uname))))

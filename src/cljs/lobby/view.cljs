@@ -74,7 +74,7 @@
     
 (defn gamehooks [ gid gm uname ]
   (case (:game gm)
-    "Res Arcana" (ramain gm uname)
+    "Res Arcana" (ramain gid gm uname)
     [:div.row-fluid
       [:h5 "Game not found"]
       [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]]))

@@ -44,7 +44,7 @@
         (rendercard "monument" monument ".jpg")))]])
     
     
-(defn setup [ gm uname ]
+(defn setup [ gid gm uname ]
   (let [mydata (get-in gm [:state :players uname])]
     [:div.col.mx-2
       [:div.row.mb-3
@@ -69,7 +69,7 @@
                 [:div plyr]])]
           [:div.d-flex 
             [:button.btn.btn-primary.mx-auto {
-              :on-click #(comms/ra-send {:action :toggleready})
+              :on-click #(comms/ra-send {:gid gid :action :toggleready})
               ;:disabled (nil? selectedmage)
               } 
               (if (contains? (-> gm :state :ready) uname) "Cancel" "Ready")
@@ -82,7 +82,7 @@
 ;(defn ra-send [ ?data ]
 ;  (chsk-send! [:lobby/ra-action ?data] 5000 nil))
     
-(defn ramain [ gm uname ]
+(defn ramain [ gid gm uname ]
   (-> ((js* "$") "body") 
       (.css "background-image" "url(/img/ra/ra-bg.png")
       (.css "background-size" "100%"))
@@ -91,7 +91,7 @@
     [:div.row 
       [:div.col-sm-9        
         (case (-> gm :state :status)
-          :setup (setup gm uname)
+          :setup (setup gid gm uname)
           [:h5 "Unmapped Status"])]
       [:div.col-sm-3
         [:div {:style {:height "400px"}}
