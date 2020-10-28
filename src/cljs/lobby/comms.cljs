@@ -22,12 +22,19 @@
   (chsk-send! [:lobby/create ?data] 5000 nil)) 
 (defn joingame [ gid ]
   (chsk-send! [:lobby/join gid] 5000 nil))
+(defn addai [ gid ]
+  (chsk-send! [:lobby/addai gid] 5000 nil))
 (defn leavegame [ gid ]
   (chsk-send! [:lobby/leave gid] 5000 nil))
 (defn startgame [ gid ]
   (chsk-send! [:lobby/start gid] 5000 nil))
 
-
+(defn sendmsg! 
+  ([ msg gid ]
+    (chsk-send! [:lobby/chat {:msg msg :gid gid}] 5000 nil))
+  ([ msg ]
+    (sendmsg! msg nil)))
+  
 (defn ra-send [ ?data ]
   (chsk-send! [:lobby/ra-action ?data] 5000 nil))
 

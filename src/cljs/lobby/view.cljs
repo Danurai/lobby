@@ -65,7 +65,8 @@
       (for [p (:plyrs gm)]
         [:div.mr-2 {:key p}
           [:div.d-flex [:i.fas.fa-user.fa-lg.mx-auto {:class (if (= (:owner gm) p) "text-primary")}]]
-          [:div p]])]
+          [:div p]])
+      (if (false? (contains? (:plyrs gm) "AI")) [:button.btn.btn-sm.btn-success.ml-auto {:on-click #(comms/addai gid)} [:i.fas.fa-plus.mr-1] "AI"])]
     [:div.d-flex
       [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]
       (if (= uname (:owner gm))
@@ -74,29 +75,45 @@
     
 (defn gamehooks [ gid gm uname ]
   (case (:game gm)
-    "Res Arcana" (ramain gid gm uname)
+    "Res Arcana" (ramain gid gm uname )
     [:div.row-fluid
       [:h5 "Game not found"]
       [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]]))
-          
+    
 (defn main []
-  (let [uname (.. js/document (getElementById "loginname") -textContent)
-        gid   (reduce-kv #(if (contains? (:plyrs %3) uname) %2) {} (:games @model/app))
-        gm    (-> @model/app :games gid)]
-    (-> ((js* "$") "body") (.removeAttr "style"))
-    [:di
-      (if (:state gm)
-        (gamehooks gid gm uname)
-        [:div.container.my-3
-          [:div.row 
-            (if gm
-              (gamelobby gid gm uname)
-              (createjoin))
-            [:div.col-sm-4
-              [:div.p-2.border.rounded
-                [:h5 "Connected"]
-                (for [conn (:user-hash @model/app)]
-                  [:div {:key (gensym)} (key conn)])]]]])
-      [:div [:small (str @model/app)]]
-      [:button.btn.btn-sm.btn-danger {:on-click #(comms/reset)} "Reset"]
-    ]))
+  (let [msg (r/atom "")]
+    (fn []
+      (let [uname (.. js/document (getElementById "loginname") -textContent)
+            gid   (reduce-kv #(if (contains? (:plyrs %3) uname) %2) {} (:games @model/app))
+            gm    (-> @model/app :games gid)]
+        (-> ((js* "$") "body") (.removeAttr "style"))
+        [:div
+          (if (:state gm)
+            (gamehooks gid gm uname)
+            [:div.container.my-3 {:style {:min-height "400px"}}
+              [:div.row
+                (if gm
+                  (gamelobby gid gm uname)
+                  (createjoin))
+                [:div.col-sm-4.h-100
+                  [:div.p-2.border.rounded.mb-2 {:style {:height "50%"}}
+                    [:h5 "Connected"]
+                    (for [conn (:user-hash @model/app)]
+                      [:div {:key (gensym)} (key conn)])]
+                  [:div
+                    [:div.border.rounded.mb-1.p-1 {:style {:height "200px" :font-size "0.8rem" :overflow-y "scroll" :display "flex" :flex-direction "column-reverse"}}
+                      (for [msg (:chat @model/app) :let [{:keys [msg uname timestamp]} msg]]
+                        [:div {:key (gensym) :style {:word-wrap "break-word"}}
+                          [:span.mr-1 (model/timeformat timestamp)]
+                          [:b.text-primary.mr-1 (str uname ":")]
+                          [:span msg]])]
+                    [:form {:on-submit (fn [e] (.preventDefault e) (comms/sendmsg! @msg) (reset! msg ""))}
+                      [:div.input-group
+                        [:input.form-control.bg-light {
+                          :type "text" :placeholder "Type to chat"
+                          :value @msg
+                          :on-change #(reset! msg (-> % .-target .-value))}]
+                        [:span.input-group-append [:button.btn.btn-outline-secondary {:type "btn"} [:i.fas.fa-arrow-right]]]]]]]]])
+          ;[:div [:small (str @model/app)]]
+          [:button.btn.btn-sm.btn-danger {:on-click #(comms/reset)} "Reset"]
+    ]))))

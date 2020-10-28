@@ -3,5 +3,9 @@
 
 (def app (r/atom {}))
 
-(def pinglog (r/atom nil))
 
+(defn timeformat [ t ]
+  (str 
+    (-> t .getHours   .toString (.padStart 2 "0")) ":"
+    (-> t .getMinutes .toString (.padStart 2 "0")) ":"
+    (-> t .getSeconds .toString (.padStart 2 "0"))))
