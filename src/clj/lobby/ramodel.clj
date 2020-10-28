@@ -42,7 +42,7 @@
                     (reduce-kv #(assoc %1 %2 (count %3)) {} (:private v))))
               (assoc-in [k :secret] (reduce-kv #(assoc %1 %2 (count %3)) {} (:secret v))))
           ) {} (:players state)))))
-
+          
 (defn setup [ plyrs ]
   (let [mages (-> @data :mages shuffle)
         artifacts (-> @data :artifacts shuffle)
@@ -55,6 +55,8 @@
       :monuments {
         :public (take 2 monuments)
         :secret (nthrest monuments 2)}
+      :magicitems (:magicitems @data)
+      :turnorder (shuffle plyrs)
       :players (zipmap 
         plyrs 
         (map-indexed  
@@ -68,8 +70,6 @@
     
     
 (defn parseaction [ gamestate ?data uname ]
-(prn gamestate )
-(prn ?data)
   (case (:action ?data)
     :toggleready (update gamestate :ready (if (contains? (:ready gamestate) uname) disj conj) uname)
     gamestate))

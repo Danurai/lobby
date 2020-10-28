@@ -75,7 +75,7 @@
 
 (defn broadcast []
   (doseq [uid (:any @connected-uids)]
-    (chsk-send! uid [:lobby/appstate @model/appstate]))); (model/obfuscate-state uid)])))
+    (chsk-send! uid [:lobby/appstate (model/obfuscate-state uid)])))
         
 ;; multi to handle Sente 'events'
 (defmulti event :id)
@@ -98,39 +98,48 @@
 
 (defmethod event :lobby/create [{:keys [?data uid ring-req]}]
   (when-let [user (-> ring-req friend/identity :current)]
-    (model/creategame user ?data)
+    (model/creategame! user ?data)
     (broadcast)))
     
 (defmethod event :lobby/leave [{:keys [?data ring-req]}]
   (when-let [user (-> ring-req friend/identity :current)]
-    (model/leavegame user ?data)
+    (model/leavegame! user ?data)
     (broadcast)))
 
 (defmethod event :lobby/join [{:keys [?data ring-req]}]
   (when-let [user (-> ring-req friend/identity :current)]
-    (model/joingame user ?data)
+    (model/joingame! user ?data)
     (broadcast)))
+(defmethod event :lobby/addai [{:keys [?data ring-req]}]
+  (model/joingame! "AI" ?data)
+  (broadcast))
     
 (defmethod event :lobby/start [{:keys [?data ring-req]}]
   (when-let [user (-> ring-req friend/identity :current)]
-    (model/startgame ?data)
+    (model/startgame! ?data)
     (broadcast)))
     
-; RA Handler
-(defmethod event :lobby/ra-action [{:keys [?data ring-req]}]
+(defmethod event :lobby/game-action [{:keys [?data ring-req]}]
   (when-let [user (-> ring-req friend/identity :current)]
-    (model/updategame! ramodel/parseaction ?data user)
+    (model/updategame! ?data user)
+    (broadcast)))
+    
+(defmethod event :lobby/chat [{:keys [?data ring-req]}]
+  (when-let [user (-> ring-req friend/identity :current)]
+    (model/addchat! (:gid ?data) user (:msg ?data))
     (broadcast)))
     
 ; Connection Management
 (defmethod event :chsk/uidport-open [{:as ev-msg :keys [ring-req uid]}] 
   (when-let [user (-> ring-req friend/identity :current)]
     (swap! model/appstate assoc-in [:user-hash user] uid)
+    (model/addchat! nil user "connected" :connection)
 		(broadcast)))
     
 (defmethod event :chsk/uidport-close [{:as ev-msg :keys [ring-req uid]}]
-  (when-let [u (->> @model/appstate :user-hash (filter #(= (val %) uid)) first)]
-    (swap! model/appstate update-in [:user-hash] dissoc (key u))
+  (when-let [user (->> @model/appstate :user-hash (filter #(= (val %) uid)) first)]
+    (swap! model/appstate update-in [:user-hash] dissoc (key user))
+    (model/addchat! nil (key user) "disconnected" :connection)
     (broadcast)))
     
     
