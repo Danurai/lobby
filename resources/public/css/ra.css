@@ -45,7 +45,6 @@
 }
 
 .chatbox {
-    height: 150px; 
     font-size: 0.8rem;
     overflow-y: scroll;
     display: flex;
