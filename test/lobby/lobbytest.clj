@@ -6,7 +6,7 @@
     
 (defn newgamegid []
   (->> {:game "Res Arcana" :title "P1 Game"}
-       (model/creategame "p1")
+       (model/creategame! "p1")
        :games
        (reduce-kv #(if (= (:owner %3) "p1") %2) {})))  
 ; User connect / disconnect
@@ -16,7 +16,7 @@
 ;; Create multiple games, only one game per owner
 (expect {:owner "p1" :game "Test" :title "P1 Game"}
   (select-keys
-    (->> (model/creategame "p1" {:game "Test" :title "P1 Game"})
+    (->> (model/creategame! "p1" {:game "Test" :title "P1 Game"})
          :games
          (reduce-kv #(if (= (:owner %3) "p1") %3) {}))
     [:owner :game :title]))
@@ -24,15 +24,15 @@
 (expect 2
   (do 
     (swap! model/appstate dissoc :games)
-    (model/creategame "p1" {:game "Test" :title "P1 Game"})
-    (model/creategame "p2" {:game "Test" :title "P2 Game"})
+    (model/creategame! "p1" {:game "Test" :title "P1 Game"})
+    (model/creategame! "p2" {:game "Test" :title "P2 Game"})
     (-> @model/appstate :games count)))
     
 (expect 1
   (do 
     (swap! model/appstate dissoc :games)
-    (model/creategame "p1" {:game "Test" :title "P1 Game"})
-    (model/creategame "p1" {:game "Test" :title "P1 Game"})
+    (model/creategame! "p1" {:game "Test" :title "P1 Game"})
+    (model/creategame! "p1" {:game "Test" :title "P1 Game"})
     (->> @model/appstate :games count)))
     
 
@@ -40,7 +40,7 @@
 ;;; Join Real Game
 (expect true
   (let [gid (newgamegid)]
-    (-> (model/joingame "p2" gid)
+    (-> (model/joingame! "p2" gid)
         :games
         gid
         :plyrs
@@ -53,8 +53,8 @@
 (expect false
   (let [gid (newgamegid)]
     (do 
-      (model/joingame "p2" gid)
-      (-> (model/leavegame "p2" gid)
+      (model/joingame! "p2" gid)
+      (-> (model/leavegame! "p2" gid)
           :games
           gid
           :plyrs
@@ -63,7 +63,7 @@
 ;;;Owner Leaves
 (expect nil
   (let [gid (newgamegid)]
-    (-> (model/leavegame "p1" gid)
+    (-> (model/leavegame! "p1" gid)
         :games
         gid)))
         
@@ -74,7 +74,7 @@
 ;; Start 'Res Arcana'
 (expect :setup
   (let [gid (newgamegid)]
-    (-> (model/startgame gid)
+    (-> (model/startgame! gid)
         :games 
         gid
         :state

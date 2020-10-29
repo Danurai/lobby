@@ -19,12 +19,6 @@
 }
   
 .preview {
-  position: fixed;
-  top: 60px;
-  right: 5px;
-  width: 250px;
-  height: 350px;
-  z-index: 99;
 }
   
 .settings {

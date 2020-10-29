@@ -55,11 +55,11 @@
 ; Receiver for server (chsk-send! uid [message]
 
 (defmethod event-msg-handler :chsk/recv [{:as ev-msg :keys [?data]}]
-  (let [chan (first ?data)]
+  (let [chan (first ?data) state (second ?data)]
     ;(prn "chsk/recv" ?data)
     (case chan
-      :lobby/appstate (reset! model/app (second ?data))
-      :lobby/ragame   (reset! ra/gamestate (second ?data))
+      :lobby/appstate (reset! model/app state)
+      :lobby/ragame   (reset! ra/gamestate state)
       (prn "unhandled" chan)
       )))
 
