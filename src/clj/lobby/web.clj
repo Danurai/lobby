@@ -132,8 +132,8 @@
 ; Connection Management
 (defmethod event :chsk/uidport-open [{:as ev-msg :keys [ring-req uid]}] 
   (when-let [user (-> ring-req friend/identity :current)]
+    (if (-> @model/appstate :user-hash (get user) nil?) (model/addchat! nil user "connected" :connection))
     (swap! model/appstate assoc-in [:user-hash user] uid)
-    (model/addchat! nil user "connected" :connection)
 		(broadcast)))
     
 (defmethod event :chsk/uidport-close [{:as ev-msg :keys [ring-req uid]}]

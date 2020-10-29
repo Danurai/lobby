@@ -17,6 +17,7 @@
       :life 1
       :death 1
     }
+    :vp 0
   }
   :private { ; player knows
     :mages nil
@@ -47,7 +48,8 @@
   (let [mages (-> @data :mages shuffle)
         artifacts (-> @data :artifacts shuffle)
         monuments (-> @data :monuments shuffle)
-        pops (-> @data :placesofpower)]
+        pops (-> @data :placesofpower)
+        turnorder (shuffle plyrs)]
     {
       :ready #{}
       :status :setup
@@ -56,7 +58,8 @@
         :public (take 2 monuments)
         :secret (nthrest monuments 2)}
       :magicitems (:magicitems @data)
-      :turnorder (shuffle plyrs)
+      :turnorder turnorder
+      :p1 (first turnorder)
       :players (zipmap 
         plyrs 
         (map-indexed  
@@ -65,9 +68,7 @@
               (-> playerdata
                   (assoc-in [:private :mages] (subvec mages mstart (+ mstart 2)))
                   (assoc-in [:private :artifacts] (subvec artifacts astart (+ astart 8))))))
-          plyrs))
-    }))
-    
+          plyrs))}))
     
 (defn parseaction [ gamestate ?data uname ]
   (case (:action ?data)

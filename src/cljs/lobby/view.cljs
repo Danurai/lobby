@@ -113,7 +113,7 @@
                           :type "text" :placeholder "Type to chat"
                           :value @msg
                           :on-change #(reset! msg (-> % .-target .-value))}]
-                        [:span.input-group-append [:button.btn.btn-outline-secondary {:type "btn"} [:i.fas.fa-arrow-right]]]]]]]]])
-          ;[:div [:small (str @model/app)]]
-          [:button.btn.btn-sm.btn-danger {:on-click #(comms/reset)} "Reset"]
-    ]))))
+                        [:span.input-group-append [:button.btn.btn-outline-secondary {:type "btn"} [:i.fas.fa-arrow-right]]]]]]]]
+              [:div.row                      
+                [:div [:small (str @model/app)]]
+                [:button.btn.btn-sm.btn-danger {:on-click #(comms/reset)} "Reset"]]])]))))
