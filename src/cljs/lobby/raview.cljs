@@ -19,7 +19,7 @@
         :active true
         :tip "Do you have dragons, creatures, or ways to make gold? This may suggest Places of Power that will work well for you or if you can buy several monuments."}}})))
       
-(defn- showsettings! [ hide? ]
+(defn- togglesettings! []
   (if (-> @ra-app :settings :hide) 
       (swap! ra-app update-in [:settings] dissoc :hide) 
       (swap! ra-app assoc-in [:settings :hide] true)))
@@ -83,8 +83,6 @@
         [:i.fas.fa-question-circle.mr-2]
         [:span (:tip tipsettings)]])])
     
-(defn settingscog [] 
-  [:i.fas.fa-cog.fa-lg.m-2.float-right {:style {:cursor "pointer"} :on-click #(showsettings! true) :title "Settings"}])
   
   
 ; Section Elements
@@ -107,7 +105,7 @@
       
 (defn settings []
   [:div.settings.bg-dark.rounded-right.p-1 {:style {:left (if (-> @ra-app :settings :hide) "-200px" "0px")}}
-    [:div [:button.btn.close.mr-1 {:on-click #(showsettings! true)} [:i.fas.fa-times]]]
+    [:div [:button.btn.close.mr-1 {:on-click #(togglesettings!)} [:i.fas.fa-times]]]
     [:div.my-1 [:b "Settings"]]
     [:div.mx-1
       [:label (str "Image Size: " (-> @ra-app :settings :cardsize :scale))]
@@ -172,33 +170,36 @@
   (let [plyrs (:plyrs gm)]
     [:div.row.mb-2
       [:div.col-12
-        [:table.table-hover
-          [:thead [:tr 
-            [:td ]
-            (for [r ["gold" "calm" "elan" "life" "death"]]
-              [:th {:key (gensym)} [:img.resource-sm.mx-1.mb-1 {:src (str "/img/ra/res-" r ".png")}]])
-            [:th.text-center.px-2 "VP"]]]
-          [:tbody
-            (for [p (-> gm :state :turnorder) :let [d (-> gm :state :players (get p))]]
-              [:tr {:key (gensym)} 
-                [:td.px-2.border.border-secondary.d-flex [:b.mr-2 p] (if (-> gm :state :p1 (= p)) [:img.p1.ml-auto {:src "/img/ra/player-1.png"}])]
-                (for [r [:gold :calm :elan :life :death]]
-                  [:td.border.border-secondary.text-center {:key (gensym)} (-> d :public :resources r)])
-                [:td.px-2.text-center.border.border-secondary (+ (if (-> gm :state :p1 (= p)) 1 0) (-> d :public :vp))]])]]
-        [:div]]]))
-    
+        [:div.d-flex
+          [:table.table-hover
+            [:thead [:tr 
+              [:td ]
+              (for [r ["gold" "calm" "elan" "life" "death"]]
+                [:th {:key (gensym)} [:img.resource-sm.mx-1.mb-1 {:src (str "/img/ra/res-" r ".png")}]])
+              [:th.text-center.px-2 "VP"]]]
+            [:tbody
+              (for [p (-> gm :state :turnorder) :let [d (-> gm :state :players (get p))]]
+                [:tr {:key (gensym)} 
+                  [:td.px-2.border.border-secondary.d-flex [:b.mr-2 p] (if (-> gm :state :p1 (= p)) [:img.p1.ml-auto {:src "/img/ra/player-1.png"}])]
+                  (for [r [:gold :calm :elan :life :death]]
+                    [:td.border.border-secondary.text-center {:key (gensym)} (-> d :public :resources r)])
+                  [:td.px-2.text-center.border.border-secondary (+ (if (-> gm :state :p1 (= p)) 1 0) (-> d :public :vp))]])]]
+          [:div.border.border-secondary.w-100.rounded-right ]]]]))
+          
+; |X|   | |
 (defn playerresource [ gid gm uname ]
   [:div.h-100.p-1.border.rounded {:style {:background "rgba(50,50,50,0.5)"}}
-    [:button.btn.btn-danger {:on-click #(comms/leavegame gid)} "Quit"]
-    (settingscog)
-    (if (= (-> gm :state :status) :setup)
-        [:div.row-fluid
-          [:div.h5.text-center "Choose Your Mage"]
-          [:div.d-flex.justify-content-center
-            (doall (for [c (-> gm :state :players (get uname) :private :mages)]
-              (rendercard "mage" c)))]]
-        [:div (str gm) "Player Hand, First Player Token"])])
+    [:button.btn.btn-danger.float-left {:on-click #(comms/leavegame gid)} "Quit"]
+    [:i.fas.fa-cog.fa-lg.m-2.float-right {:style {:cursor "pointer"} :on-click #(togglesettings!) :title "Settings"}]
+    (case (-> gm :state :status) 
+      :setup [:div
+              [:div.h5.text-center "Choose Your Mage"]
+                [:div.d-flex.justify-content-center
+                  (doall (for [c (-> gm :state :players (get uname) :private :mages)]
+                    (rendercard "mage" c)))]]
+      [:div (str gm) "Player Hand, First Player Token"])])
     
+; | | XX | |
 (defn playercards [ gid gm uname ]
   (if (= (-> gm :state :status) :setup)
       [:div.row-fluid
@@ -218,18 +219,18 @@
   [:div.container-fluid.my-2 {:on-mouse-move #(swap! ra-app dissoc :preview)}
     (settings)
     [:div.row
-      [:div.col-10
+      [:div.col-9
         (players gid gm uname)
         [:div.row.justify-content-around
           (placesofpower gm)
           (monuments gm)]]
-      [:div.col-2
+      [:div.col-3
         (let [preview (:preview @ra-app)] 
           [:img.img-fluid.preview.card {:hidden (nil? preview) :src preview}])]]
     [:div.row {:style {:position "fixed" :bottom "15px" :width "100%"}}
       [:div.col-3
         (playerresource gid gm uname)]
-      [:div.col-7
+      [:div.col-6
         (playercards gid gm uname)]
-      [:div.col-2 (chat gid (:chat gm))]]
+      [:div.col-3 (chat gid (:chat gm))]]
   ])

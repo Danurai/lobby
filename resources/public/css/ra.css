@@ -21,6 +21,8 @@
 .preview {
   position: relative;
   z-index: 99;
+  width: 75%;
+  float: right;
 }
   
 .settings {
