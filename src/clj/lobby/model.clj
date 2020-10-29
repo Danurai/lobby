@@ -37,7 +37,6 @@
             
 (defn creategame! [ uname data ]
   (let [gid (-> "gm" gensym keyword)]
-    (println "creating game " gid " owner " uname)
     (addchat! nil uname (str "created " (:game data) " game " (:title data)) :gamestate)
     (swap! appstate assoc :games
       (assoc 
@@ -50,9 +49,10 @@
 	(swap! appstate update-in [:games gid :plyrs] conj uname))
 
 (defn leavegame! [ uname gid ]
-  (addchat! nil uname (str "left " (-> @appstate :games gid :name)) :gamestate)
-	(swap! appstate assoc :games
-    (reduce-kv (fn [m k v] (if (= (:owner v) uname) (dissoc m k) (update-in m [k :plyrs] disj uname))) {} (:games @appstate))))
+  (let [gm (-> @appstate :games gid)]
+    (addchat! nil (str uname (if (= (:owner gm) uname) " (owner)")) (str "left game " (-> @appstate :games gid :title)) :gamestate)
+    (swap! appstate assoc :games
+      (reduce-kv (fn [m k v] (if (= (:owner v) uname) (dissoc m k) (update-in m [k :plyrs] disj uname))) {} (:games @appstate)))))
         
 (defn gamesetup [ gname plyrs ]
   (case gname 
