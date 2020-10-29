@@ -3,6 +3,7 @@ pom.xml.asc
 *.jar
 *.class
 *.sqlite3
+*.log
 /lib/
 /classes/
 /target/
