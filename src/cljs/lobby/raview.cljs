@@ -8,6 +8,7 @@
 
 (def ra-app (let [scale (or (.getItem js/localStorage "cardscale") 4)]
   (r/atom {
+    :target_fn #(= (:type %) "Mage")
     :settings {
       :msg ""
       :hide true
@@ -28,7 +29,20 @@
   (let [w (* base 20) h (* base 28)] 
     (swap! ra-app assoc-in [:settings :cardsize] {:scale base :w w :h h})
     (.setItem js/localStorage "cardscale" base)))
-
+    
+(defn card-click-handler [ gid c ]
+  (let [selected? (-> @ra-app :selected (= (:name c)))] ; Q&D
+    (comms/ra-send! {
+      :gid gid
+      :action (->> c :type clojure.string/lower-case (str "select") keyword)
+      :select? (not selected?)
+      :card c})
+    (if selected?
+      (swap! ra-app dissoc :selected)
+      (swap! ra-app assoc  :selected (:name c)))))
+      
+      
+      
 ; Element functions 
 
 
@@ -44,25 +58,24 @@
 ;    [:div.text-center {:class (if (= res :death) "text-white")} v]])
 
 (defn rendercard 
-  ([ type card size ]
+  ([ gid type card size ]
     (let [ext ".jpg"
           imgsrc (str "/img/ra/" type "-" (:id card) ext)
-          scale (case size :lg 1.5 :sm 0.9  1)]
+          scale (case size :lg 1.5 :sm 0.9  1)
+          target? ((:target_fn @ra-app) card)
+          selected? (-> @ra-app :selected (= (:name card)))]
       [:img.img-fluid.card.mr-2 {
         :key (gensym)
         :style {:display "inline-block"}
         :width  (* (-> @ra-app :settings :cardsize :w) scale)
         :height (* (-> @ra-app :settings :cardsize :h) scale)
         :src imgsrc
-        :class (if (= (str type (:id card)) (:selected @ra-app)) "active")
-        ;:on-click #(let [sel (str type (:id card))] 
-        ;            (if (= sel (:selected @ra-app))
-        ;              (swap! ra-app dissoc :selected)
-        ;              (swap! ra-app assoc :selected sel)))
+        :class (cond selected? "active" target? "target" :else nil)
+        :on-click #(if target? (card-click-handler gid card))
         :on-mouse-move (fn [e] (.stopPropagation e) (swap! ra-app assoc :preview imgsrc))
         :on-mouse-out #(swap! ra-app assoc :preview nil)}]))
-  ([ type card ]
-    (rendercard type card nil)))
+  ([ gid type card ]
+    (rendercard gid type card nil)))
   
 (defn rendercardback [ type ]
   (let [scale (case type "pop" 1.5 "magicitem" 0.9  1)]
@@ -71,40 +84,33 @@
       :height (* (-> @ra-app :settings :cardsize :h) scale)
       :src (str "/img/ra/" type "-back.jpg")}]))  
   
-(defn showdata [gm]
+(defn showdata [ gm ]
   [:div 
     [:div.mb-2 (str @ra-app)]
     [:div (str gm)]])
-    
-(defn tips [ tipsettings ]
-  [:div.tip.pt-2
-    (if (:active tipsettings)
-      [:div.text-center
-        [:i.fas.fa-question-circle.mr-2]
-        [:span (:tip tipsettings)]])])
     
   
   
 ; Section Elements
   
-(defn placesofpower [ gm ]
+(defn placesofpower [ gid gm ]
   [:div
     (doall (for [pop (-> gm :state :pops)]
-      (rendercard "pop" pop :lg)))])
+      (rendercard gid "pop" pop :lg)))])
         
-(defn monuments [ gm ]
+(defn monuments [ gid gm ]
   [:div
     (doall (for [monument (-> gm :state :monuments :public)]
-      (rendercard "monument" monument :lg)))])
+      (rendercard gid "monument" monument :lg)))])
        
-(defn magicitems [ gm ]
+(defn magicitems [ gid gm ]
   [:div.mb-2
     [:div.d-flex.justify-content-center
       (doall (for [magicitem (-> gm :state :magicitems)]
-        (rendercard "magicitem" magicitem)))]])
+        (rendercard gid "magicitem" magicitem)))]])
       
 (defn settings []
-  [:div.settings.bg-dark.rounded-right.p-1 {:style {:left (if (-> @ra-app :settings :hide) "-200px" "0px")}}
+  [:div.settings.bg-dark.rounded-left.p-1 {:style {:right (if (-> @ra-app :settings :hide) "-200px" "0px")}}
     [:div [:button.btn.close.mr-1 {:on-click #(togglesettings!)} [:i.fas.fa-times]]]
     [:div.my-1 [:b "Settings"]]
     [:div.mx-1
@@ -124,6 +130,13 @@
                          (swap! ra-app update-in [:settings :tips] dissoc :active) 
                          (swap! ra-app assoc-in [:settings :tips :active] true))}]]
       ]])
+        
+(defn tips [ tipsettings ]
+  [:div.tip.pt-2
+    (if (:active tipsettings)
+      [:div.text-center
+        [:i.fas.fa-question-circle.mr-2]
+        [:span (:tip tipsettings)]])])
         
 (defn chat [ gid chat ]
   [:div.chat
@@ -184,30 +197,38 @@
                   (for [r [:gold :calm :elan :life :death]]
                     [:td.border.border-secondary.text-center {:key (gensym)} (-> d :public :resources r)])
                   [:td.px-2.text-center.border.border-secondary (+ (if (-> gm :state :p1 (= p)) 1 0) (-> d :public :vp))]])]]
-          [:div.border.border-secondary.w-100.rounded-right ]]]]))
+          [:div.border.border-secondary.w-100.rounded-right 
+            (if (-> gm :state :status (= :setup))
+              [:div 
+                [:div.h5.text-center "Players making choices..."]
+                [:div.d-flex.justify-content-around
+                  (for [p plyrs] 
+                    [:div.mr-2 {:key p}
+                      [:b.mr-2 {:title (-> gm :state :players (get p) str)} p] 
+                      [:i.fas {
+                        :class (if (-> gm :state :players (get p) :public :mage (= 0)) 
+                                    "fa-times-circle text-danger" "fa-check-circle text-success")}]
+                    ])]])]]]]))
           
 ; |X|   | |
 (defn playerresource [ gid gm uname ]
   [:div.h-100.p-1.border.rounded {:style {:background "rgba(50,50,50,0.5)"}}
-    [:button.btn.btn-danger.float-left {:on-click #(comms/leavegame gid)} "Quit"]
-    [:i.fas.fa-cog.fa-lg.m-2.float-right {:style {:cursor "pointer"} :on-click #(togglesettings!) :title "Settings"}]
     (case (-> gm :state :status) 
       :setup [:div
               [:div.h5.text-center "Choose Your Mage"]
                 [:div.d-flex.justify-content-center
                   (doall (for [c (-> gm :state :players (get uname) :private :mages)]
-                    (rendercard "mage" c)))]]
+                    (rendercard gid "mage" c)))]]
       [:div (str gm) "Player Hand, First Player Token"])])
     
 ; | | XX | |
 (defn playercards [ gid gm uname ]
   (if (= (-> gm :state :status) :setup)
-      [:div.row-fluid
+      [:div.row-fluid {:style {:height (* 2 (-> @ra-app :settings :cardsize :h))}}
         [:div.h5.text-center "Artifact Deck:"]
         [:div.d-flex.justify-content-center
           (doall (for [c (-> gm :state :players (get uname) :private :artifacts)]
-            (rendercard "artifact" c)))]
-        (tips (-> @ra-app :settings :tips))]
+            (rendercard gid "artifact" c)))]]
       [:div (str gm) "Places of Power, Artifacts and Magic Item"]))
           
           
@@ -222,9 +243,13 @@
       [:div.col-9
         (players gid gm uname)
         [:div.row.justify-content-around
-          (placesofpower gm)
-          (monuments gm)]]
+          (placesofpower gid gm)
+          (monuments gid gm)]]
       [:div.col-3
+        [:div.row.d-flex.px-2.h-100
+          [:i.fas.fa-cog.fa-lg.ml-auto {:style {:cursor "pointer"} :on-click #(togglesettings!) :title "Settings"}]
+          (tips (-> @ra-app :settings :tips))
+          [:button.btn.btn-sm.btn-danger.ml-auto.mt-auto {:on-click #(comms/leavegame gid)} "Quit"]]
         (let [preview (:preview @ra-app)] 
           [:img.img-fluid.preview.card {:hidden (nil? preview) :src preview}])]]
     [:div.row {:style {:position "fixed" :bottom "15px" :width "100%"}}

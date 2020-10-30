@@ -127,6 +127,79 @@
       :artifacts
       count))
       
+; New AI Player has a Public/private selected Mage
+(expect 1
+  (-> (ramodel/setup ["p1" "AI"])
+      :players
+      (get "AI")
+      :public
+      :mage))
+(expect 1
+  (count 
+    (filter :selected
+      (-> (ramodel/setup ["p1" "AI"])
+          :players
+          (get "AI")
+          :private
+          :mages))))
+
+; Player has a Public/private selected Mage
+(expect 1 
+  (let [gs (ramodel/setup ["p1" "p2" "AI"])]
+      (-> gs
+          (ramodel/selectmage {:card (-> gs :players (get "p1") :private :mages first) :select? true} "p1")
+          :players
+          (get "p1")
+          :public
+          :mage)))
+; ..even if they do it multiple times
+(expect 1 
+  (let [gs (ramodel/setup ["p1" "p2" "AI"])]
+      (-> gs
+          (ramodel/selectmage {:card (-> gs :players (get "p1") :private :mages first) :select? true} "p1")
+          (ramodel/selectmage {:card (-> gs :players (get "p1") :private :mages second) :select? true} "p1")
+          :players
+          (get "p1")
+          :public
+          :mage)))
+; Deselect
+(expect 0 
+  (let [gs (ramodel/setup ["p1" "p2" "AI"])]
+      (-> gs
+          (ramodel/selectmage {:card (-> gs :players (get "p1") :private :mages first) :select? true} "p1")
+          (ramodel/selectmage {:card (-> gs :players (get "p1") :private :mages first) :select? false} "p1")
+          :players
+          (get "p1")
+          :public
+          :mage)))
+; Private, select mage twice        
+(expect 1
+  (let [gs (ramodel/setup ["p1" "p2" "AI"])]
+    (count
+      (filter :selected
+        (-> gs
+            (ramodel/selectmage {:card (-> gs :players (get "p1") :private :mages first) :select? true} "p1")
+            (ramodel/selectmage {:card (-> gs :players (get "p1") :private :mages second) :select? true} "p1")
+            :players
+            (get "p1")
+            :private
+            :mages)))))
+
+; All players selected a mage (including AI setup), game on!
+(expect :started
+  (let [gs (ramodel/setup ["p1" "AI"])]
+    (-> gs
+        (ramodel/selectmage {:card (-> gs :players (get "p1") :private :mages first) :select? true} "p1")
+        :state)))
+          
+(expect 2
+  (let [gs (ramodel/setup ["p1" "AI"])]
+    (->> (ramodel/selectmage gs {:card (-> gs :players (get "p1") :private :mages first) :select? true} "p1")
+          :players
+          (map (fn [[k v]] (-> v :public :mage)))
+          (map :name)
+          count)))
+      
 ; Obfuscation 
 ; Public = P1 can see P1 public data, P2 can see P1 public data
 (expect true 

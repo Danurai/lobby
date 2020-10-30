@@ -35,8 +35,10 @@
   ([ msg ]
     (sendmsg! msg nil)))
   
-(defn ra-send [ ?data ]
-  (chsk-send! [:lobby/ra-action ?data] 5000 nil))
+; RA Send
+  
+(defn ra-send! [ ?data ]
+  (chsk-send! [:lobby/game-action ?data] 5000 nil))
 
 ;;;; Sente send functions
 
