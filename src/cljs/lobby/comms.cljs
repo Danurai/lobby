@@ -1,8 +1,7 @@
 (ns lobby.comms
   (:require 
     [taoensso.sente :as sente :refer [cb-success?]]
-		[lobby.model :as model]
-    [lobby.ramodel :as ra :refer [gamestate]]))
+		[lobby.model :as model]))
 
 (defonce channel-socket
   (sente/make-channel-socket! "/chsk" {:type :auto :ws-kalive-ms 20000}))
@@ -61,7 +60,6 @@
     ;(prn "chsk/recv" ?data)
     (case chan
       :lobby/appstate (reset! model/app state)
-      :lobby/ragame   (reset! ra/gamestate state)
       (prn "unhandled" chan)
       )))
 

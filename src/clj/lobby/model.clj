@@ -56,7 +56,7 @@
         
 (defn gamesetup [ gname plyrs ]
   (case gname 
-    "Res Arcana" (ramodel/setup (if (= 1 (count plyrs)) (conj plyrs "AI") plyrs))
+    "Res Arcana" (ramodel/setup plyrs)  ;(if (= 1 (count plyrs)) (conj plyrs "AI")
     {}))
         
 (defn startgame! [ gid ]
