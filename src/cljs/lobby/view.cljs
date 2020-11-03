@@ -88,6 +88,7 @@
             gm    (-> @model/app :games gid)]
         (-> ((js* "$") "body") (.removeAttr "style"))
         [:div
+          ;[:div (str gm)]
           (if (:state gm)
             (gamehooks gid gm uname)
             [:div.container.my-3 {:style {:min-height "400px"}}

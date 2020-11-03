@@ -8,7 +8,6 @@
 
 (def ra-app (let [scale (or (.getItem js/localStorage "cardscale") 4)]
   (r/atom {
-    :target_fn #(= (:type %) "Mage")
     :settings {
       :msg ""
       :hide true
@@ -32,11 +31,11 @@
     
 (defn card-click-handler [ gid c ]
   (let [selected? (-> @ra-app :selected (= (:name c)))] ; Q&D
-    (comms/ra-send! {
-      :gid gid
-      :action (->> c :type clojure.string/lower-case (str "select") keyword)
-      :select? (not selected?)
-      :card c})
+    ;(comms/ra-send! {
+    ;  :gid gid
+    ;  :action (->> c :type clojure.string/lower-case (str "select") keyword)
+    ;  :select? (not selected?)
+    ;  :card c})
     (if selected?
       (swap! ra-app dissoc :selected)
       (swap! ra-app assoc  :selected (:name c)))))
@@ -62,16 +61,15 @@
     (let [ext ".jpg"
           imgsrc (str "/img/ra/" type "-" (:id card) ext)
           scale (case size :lg 1.5 :sm 0.9  1)
-          target? ((:target_fn @ra-app) card)
-          selected? (-> @ra-app :selected (= (:name card)))]
+          selected? (or (:selected card) (-> @ra-app :selected (= (:name card))))]
       [:img.img-fluid.card.mr-2 {
         :key (gensym)
         :style {:display "inline-block"}
         :width  (* (-> @ra-app :settings :cardsize :w) scale)
         :height (* (-> @ra-app :settings :cardsize :h) scale)
         :src imgsrc
-        :class (cond selected? "active" target? "target" :else nil)
-        :on-click #(if target? (card-click-handler gid card))
+        :class (cond selected? "active" (:target? card) "target" :else nil)
+        :on-click #(if (:target? card) (card-click-handler gid card))
         :on-mouse-move (fn [e] (.stopPropagation e) (swap! ra-app assoc :preview imgsrc))
         :on-mouse-out #(swap! ra-app assoc :preview nil)}]))
   ([ gid type card ]
@@ -103,12 +101,14 @@
     (doall (for [monument (-> gm :state :monuments :public)]
       (rendercard gid "monument" monument :lg)))])
        
-(defn magicitems [ gid gm ]
-  [:div.mb-2
-    [:div.d-flex.justify-content-center
-      (doall (for [magicitem (-> gm :state :magicitems)]
-        (rendercard gid "magicitem" magicitem)))]])
-      
+(defn magicitems [ gid gm uname ]
+  (let [select? (-> gm :state :players (get uname) :action (= :selectmagicitem))]
+    [:div.mb-2 {:hidden (not select?)}; show based on select? or global setting
+      [:div uname (-> gm :state :players (get uname) :action)]
+      [:div.d-flex.justify-content-center
+        (doall (for [magicitem (-> gm :state :magicitems)]
+          (rendercard gid "magicitem" (assoc magicitem :target? select?))))]]))
+        
 (defn settings []
   [:div.settings.bg-dark.rounded-left.p-1 {:style {:right (if (-> @ra-app :settings :hide) "-200px" "0px")}}
     [:div [:button.btn.close.mr-1 {:on-click #(togglesettings!)} [:i.fas.fa-times]]]
@@ -178,7 +178,22 @@
 ;;    :secret { ; no-one knows
 ;;      :discard nil
 ;;    }})
-        
+
+(defn- setupsummary [ gid gm uname ]
+  [:div.p-2
+    [:div.h5.text-center "Players making choices..."]
+    [:div.d-flex.justify-content-around
+      (for [p (:plyrs gm)] 
+        [:div.mr-2 {:key p}
+          [:b.mr-2 {:title (-> gm :state :players (get p) str)} p] 
+          [:i.fas {
+            :class (if (-> gm :state :players (get p) :public :mage (= 0)) 
+                        "fa-times-circle text-danger" "fa-check-circle text-success")}]])]
+    [:div.d-flex [:button.ml-auto.btn.btn-dark.btn-sm {
+      :disabled (> (-> gm :plyrs count) (->> gm :state :players (reduce-kv #(update %1 :count + (-> %3 :public :mage)) {:count 0}) :count))
+      }
+      "Start"]]])
+
 (defn players [ gid gm uname ]
   (let [plyrs (:plyrs gm)]
     [:div.row.mb-2
@@ -198,38 +213,46 @@
                     [:td.border.border-secondary.text-center {:key (gensym)} (-> d :public :resources r)])
                   [:td.px-2.text-center.border.border-secondary (+ (if (-> gm :state :p1 (= p)) 1 0) (-> d :public :vp))]])]]
           [:div.border.border-secondary.w-100.rounded-right 
-            (if (-> gm :state :status (= :setup))
-              [:div 
-                [:div.h5.text-center "Players making choices..."]
-                [:div.d-flex.justify-content-around
-                  (for [p plyrs] 
-                    [:div.mr-2 {:key p}
-                      [:b.mr-2 {:title (-> gm :state :players (get p) str)} p] 
-                      [:i.fas {
-                        :class (if (-> gm :state :players (get p) :public :mage (= 0)) 
-                                    "fa-times-circle text-danger" "fa-check-circle text-success")}]
-                    ])]])]]]]))
+            (case (-> gm :state :status)
+              :setup (setupsummary gid gm uname)
+              [:div "Active/Selected Player Public Data"]
+            )]]]]))
+            
+            
+(defn select-start-mage! [ gid card ]
+  (swap! ra-app dissoc :selected)
+  (comms/ra-send! {:gid gid :action :selectstartmage :card card}))
           
 ; |X|   | |
-(defn playerresource [ gid gm uname ]
-  [:div.h-100.p-1.border.rounded {:style {:background "rgba(50,50,50,0.5)"}}
-    (case (-> gm :state :status) 
-      :setup [:div
-              [:div.h5.text-center "Choose Your Mage"]
+(defn player-hand [ gid gm uname ]
+  (let [pub (-> gm :state :players (get uname) :public)
+        pri (-> gm :state :players (get uname) :private)]
+    [:div.h-100.p-1.border.rounded {:style {:background "rgba(50,50,50,0.5)"}}
+      (case (-> gm :state :status) 
+        :setup [:div
+                [:div.h5.text-center "Choose Your Mage"]
                 [:div.d-flex.justify-content-center
                   (doall (for [c (-> gm :state :players (get uname) :private :mages)]
-                    (rendercard gid "mage" c)))]]
-      [:div (str gm) "Player Hand, First Player Token"])])
-    
+                    (rendercard gid "mage" c)))]
+                [:div.d-flex [:button.btn.btn-dark.ml-auto.btn-sm {:disabled (-> @ra-app :selected nil?) :on-click #(select-start-mage! gid (:selected @ra-app))} "OK"]]]
+        [:div "Player Hand, First Player Token"
+          [:div.d-flex
+            (for [a (-> pri :artifacts)]
+              (doall (rendercard gid "artifact" a)))]])]))
+      
 ; | | XX | |
-(defn playercards [ gid gm uname ]
-  (if (= (-> gm :state :status) :setup)
-      [:div.row-fluid {:style {:height (* 2 (-> @ra-app :settings :cardsize :h))}}
-        [:div.h5.text-center "Artifact Deck:"]
-        [:div.d-flex.justify-content-center
-          (doall (for [c (-> gm :state :players (get uname) :private :artifacts)]
-            (rendercard gid "artifact" c)))]]
-      [:div (str gm) "Places of Power, Artifacts and Magic Item"]))
+(defn player-board [ gid gm uname ]
+  (let [pub (-> gm :state :players (get uname) :public)
+        pri (-> gm :state :players (get uname) :private)]
+    (if (= (-> gm :state :status) :setup)
+        [:div.row-fluid {:style {:height (* 2 (-> @ra-app :settings :cardsize :h))}}
+          [:div.h5.text-center "Artifact Deck:"]
+          [:div.d-flex.justify-content-center
+            (doall (for [c (-> gm :state :players (get uname) :private :artifacts)]
+              (rendercard gid "artifact" c)))]]
+        [:div "Places of Power, Artifacts and Magic Item"
+          [:div.d-flex.justify-content-between
+            (doall (rendercard gid "mage" (-> pub :mage)))]])))
           
           
 (defn ramain [ gid gm uname ]
@@ -239,10 +262,12 @@
   ;(-> ((js* "$") "#navbar") (.attr "hidden" true))
   [:div.container-fluid.my-2 {:on-mouse-move #(swap! ra-app dissoc :preview)}
     (settings)
+    ;(showdata gm)
     [:div.row
       [:div.col-9
         (players gid gm uname)
         [:div.row.justify-content-around
+          (magicitems gid gm uname)
           (placesofpower gid gm)
           (monuments gid gm)]]
       [:div.col-3
@@ -254,8 +279,8 @@
           [:img.img-fluid.preview.card {:hidden (nil? preview) :src preview}])]]
     [:div.row {:style {:position "fixed" :bottom "15px" :width "100%"}}
       [:div.col-3
-        (playerresource gid gm uname)]
+        (player-hand gid gm uname)]
       [:div.col-6
-        (playercards gid gm uname)]
+        (player-board gid gm uname)]
       [:div.col-3 (chat gid (:chat gm))]]
   ])
