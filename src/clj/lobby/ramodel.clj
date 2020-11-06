@@ -3,13 +3,19 @@
     [lobby.radata :refer [data]]))
   
 ;(defonce gamestate (atom {}))
-
+(def gs {
+  :status :setup
+  :pops []
+  :monuments []
+  :magicitems (:magicitems @data)
+  :turnorder []
+  :p1 nil
+  :players {}
+})
+  
 (def playerdata {
   :public {
     :mage 0
-    :artifacts nil
-    :monuments nil
-    :pops nil
     :resources {
       :gold 1
       :calm 1
@@ -20,15 +26,12 @@
     :vp 0
   }
   :private { ; player knows
-    :mages nil
-    :artifacts nil
   }
   :secret { ; no-one knows
     :discard nil
-  }})
-  
-;(reduce-kv (fn [m k v] (assoc m k (count v))) {} t)
-  
+  }
+})
+
 (defn obfuscate [ state plyr ]
   (-> state 
       (assoc-in [:monuments :secret] (-> state :monuments :secret count))
@@ -75,7 +78,7 @@
         pops (-> @data :placesofpower)
         turnorder (shuffle plyrs)
         players (set-player-hands plyrs mages artifacts) ]
-    {
+    (assoc gs 
       :status :setup
       :pops (map (fn [base] (rand-nth (filter #(= (:base %) base) pops))) (->> pops (map :base) frequencies keys))
       :monuments {
@@ -84,7 +87,7 @@
       :magicitems (:magicitems @data)
       :turnorder turnorder
       :p1 (first turnorder)
-      :players (make-ai-choices players)}))
+      :players (make-ai-choices players))))
       
 (defn- start-game [ gs ]
   (-> gs
@@ -101,27 +104,63 @@
           ))) {} (:players gs)))
   
   ))
+  
+
+    
+(defn selectmagicitem [ gamestate ?data uname ]
+  (assoc gamestate
+    :players (reduce-kv 
+              (fn [m k v]
+                (if (= k uname)
+                  (assoc m k (assoc-in v [:public :magicitem] (:card ?data)))
+                  (assoc m k v))) {} (:players gamestate))
+    :magicitems (mapv 
+                  #(if (= (:owner %) uname)
+                       (dissoc % :owner)
+                       (if (= (:name %) (-> ?data :card :name))
+                            (assoc % :owner uname)
+                            %)) (:magicitems gamestate))))
       
       
-(defn- select-magicitem [ gs ]
-  (let [choosing-player (first (-> gs :turnorder reverse))]
-    (assoc gs :players
-      (reduce-kv
-        (fn [m k v]
-          (if (= k choosing-player)
-              (assoc m k (assoc v :action :selectmagicitem))
-              (assoc m k (dissoc v :action)))) {} (:players gs)))))
+(defn- choose-magicitem [ gs choosing-player ]
+(prn "Choose MI " choosing-player)
+  (assoc gs :players
+    (reduce-kv
+      (fn [m k v]
+        (if (= k choosing-player)
+            (assoc m k (assoc v :action :selectmagicitem))
+            (assoc m k (dissoc v :action)))) {} (:players gs))))
+            
+(defn- choose-magicitem-ai [ gs choosing-player ]
+  (prn "AI Choose MI "  (->> gs :magicitems (filter #(nil? (:owner %))) first str))
+  (selectmagicitem 
+    gs
+    {:card (->> gs :magicitems (filter #(nil? (:owner %))) first)}
+    choosing-player))
+            
+(defn choosing-player [ gs ]
+  (let [nomi (reduce-kv #(if (-> %3 :public :magicitem nil?) (conj %1 %2)) #{} (:players gs))]
+    (->> (:turnorder gs)
+         reverse
+         (mapv #(if (contains? nomi %) % nil))
+         (remove nil?)
+         first)))
+
       
-(defn- check-start [ gs ]
+(defn check-start [ gs ]
   (let [nplayers (-> gs :players keys count)]
     (if (= nplayers (reduce + (map (fn [[k v]] (-> v :public :mage)) (:players gs))))             ; All players have selected a Mage
-        (if (> nplayers (reduce + (map (fn [[k v]] (if (-> v :public :magicitem nil?) 0 1)) (:players gs))))  ; All players have selected a Magic Item
-            (select-magicitem gs)
+        (if (> nplayers (reduce + (map (fn [[k v]] (if (-> v :public :magicitem nil?) 0 1)) (:players gs))))  ; Not all players have selected a Magic Item
+            (let [cp (choosing-player gs)]
+              (if (= "AI" cp) 
+                  (check-start (choose-magicitem-ai gs cp))
+                  (choose-magicitem gs cp)))
             (start-game gs))
     gs)))
+                   
       
 (defn selectstartmage [ gamestate ?data uname ]
-; Only runs for game setup...
+; Only runs for game setup..
   (-> gamestate
     (assoc :players 
       (reduce-kv  
@@ -133,9 +172,15 @@
                     (assoc-in [:public :mage] 1))
                 v))) {} (:players gamestate)))
     check-start))
+         
+(defn selectstartitem [ gamestate ?data uname ]
+  (-> (selectmagicitem gamestate ?data uname)
+      check-start))    
     
 (defn parseaction [ gamestate ?data uname ]
   (println "Action:" ?data)
   (case (:action ?data)
     :selectstartmage (selectstartmage gamestate ?data uname)
+    :selectstartitem (selectstartitem gamestate ?data uname)
+    :selectmagicitem (selectmagicitem gamestate ?data uname)
     gamestate))
