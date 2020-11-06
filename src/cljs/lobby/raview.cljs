@@ -179,44 +179,56 @@
 ;;      :discard nil
 ;;    }})
 
-(defn- setupsummary [ gid gm uname ]
+;; TOP ROW ;;
+
+(defn player-resource [ gm ]  
+  [:table.table-hover
+    [:thead [:tr 
+      [:td ]
+      (for [r ["gold" "calm" "elan" "life" "death"]]
+        [:th {:key (gensym)} [:img.resource-sm.mx-1.mb-1 {:src (str "/img/ra/res-" r ".png")}]])
+      [:th.text-center.px-2 "VP"]]]
+    [:tbody
+      (for [p (-> gm :state :turnorder) :let [d (-> gm :state :players (get p))]]
+        [:tr {:key (gensym)} 
+          [:td.px-2.border.border-secondary.d-flex [:b.mr-2 p] (if (-> gm :state :p1 (= p)) [:img.p1.ml-auto {:src "/img/ra/player-1.png"}])]
+          (for [r [:gold :calm :elan :life :death]]
+            [:td.border.border-secondary.text-center {:key (gensym)} (-> d :public :resources r)])
+          [:td.px-2.text-center.border.border-secondary (+ (if (-> gm :state :p1 (= p)) 1 0) (-> d :public :vp))]])]])
+
+(defn- setupsummary [ gid gm ]
   [:div.p-2
     [:div.h5.text-center "Players making choices..."]
     [:div.d-flex.justify-content-around
-      (for [p (:plyrs gm)] 
+      (for [p (:plyrs gm)]
         [:div.mr-2 {:key p}
           [:b.mr-2 {:title (-> gm :state :players (get p) str)} p] 
-          [:i.fas {
-            :class (if (-> gm :state :players (get p) :public :mage (= 0)) 
-                        "fa-times-circle text-danger" "fa-check-circle text-success")}]])]
+          (case (-> gm :state :players (get p) :public :mage)
+                0 [:span.mr-2 [:span.mr-1 "Mage"][:i.fas.fa-times-circle.text-danger]]
+                1 [:span.mr-2 [:span.mr-1 "Mage"][:i.fas.fa-check-circle.text-success]]
+                (rendercard gid "mage" (-> gm :state :players (get p) :public :mage) :sm))
+          (if-let [mi (-> gm :state :players (get p) :public :magicitem)]
+            (rendercard gid "magicitem" mi :sm)
+            [:span.mr-2 [:span.mr-1 "Magic Item"][:i.fas.fa-times-circle.text-danger]])
+          ])]
     [:div.d-flex [:button.ml-auto.btn.btn-dark.btn-sm {
       :disabled (> (-> gm :plyrs count) (->> gm :state :players (reduce-kv #(update %1 :count + (-> %3 :public :mage)) {:count 0}) :count))
       }
       "Start"]]])
-
+      
+(defn player-data [ gid gm ]
+  [:div.border.border-secondary.w-100.rounded-right 
+    (case (-> gm :state :status)
+      :setup (setupsummary gid gm)
+      [:div "Active/Selected Player Public Data"]
+    )])
+          
 (defn players [ gid gm uname ]
-  (let [plyrs (:plyrs gm)]
-    [:div.row.mb-2
-      [:div.col-12
-        [:div.d-flex
-          [:table.table-hover
-            [:thead [:tr 
-              [:td ]
-              (for [r ["gold" "calm" "elan" "life" "death"]]
-                [:th {:key (gensym)} [:img.resource-sm.mx-1.mb-1 {:src (str "/img/ra/res-" r ".png")}]])
-              [:th.text-center.px-2 "VP"]]]
-            [:tbody
-              (for [p (-> gm :state :turnorder) :let [d (-> gm :state :players (get p))]]
-                [:tr {:key (gensym)} 
-                  [:td.px-2.border.border-secondary.d-flex [:b.mr-2 p] (if (-> gm :state :p1 (= p)) [:img.p1.ml-auto {:src "/img/ra/player-1.png"}])]
-                  (for [r [:gold :calm :elan :life :death]]
-                    [:td.border.border-secondary.text-center {:key (gensym)} (-> d :public :resources r)])
-                  [:td.px-2.text-center.border.border-secondary (+ (if (-> gm :state :p1 (= p)) 1 0) (-> d :public :vp))]])]]
-          [:div.border.border-secondary.w-100.rounded-right 
-            (case (-> gm :state :status)
-              :setup (setupsummary gid gm uname)
-              [:div "Active/Selected Player Public Data"]
-            )]]]]))
+  [:div.row.mb-2
+    [:div.col-12
+      [:div.d-flex
+        (player-resource gm)
+        (player-data gid gm)]]])
             
             
 (defn select-start-mage! [ gid card ]
@@ -274,7 +286,7 @@
         [:div.row.d-flex.px-2.h-100
           [:i.fas.fa-cog.fa-lg.ml-auto {:style {:cursor "pointer"} :on-click #(togglesettings!) :title "Settings"}]
           (tips (-> @ra-app :settings :tips))
-          [:button.btn.btn-sm.btn-danger.ml-auto.mt-auto {:on-click #(comms/leavegame gid)} "Quit"]]
+          [:button.btn.btn-sm.btn-danger.ml-auto.mt-auto {:on-click #(if (js/confirm "Are you sure you want to Quit?") (comms/leavegame gid))} "Quit"]]
         (let [preview (:preview @ra-app)] 
           [:img.img-fluid.preview.card {:hidden (nil? preview) :src preview}])]]
     [:div.row {:style {:position "fixed" :bottom "15px" :width "100%"}}
