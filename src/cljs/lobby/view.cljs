@@ -3,17 +3,25 @@
     [reagent.core :as r]
 		[lobby.model :as model]
 		[lobby.comms :as comms]
-    [lobby.raview :refer [ramain]]))
+    [lobby.raview :refer [ramain]]
+    [lobby.daview :refer [damain]]
+  ))
     
 (defn createform []
-  (let [formdata (r/atom {:game "Res Arcana" :title (str (.. js/document (getElementById "loginname") -textContent) "'s Game") :private? false})]
+  (let [formdata (r/atom {
+          :game "Res Arcana" ;(if-let [g1 (-> @model/app :gamelist first)] (key g1) "") 
+          :title (str (.. js/document (getElementById "loginname") -textContent) "'s Game") 
+          :private? false})]
     (fn []
       [:form.form-inline {:on-submit #(.preventDefault %)}
         [:label.my-auto.mr-1 "Game"]
         [:select.form-control.form-control-sm.mr-2 {
           :value (:game @formdata)
           :on-change #(swap! formdata assoc :game (.. % -target -value))}
-          [:option "Res Arcana"]]
+          [:option "Res Arcana"]
+          [:option "Death Angel"]
+          ;(for [g (:gamelist @model/app)] [:option {:key (gensym)} (key g)])
+        ]
         [:label.my-auto.mr-1 "Title"]
         [:input.form-control.form-control-sm.mr-2 {
           :data-lpignore true
@@ -36,7 +44,7 @@
       [:div.col 
         [:div [:span.h5.mr-2 "Join"][:span (str "(" (count gms) ")")]]
         [:div.list-group
-          (for [[k g] gms]
+          (for [[k g] gms :let [full? (= (-> g :plyrs count) (-> g :maxp))]]
             [:div.list-group-item.list-group-item-action {:key k}
               [:div.d-flex
                 [:div 
@@ -45,15 +53,19 @@
                   [:small.mr-2 (str "Host: " (:owner g))]
                   (for [p (:plyrs g)]
                     [:i.fas.fa-user.mr-2 {:key (gensym) :title p :class (if (= p (:owner g)) "text-primary")}])]
-                (if (and (-> g :status nil?) (-> g :private? false?))
-                    [:button.btn.btn-sm.btn-primary.ml-auto 
-                      {:on-click #(comms/joingame (:gid g))}
+                (if (and (-> g :status nil?) (-> g :private? false?) )
+                    [:button.btn.btn-sm.btn-primary.ml-auto {
+                      :disabled full?
+                      :on-click #(comms/joingame (:gid g))}
                       "Join"])]])]]]))
           
 (defn createjoin []
   [:div.col-sm-8
     (create)
     (join)])
+    
+(defn isAI [ p ]
+  (-> @model/app :user-hash (get p) nil?))
     
 (defn gamelobby [ gid gm uname ]
   [:div.col-sm-8
@@ -66,16 +78,18 @@
         [:div.mr-2 {:key p}
           [:div.d-flex [:i.fas.fa-user.fa-lg.mx-auto {:class (if (= (:owner gm) p) "text-primary")}]]
           [:div p]])
-      (if (false? (contains? (:plyrs gm) "AI")) [:button.btn.btn-sm.btn-success.ml-auto {:on-click #(comms/addai gid)} [:i.fas.fa-plus.mr-1] "AI"])]
+      (if (-> (->> @model/app :plyrs (map #(isAI %)) frequencies) (get true) nil?) 
+        [:button.btn.btn-sm.btn-success.ml-auto {:disabled (= (-> gm :plyrs count) (-> gm :maxp)) :on-click #(comms/addai gid)} [:i.fas.fa-plus.mr-1] "Add AI"])]
     [:div.d-flex
       [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]
       (if (= uname (:owner gm))
-          [:button.btn.btn-primary.ml-auto {:on-click #(comms/startgame gid)} "Start"])]
+          [:button.btn.btn-primary.ml-auto {:disabled (< (-> gm :plyrs count) (-> gm :minp)) :on-click #(comms/startgame gid)} "Start"])]
     ])
     
 (defn gamehooks [ gid gm uname ]
   (case (:game gm)
-    "Res Arcana" (ramain gid gm uname )
+    "Res Arcana"  (ramain gid gm uname)
+    "Death Angel" (damain gid gm uname)
     [:div.row-fluid
       [:h5 "Game not found"]
       [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]]))

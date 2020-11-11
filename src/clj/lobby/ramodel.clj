@@ -53,7 +53,7 @@
   (reduce-kv  
     (fn [m k v]
       (assoc m k
-        (if (= k "AI")
+        (if (= "AI" k) ;(re-matches #"AI\d+" k)
             (-> v 
                 (assoc-in [:private :mages 0 :selected] true) 
                 (assoc-in [:public :mage] 1))
@@ -123,7 +123,7 @@
       
       
 (defn- choose-magicitem [ gs choosing-player ]
-(prn "Choose MI " choosing-player)
+;(prn "Choose MI " choosing-player)
   (assoc gs :players
     (reduce-kv
       (fn [m k v]
@@ -132,7 +132,7 @@
             (assoc m k (dissoc v :action)))) {} (:players gs))))
             
 (defn- choose-magicitem-ai [ gs choosing-player ]
-  (prn "AI Choose MI "  (->> gs :magicitems (filter #(nil? (:owner %))) first str))
+;(prn "AI Choose MI "  (->> gs :magicitems (filter #(nil? (:owner %))) first str))
   (selectmagicitem 
     gs
     {:card (->> gs :magicitems (filter #(nil? (:owner %))) first)}
@@ -178,7 +178,7 @@
       check-start))    
     
 (defn parseaction [ gamestate ?data uname ]
-  (println "Action:" ?data)
+  ;(println "Action:" ?data)
   (case (:action ?data)
     :selectstartmage (selectstartmage gamestate ?data uname)
     :selectstartitem (selectstartitem gamestate ?data uname)
