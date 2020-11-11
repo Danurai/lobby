@@ -4,11 +4,14 @@
     [lobby.model :as model]
     [lobby.ramodel :as ramodel]))
     
-(defn newgamegid []
-  (->> {:game "Res Arcana" :title "P1 Game"}
-       (model/creategame! "p1")
-       :games
-       (reduce-kv #(if (= (:owner %3) "p1") %2) {})))
+(defn newgamegid 
+  ([ game ]
+    (->> {:game game :title "P1 Game"}
+         (model/creategame! "p1")
+         :games
+         (reduce-kv #(if (= (:owner %3) "p1") %2) {})))
+  ([]
+    (newgamegid "Res Arcana")))
 ; User connect / disconnect
 
 ; Create / Join / Leave / Start
@@ -45,7 +48,17 @@
         gid
         :plyrs
         (contains? "p2"))))
-
+        
+;;; don't join full game 
+(expect 4
+  (let [gid (newgamegid)]
+    (doseq [n (range 5)]
+      (model/joingame! (gensym "P") gid))
+    (-> @model/appstate
+        :games
+        gid
+        :plyrs 
+        count)))
 ;;; TODO Join nil game, non-existamt game
 
 ;; Leave
@@ -71,8 +84,17 @@
 ;;; TODO Leave nil game, non-existamt game
 
     
-;; Start 'Res Arcana'
+;; Start 'Res Arcana' (2 players min)
 (expect :setup
+  (let [gid (newgamegid) gm (model/joingame! "p2" gid)]
+    (-> (model/startgame! gid)
+        :games 
+        gid
+        :state
+        :status)))
+        
+;; Don't start if minplayers isn't met :minp
+(expect nil
   (let [gid (newgamegid)]
     (-> (model/startgame! gid)
         :games 

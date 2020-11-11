@@ -67,8 +67,8 @@
           :mages))))
 
 ; 1 player game has 1 player etc
-(expect 1
-  (let [gid (newgamegid)]
+(expect 2
+  (let [gid (newgamegid) tmp (model/joingame! "p2" gid)]
     (-> (model/startgame! gid) :games gid :state :players keys count)))
           
 ; Player has a Public/private selected Mage
@@ -157,15 +157,15 @@
         :action
         )))
 ; one at a time
-(expect 1
-  (let [gs (ramodel/setup ["p1" "p2"])]
-    (->> (ramodel/selectstartmage gs {:card (-> gs :players (get "p1") :private :mages first :name)} "p1")
-          :players
-          (reduce-kv
-            #(if (= :selectmagicitem (:action %3)) (update %1 :c inc) %1)
-            {:c 0}
-            )
-          :c)))
+;(expect 1
+;  (let [gs (ramodel/setup ["p1" "p2"])]
+;    (->> (ramodel/selectstartmage gs {:card (-> gs :players (get "p1") :private :mages first :name)} "p1")
+;          :players
+;          (reduce-kv
+;            #(if (= :selectmagicitem (:action %3)) (update %1 :c inc) %1)
+;            {:c 0}
+;            )
+;          :c)))
 ; reverse turn order
 (expect "p1"
   (let [gs (ramodel/setup ["p1" "p2"])]
