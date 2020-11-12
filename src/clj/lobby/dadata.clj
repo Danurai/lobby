@@ -1,16 +1,50 @@
 (ns lobby.dadata)
 
+(def paths {
+  3 [:0 :2 :3 :4]
+  4 [:0 :1C :2 :3 :4]
+  5 [:0 :1B :2 :3 :4]
+  6 [:0 :1A :2 :3 :4]})
+
+(def spawns {
+  3 {:maj 2 :min 1}
+  4 {:maj 3 :min 1}
+  5 {:maj 4 :min 2}
+  6 {:maj 5 :min 3}
+})
+
 (def locations [
-    {:id :void3 :stage 0 :name "Void Lock" :teams 3 :blipcount [6 6] :terrain {}}
-    {:id :void4 :stage 0 :name "Void Lock" :teams 4 :blipcount [7 7] :terrain {}}
-    {:id :void5 :stage 0 :name "Void Lock" :teams 5 :blipcount [8 8] :terrain {}}
-    {:id :void6 :stage 0 :name "Void Lock" :teams 6 :blipcount [9 9] :terrain {}}
+    {:id :void3 :stage :0 :name "Void Lock" :teams 3 :blipcount [6 6] :terrain [{:id :door :top 1}{:id :corner :top 3}{:id :vent :bottom 3}{:id :corridor :bottom 2}] }
+    {:id :void4 :stage :0 :name "Void Lock" :teams 4 :blipcount [7 7] :terrain [{:id :door :top 1}{:id :corner :top 3}{:id :vent :bottom 4}{:id :corridor :bottom 2}] }
+    {:id :void5 :stage :0 :name "Void Lock" :teams 5 :blipcount [8 8] :terrain [{:id :door :top 2}{:id :corner :top 4}{:id :vent :bottom 5}{:id :corridor :bottom 3}] }
+    {:id :void6 :stage :0 :name "Void Lock" :teams 6 :blipcount [9 9] :terrain [{:id :door :top 2}{:id :corner :top 6}{:id :vent :bottom 3}{:id :corridor :bottom 3}] }
   ])
   
+;    {"id":1,"text":"Setup for 1 player (6 Space Marines)",       ,
+;    {"id":2,"text":"Setup for 2 or 4 players (8 Space Marines)", ,
+;    {"id":3,"text":"Setup for 5 players (10 Space Marines)",     ,
+;    {"id":4,"text":"Setup for 3 or 6 players (12 Space Marines)",
+
+(def terrain {
+  :door {
+    :threat 2 :support true :text "Activate: Place 1 support token on this card. When travelling, the current player may first slay 1 Genestealer in the formation for each token on this card." :set "SL06"}
+  :corner {
+    :threat 3 :support false :text "" :set "SL06"},
+  :corridor {
+    :threat 1 :support false :text "" :set "SL06"},
+  :vent {
+    :threat 4 :support false :text "" :set "SL06"},
+  :artefact {
+    :threat 1 :support false :text "Activate: Place this card in your hand. You may discard this card after 1 of your defending Space marines rolls the die to make the attack miss." :set "SL06"}
+  :control {
+    :threat 2 :support true :text "Activate: Use the current Location card's \"Activate Control Panel\" ability." :set "SL06"},
+  :tank {
+    :threat 3 :support false :text "Acivate: Discard this Terrain card and slay all Genestealers on this position. Then roll a die, if you roll [0], slay this Space Marine." :set "SL06"}
+  :chimney {
+    :threat 4 :support false :text "Activate: Roll a die, if you roll [skull], discard this Terrain card." :set "SL06"}
+})
+  
 (def genestealers nil) ; claw bite tail etc
-(def events nil)       ; deck?
-(def terrain nil)    ; Corridor etc
-(def support 12)
 (def teams {        ; Players: Teams {1 3, 2 2, 3 2, 4 1, 5 1, 6 1}
     :blue {
       :orders [
@@ -73,7 +107,39 @@
          {:id 12 :type :claw :squad :yellow :range 2 :name "Brother Goriel" :text "Brother Goriel carefully balances his natural aggression with his trained discipline. Brother Goriel is never far away when violence is brewing."}
       ]}
       })
-      
+
+(def events [
+  {:id 1 :name "Chaos of Battle" :spawn [{:threat 4 :type :min},{:threat 2 :type :min}] :swarm "skull" :action "move" :text "Change every Space Marine's facing."},
+  {:id 2 :name "Chaos of Battle" :spawn [{:threat 4 :type :min},{:threat 2 :type :min}] :swarm "skull" :action "move" :text "Change every Space Marine's facing."},
+  {:id 3 :name "Cleansing Flames" :spawn [{:threat 3 :type :maj},{:threat 1 :type :maj}] :swarm "tongue" :action "move" :text "<b>Instinct</b> Choose a Space Marine and roll a die. If you roll a [skull] slay 2 Genestealers engaged with him (of your choice)."},
+  {:id 4 :name "Enter Formation" :spawn [{:threat 3 :type :maj},{:threat 2 :type :maj}] :swarm "claw" :action "move" :text "Each time a player resolves a Move + Activate action card next round, he may first place 1 Support Token in any Space Marine."},
+  {:id 5 :name "Evasion" :spawn [{:threat 2 :type :min},{:threat 4 :type :min}] :swarm "skull" :action "flank" :text "When a player resolves an Attack Action next round, he may only attack with 1 Space Marine of that Combat Team (instead of both)."},
+  {:id 6 :name "Flanking Manoeuvre" :spawn [{:threat 4 :type :min},{:threat 3 :type :min}] :swarm "null" :action "null" :text "Move all Swarms so that they are behind their engaged Space Marine."},
+  {:id 7 :name "For my Battle Brothers!" :spawn [{:threat 4 :type :maj},{:threat 3 :type :min}] :swarm "tail" :action "move" :text "<b>Instinct</b> Choose a Space Marine that has at least 1 Support Token (if able). Discard 1 Support Token form him and 1 Genestealer engaged with him (of your choice)."},
+  {:id 8 :name "For my Battle Brothers!" :spawn [{:threat 4 :type :maj},{:threat 3 :type :min}] :swarm "tail" :action "move" :text "<b>Instinct</b> Choose a Space Marine that has at least 1 Support Token (if able). Discard 1 Support Token form him and 1 Genestealer engaged with him (of your choice)."},
+  {:id 9 :name "Full Scan" :spawn [{:threat 4 :type :maj},{:threat 2 :type :maj}] :swarm "tongue" :action "move" :text "<b>Instinct</b> Choose a blip pile. Discard the top card of the chosen pile."},
+  {:id 10 :name "Full Scan" :spawn [{:threat 4 :type :maj},{:threat 2 :type :maj}] :swarm "tongue" :action "move" :text "<b>Instinct</b> Choose a blip pile. Discard the top card of the chosen pile."},
+  {:id 11 :name "Gun Jam" :spawn [{:threat 2 :type :maj},{:threat 4 :type :min}] :swarm "tail" :action "move" :text "<b>Instinct</b> Choose a Combat Team that did not reveal an Attack Action this round. Next round,  that combat team may not play an Attack Action card."},
+  {:id 12 :name "Gun Jam" :spawn [{:threat 2 :type :maj},{:threat 4 :type :min}] :swarm "tail" :action "move" :text "<b>Instinct</b> Choose a Combat Team that did not reveal an Attack Action this round. Next round,  that combat team may not play an Attack Action card."},
+  {:id 13 :name "Out of Thin Air" :spawn [{:threat 3 :type :min},{:threat 4 :type :min}] :swarm "skull" :action "flank" :text "<b>Instinct:</b> Choose a Space Marine. Spawn 2 Genestealers behind him."},
+  {:id 14 :name "Out of Thin Air" :spawn [{:threat 3 :type :min},{:threat 4 :type :min}] :swarm "skull" :action "flank" :text "<b>Instinct:</b> Choose a Space Marine. Spawn 2 Genestealers behind him."},
+  {:id 15 :name "Outnumbered" :spawn [{:threat 3 :type :min},{:threat 4 :type :min}] :swarm "claw" :action "flank" :text "Discard all Support Tokens from each Space Marine that is engaged with at least 1 Swarm."},
+  {:id 16 :name "Psychic Assault" :spawn [{:threat 4 :type :min},{:threat 3 :type :min}] :swarm "tongue" :action "flank" :text "<b>Instinct</b> Choose a Space Marine and roll a die. If you roll a [0] or [1], the space marine is slain."},
+  {:id 17 :name "Quick Instincts" :spawn [{:threat 4 :type :maj},{:threat 3 :type :maj}] :swarm "tongue" :action "move" :text "<b>Instinct</b> Choose a Space Marine. He may immediately make 1 attack."},
+  {:id 18 :name "Rescue Space Marine" :spawn [{:threat 3 :type :maj},{:threat 4 :type :maj}] :swarm "claw" :action "move" :text "<b>Instinct</b> Choose a Space Marine that has been slain belonging to a non-eliminated Combat Team. Place the Space Marine card at the bottom of the formation facing the right."},
+  {:id 19 :name "Resupply" :spawn [{:threat 4 :type :maj},{:threat 2 :type :min}] :swarm "skull" :action "move" :text "<b>Instinct</b> Choose a Space Marine. Move all Support Tokens to him from all other Space Marines."},
+  {:id 20 :name "Rewarded Faith" :spawn [{:threat 1 :type :maj},{:threat 4 :type :min}] :swarm "tail" :action "move" :text "<b>Instinct</b> Choose a Space Marine. You may discard any number of Support Tokens from him to slay an equal number of Genestealers engaged with him."},
+  {:id 21 :name "Second Wind" :spawn [{:threat 2 :type :maj},{:threat 4 :type :maj}] :swarm "tongue" :action "move" :text "<b>Instinct</b> Choose a Space Marine. Each time he rolls a [0] while defending next round, the attack misses."},
+  {:id 22 :name "Secret Route" :spawn [{:threat 3 :type :maj},{:threat 1 :type :maj}] :swarm "claw" :action "move" :text "If there is a Door terrain card in the formation, place 2 Support Tokens on it."},
+  {:id 23 :name "Secret Route" :spawn [{:threat 3 :type :maj},{:threat 1 :type :maj}] :swarm "claw" :action "move" :text "If there is a Door terrain card in the formation, place 2 Support Tokens on it."},
+  {:id 24 :name "Stalking from the Shadows" :spawn [{:threat 4 :type :maj},{:threat 1 :type :maj}] :swarm "head" :action "move" :text "<b>Instinct</b> Choose a Space Marine with at least 1 Support Token. DIscard all his Support Tokens."},
+  {:id 25 :name "Stalking from the Shadows" :spawn [{:threat 4 :type :maj},{:threat 1 :type :maj}] :swarm "head" :action "move" :text "<b>Instinct</b> Choose a Space Marine with at least 1 Support Token. DIscard all his Support Tokens."},
+  {:id 26 :name "Surrounded" :spawn [{:threat 4 :type :min},{:threat 3 :type :min}] :swarm "null" :action "null" :text "<b>Instinct</b> Choose a Space Marine. Move all Genestealers (from every position) to the chosen Space Marine's position (do not change their side)."},
+  {:id 27 :name "Temporary Sanctuary" :spawn [{:threat 4 :type :maj},{:threat 3 :type :maj}] :swarm "claw" :action "move" :text "<b>Instinct</b> Choose a swarm of Genestealers. Shuffle all cards from the chose swarm into the smallest blip pile."},
+  {:id 28 :name "The Swarm" :spawn [{:threat 2 :type :min},{:threat 3 :type :min}] :swarm "tail" :action "flank" :text "Place 2 Genestealer cards into each blip pile (from the Genestealer deck)."},
+  {:id 29 :name "The Swarm" :spawn [{:threat 2 :type :min},{:threat 3 :type :min}] :swarm "tail" :action "flank" :text "Place 2 Genestealer cards into each blip pile (from the Genestealer deck)."},
+  {:id 30 :name "They're Everywhere!" :spawn [{:threat 3 :type :min},{:threat 4 :type :min}] :swarm "tail" :action "flank" :text "Spawn 1 Genestealer in front of each Space Marine that is not enagaged with a swarm."}
+])
 ;{
 ;  "location": [
 ;    {"id":1,"name":"Void Lock","text":"Setup for 1 player (6 Space Marines)","blipcount":[6,6],"terrain":[1,2,4,3],"terrainlocation":[1,3,3,2],"spawn":{"major":2,"minor":1},"setup":["2","3","4"],"deck":"0","set":"SL06"},
@@ -108,37 +174,4 @@
 ;    {"id":6,"name":"Control Panel","threat":2,"support":true,"text":"Activate: Use the current Location card's \"Activate Control Panel\" ability.","set":"SL06"},
 ;    {"id":7,"name":"Promethean Tank","threat":3,"support":false,"text":"Acivate: Discard this Terrain card and slay all Genestealers on this position. Then roll a die, if you roll [0], slay this Space Marine.","set":"SL06"},
 ;    {"id":8,"name":"Spore Chimney","threat":4,"support":false,"text":"Activate: Roll a die, if you roll [skull], discard this Terrain card.","set":"SL06"}
-;  ],
-;  "events": [
-;    {"id":1,"name":"Chaos of Battle","spawn":[{"threat":4,"type":"minor"},{"threat":2,"type":"minor"}],"swarm":"skull","action":"move","text":"Change every Space Marine's facing."},
-;    {"id":2,"name":"Chaos of Battle","spawn":[{"threat":4,"type":"minor"},{"threat":2,"type":"minor"}],"swarm":"skull","action":"move","text":"Change every Space Marine's facing."},
-;    {"id":3,"name":"Cleansing Flames","spawn":[{"threat":3,"type":"major"},{"threat":1,"type":"major"}],"swarm":"tongue","action":"move","text":"<b>Instinct</b> Choose a Space Marine and roll a die. If you roll a [skull] slay 2 Genestealers engaged with him (of your choice)."},
-;    {"id":4,"name":"Enter Formation","spawn":[{"threat":3,"type":"major"},{"threat":2,"type":"major"}],"swarm":"claw","action":"move","text":"Each time a player resolves a Move + Activate action card next round, he may first place 1 Support Token in any Space Marine."},
-;    {"id":5,"name":"Evasion","spawn":[{"threat":2,"type":"minor"},{"threat":4,"type":"minor"}],"swarm":"skull","action":"flank","text":"When a player resolves an Attack Action next round, he may only attack with 1 Space Marine of that Combat Team (instead of both)."},
-;    {"id":6,"name":"Flanking Manoeuvre","spawn":[{"threat":4,"type":"minor"},{"threat":3,"type":"minor"}],"swarm":"null","action":"null","text":"Move all Swarms so that they are behind their engaged Space Marine."},
-;    {"id":7,"name":"For my Battle Brothers!","spawn":[{"threat":4,"type":"major"},{"threat":3,"type":"minor"}],"swarm":"tail","action":"move","text":"<b>Instinct</b> Choose a Space Marine that has at least 1 Support Token (if able). Discard 1 Support Token form him and 1 Genestealer engaged with him (of your choice)."},
-;    {"id":8,"name":"For my Battle Brothers!","spawn":[{"threat":4,"type":"major"},{"threat":3,"type":"minor"}],"swarm":"tail","action":"move","text":"<b>Instinct</b> Choose a Space Marine that has at least 1 Support Token (if able). Discard 1 Support Token form him and 1 Genestealer engaged with him (of your choice)."},
-;    {"id":9,"name":"Full Scan","spawn":[{"threat":4,"type":"major"},{"threat":2,"type":"major"}],"swarm":"tongue","action":"move","text":"<b>Instinct</b> Choose a blip pile. Discard the top card of the chosen pile."},
-;    {"id":10,"name":"Full Scan","spawn":[{"threat":4,"type":"major"},{"threat":2,"type":"major"}],"swarm":"tongue","action":"move","text":"<b>Instinct</b> Choose a blip pile. Discard the top card of the chosen pile."},
-;    {"id":11,"name":"Gun Jam","spawn":[{"threat":2,"type":"major"},{"threat":4,"type":"minor"}],"swarm":"tail","action":"move","text":"<b>Instinct</b> Choose a Combat Team that did not reveal an Attack Action this round. Next round,  that combat team may not play an Attack Action card."},
-;    {"id":12,"name":"Gun Jam","spawn":[{"threat":2,"type":"major"},{"threat":4,"type":"minor"}],"swarm":"tail","action":"move","text":"<b>Instinct</b> Choose a Combat Team that did not reveal an Attack Action this round. Next round,  that combat team may not play an Attack Action card."},
-;    {"id":13,"name":"Out of Thin Air","spawn":[{"threat":3,"type":"minor"},{"threat":4,"type":"minor"}],"swarm":"skull","action":"flank","text":"<b>Instinct:</b> Choose a Space Marine. Spawn 2 Genestealers behind him."},
-;    {"id":14,"name":"Out of Thin Air","spawn":[{"threat":3,"type":"minor"},{"threat":4,"type":"minor"}],"swarm":"skull","action":"flank","text":"<b>Instinct:</b> Choose a Space Marine. Spawn 2 Genestealers behind him."},
-;    {"id":15,"name":"Outnumbered","spawn":[{"threat":3,"type":"minor"},{"threat":4,"type":"minor"}],"swarm":"claw","action":"flank","text":"Discard all Support Tokens from each Space Marine that is engaged with at least 1 Swarm."},
-;    {"id":16,"name":"Psychic Assault","spawn":[{"threat":4,"type":"minor"},{"threat":3,"type":"minor"}],"swarm":"tongue","action":"flank","text":"<b>Instinct</b> Choose a Space Marine and roll a die. If you roll a [0] or [1], the space marine is slain."},
-;    {"id":17,"name":"Quick Instincts","spawn":[{"threat":4,"type":"major"},{"threat":3,"type":"major"}],"swarm":"tongue","action":"move","text":"<b>Instinct</b> Choose a Space Marine. He may immediately make 1 attack."},
-;    {"id":18,"name":"Rescue Space Marine","spawn":[{"threat":3,"type":"major"},{"threat":4,"type":"major"}],"swarm":"claw","action":"move","text":"<b>Instinct</b> Choose a Space Marine that has been slain belonging to a non-eliminated Combat Team. Place the Space Marine card at the bottom of the formation facing the right."},
-;    {"id":19,"name":"Resupply","spawn":[{"threat":4,"type":"major"},{"threat":2,"type":"minor"}],"swarm":"skull","action":"move","text":"<b>Instinct</b> Choose a Space Marine. Move all Support Tokens to him from all other Space Marines."},
-;    {"id":20,"name":"Rewarded Faith","spawn":[{"threat":1,"type":"major"},{"threat":4,"type":"minor"}],"swarm":"tail","action":"move","text":"<b>Instinct</b> Choose a Space Marine. You may discard any number of Support Tokens from him to slay an equal number of Genestealers engaged with him."},
-;    {"id":21,"name":"Second Wind","spawn":[{"threat":2,"type":"major"},{"threat":4,"type":"major"}],"swarm":"tongue","action":"move","text":"<b>Instinct</b> Choose a Space Marine. Each time he rolls a [0] while defending next round, the attack misses."},
-;    {"id":22,"name":"Secret Route","spawn":[{"threat":3,"type":"major"},{"threat":1,"type":"major"}],"swarm":"claw","action":"move","text":"If there is a Door terrain card in the formation, place 2 Support Tokens on it."},
-;    {"id":23,"name":"Secret Route","spawn":[{"threat":3,"type":"major"},{"threat":1,"type":"major"}],"swarm":"claw","action":"move","text":"If there is a Door terrain card in the formation, place 2 Support Tokens on it."},
-;    {"id":24,"name":"Stalking from the Shadows","spawn":[{"threat":4,"type":"major"},{"threat":1,"type":"major"}],"swarm":"head","action":"move","text":"<b>Instinct</b> Choose a Space Marine with at least 1 Support Token. DIscard all his Support Tokens."},
-;    {"id":25,"name":"Stalking from the Shadows","spawn":[{"threat":4,"type":"major"},{"threat":1,"type":"major"}],"swarm":"head","action":"move","text":"<b>Instinct</b> Choose a Space Marine with at least 1 Support Token. DIscard all his Support Tokens."},
-;    {"id":26,"name":"Surrounded","spawn":[{"threat":4,"type":"minor"},{"threat":3,"type":"minor"}],"swarm":"null","action":"null","text":"<b>Instinct</b> Choose a Space Marine. Move all Genestealers (from every position) to the chosen Space Marine's position (do not change their side)."},
-;    {"id":27,"name":"Temporary Sanctuary","spawn":[{"threat":4,"type":"major"},{"threat":3,"type":"major"}],"swarm":"claw","action":"move","text":"<b>Instinct</b> Choose a swarm of Genestealers. Shuffle all cards from the chose swarm into the smallest blip pile."},
-;    {"id":28,"name":"The Swarm","spawn":[{"threat":2,"type":"minor"},{"threat":3,"type":"minor"}],"swarm":"tail","action":"flank","text":"Place 2 Genestealer cards into each blip pile (from the Genestealer deck)."},
-;    {"id":29,"name":"The Swarm","spawn":[{"threat":2,"type":"minor"},{"threat":3,"type":"minor"}],"swarm":"tail","action":"flank","text":"Place 2 Genestealer cards into each blip pile (from the Genestealer deck)."},
-;    {"id":30,"name":"They're Everywhere!","spawn":[{"threat":3,"type":"minor"},{"threat":4,"type":"minor"}],"swarm":"tail","action":"flank","text":"Spawn 1 Genestealer in front of each Space Marine that is not enagaged with a swarm."}
 ;  ]
-;}
