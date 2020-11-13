@@ -14,10 +14,10 @@
 })
 
 (def locations [
-    {:id :void3 :stage :0 :name "Void Lock" :teams 3 :blipcount [6 6] :terrain [{:id :door :top 1}{:id :corner :top 3}{:id :vent :bottom 3}{:id :corridor :bottom 2}] }
-    {:id :void4 :stage :0 :name "Void Lock" :teams 4 :blipcount [7 7] :terrain [{:id :door :top 1}{:id :corner :top 3}{:id :vent :bottom 4}{:id :corridor :bottom 2}] }
-    {:id :void5 :stage :0 :name "Void Lock" :teams 5 :blipcount [8 8] :terrain [{:id :door :top 2}{:id :corner :top 4}{:id :vent :bottom 5}{:id :corridor :bottom 3}] }
-    {:id :void6 :stage :0 :name "Void Lock" :teams 6 :blipcount [9 9] :terrain [{:id :door :top 2}{:id :corner :top 6}{:id :vent :bottom 3}{:id :corridor :bottom 3}] }
+    {:id :void3 :stage :0 :name "Void Lock" :teams 3 :blipcount {:top 6 :bot 6} :terrain [{:id :door :facing :top :pos 1}{:id :corner :facing :top :pos 3}{:id :vent :facing :bot :pos 3}{:id :corridor :facing :bot :pos 2}] }
+    {:id :void4 :stage :0 :name "Void Lock" :teams 4 :blipcount {:top 7 :bot 7} :terrain [{:id :door :facing :top :pos 1}{:id :corner :facing :top :pos 3}{:id :vent :facing :bot :pos 4}{:id :corridor :facing :bot :pos 2}] }
+    {:id :void5 :stage :0 :name "Void Lock" :teams 5 :blipcount {:top 8 :bot 8} :terrain [{:id :door :facing :top :pos 2}{:id :corner :facing :top :pos 4}{:id :vent :facing :bot :pos 5}{:id :corridor :facing :bot :pos 3}] }
+    {:id :void6 :stage :0 :name "Void Lock" :teams 6 :blipcount {:top 9 :bot 9} :terrain [{:id :door :facing :top :pos 2}{:id :corner :facing :top :pos 6}{:id :vent :facing :bot :pos 3}{:id :corridor :facing :bot :pos 3}] }
   ])
   
 ;    {"id":1,"text":"Setup for 1 player (6 Space Marines)",       ,
@@ -25,24 +25,24 @@
 ;    {"id":3,"text":"Setup for 5 players (10 Space Marines)",     ,
 ;    {"id":4,"text":"Setup for 3 or 6 players (12 Space Marines)",
 
-(def terrain {
-  :door {
+(def terrain [
+  {:id :door 
     :threat 2 :support true :text "Activate: Place 1 support token on this card. When travelling, the current player may first slay 1 Genestealer in the formation for each token on this card." :set "SL06"}
-  :corner {
+  {:id :corner 
     :threat 3 :support false :text "" :set "SL06"},
-  :corridor {
+  {:id :corridor 
     :threat 1 :support false :text "" :set "SL06"},
-  :vent {
+  {:id :vent 
     :threat 4 :support false :text "" :set "SL06"},
-  :artefact {
+  {:id :artefact 
     :threat 1 :support false :text "Activate: Place this card in your hand. You may discard this card after 1 of your defending Space marines rolls the die to make the attack miss." :set "SL06"}
-  :control {
+  {:id :control 
     :threat 2 :support true :text "Activate: Use the current Location card's \"Activate Control Panel\" ability." :set "SL06"},
-  :tank {
+  {:id :tank 
     :threat 3 :support false :text "Acivate: Discard this Terrain card and slay all Genestealers on this position. Then roll a die, if you roll [0], slay this Space Marine." :set "SL06"}
-  :chimney {
+  {:id :chimney 
     :threat 4 :support false :text "Activate: Roll a die, if you roll [skull], discard this Terrain card." :set "SL06"}
-})
+])
   
 (def genestealers nil) ; claw bite tail etc
 (def teams {        ; Players: Teams {1 3, 2 2, 3 2, 4 1, 5 1, 6 1}
