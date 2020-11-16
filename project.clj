@@ -17,7 +17,7 @@
                  [com.stuartsierra/component "0.3.2"]
                 ; routing
                  [compojure "1.6.0"]
-                 [ring/ring-defaults "0.3.1"]
+                 [ring/ring-defaults "0.3.2"]
                  [clj-http "3.7.0"]
                 ; Websocket sente
                  [com.taoensso/sente "1.12.0"]

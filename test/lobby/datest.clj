@@ -83,13 +83,13 @@
     (damodel/obfuscate "p1") :events))
 ;; :blipdeck 
 ;; Spawn: 3
-(expect  #(> % 16)
+(expect  #(< % 20)
   (->> (damodel/parseaction onepgm {:action :start} "p1") 
-       :blipdeck (map :type) frequencies vals (apply +)))
+       :blipdeck (map :type) frequencies vals (apply +) int))
 ;; & obfuscation
-(expect  #(> % 16)
+(expect #(< % 20)
   (-> onepgm (damodel/parseaction {:action :start} "p1") 
-      (damodel/obfuscate "p1") :blipdeck))
+      (damodel/obfuscate "p1") :blipdeck int))
 
 ; 3. Setup location deck
 ;; :path
@@ -150,14 +150,9 @@
     (-> onepgm (damodel/parseaction {:action :start} "p1") :formation (get 4) :terrain first)
     [:id :facing :threat]))
 ;; 8. Spawn starting genestealers
-;(expect #(> % 2)
-;  (-> onepgm (damodel/parseaction {:action :start} "p1")
-;      :formation first :top count
-;    ))
-;(expect 1
-;  (->> (damodel/parseaction onepgm {:action :start} "p1") 
-;    :formation (map #(apply conj (-> % :top :swarm) (-> % :bot :swarm))) (remove empty?) first
-;    ))
-;(expect true
-;  (-> onepgm (damodel/parseaction {:action :start} "p1") 
-;    :enemies))
+(expect #(> % 0)
+  (->> (damodel/parseaction onepgm {:action :start} "p1")
+        :formation 
+        (map #(-> % :swarm count))
+        (apply +)
+        int))

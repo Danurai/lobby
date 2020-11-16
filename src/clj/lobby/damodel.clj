@@ -10,7 +10,8 @@
     :timelimit 0
     :maxsupport 12
     :chat []
-  } )
+  }
+)
   
   
 (defn obfuscate [ gs plyr ]
@@ -42,7 +43,7 @@
         rand-nth))
         
 (defn- set-terrain [ formation terrain ]
-; terrain {:terrain [{:id :door :facing :top :pos 1} ...]}
+; terrain [{:zone n :terrain [{:id :door :facing :top :pos 1} ...]}]
   (let [flen (count formation)
         adjterrain (map #(if (= (:facing %) :bot) (assoc % :pos (->> % :pos (- flen) inc)) %) terrain)]
     (mapv
@@ -75,35 +76,39 @@
         (map-indexed 
           #(hash-map 
               :zone (inc %1)
-              :top {:swarm []}
-              :bot {:swarm []}
+              ;:terrain [] :swarm []
               :marine (assoc %2 :facing (if (< %1 (/ teamcount 2)) :top :bottom))))))
     
-(defn spawn [ gs spawnzone spawnfacing spawnqty ]
+(defn spawn [ gs {:keys [spawnzone spawnfacing spawnqty]}] ;spawnzone spawnfacing spawnqty ]
   (let [sq (min (-> gs :blips spawnfacing) spawnqty)
         blipdeck (:blipdeck gs)] ;TRAVEL ?
+    ;(prn spawnzone spawnfacing spawnqty)
     (assoc gs
       :formation (mapv 
-                  #(if (= (:zone %) spawnzone) 
-                        (apply update-in % [spawnfacing :swarm] conj (take spawnqty blipdeck)) 
-                        %) (:formation gs))
+                  (fn [zone] 
+                    (if (= (:zone zone) spawnzone)
+                        (apply update zone :swarm conj (map #(assoc % :facing spawnfacing) (take spawnqty blipdeck))) 
+                        zone)) (:formation gs))
       :blipdeck (nthrest blipdeck sq)
       
     )))
     
-;(defn threat-spawn [ gs threatmap ]
-; (prn threatmap)
-; (prn (-> gs :formation (map #(
- ;{:threat 4, qty 1} >> {:zone x :facing :t/b :qty n}
- ;(map #(assoc )
     
 (defn event-spawn [ gs ev ]
-  (let [threatmap (map #(assoc % :qty (get (:spawns gs) (:type %))) (:spawn ev))]
-    (spawn gs 1 :top 2)
-    ;(reduce threat-spawn gs threatmap)
+  (let [threatmap (apply merge (map #(hash-map (:threat %) (get (:spawns gs) (:type %))) (:spawn ev)))
+        spawnmap  (->>    ; {:zone #, :facing :top/:bot :qty qty)
+                    (map #(map (fn [t] {:spawnzone (:zone %) :spawnfacing (:facing t) :spawnqty (get threatmap (:threat t))}) (:terrain %)) (:formation gs))
+                    (apply concat)
+                    (filter #(some? (:spawnqty %)))
+                    )]
 ; Location Movement? (not turn 1)
-; Event Effect? Macro/option
+    ;(prn threatmap spawnmap)
+    ;(prn (reduce spawn gs spawnmap))
+; Event Spawns
+    (reduce spawn gs spawnmap)
+; Event Effect? Macro/option?
 ))
+
 
 (def blipdeck 
   (map-indexed 
@@ -121,9 +126,8 @@
         (assoc :formation (setformation (:teams gs) teamcount))                       ; set formation
         travel                                                                        ; travel to Void Lock
         (assoc :event (first events) :events (rest events))                           ; select event (for spawns)
-        (event-spawn (first events))                                                        ; spawn
-        )                       
-))
+        (event-spawn (first events))                                                  ; spawn
+    )))
           
 (defn parseaction [ gs ?data plyr ]
   (case (:action ?data)

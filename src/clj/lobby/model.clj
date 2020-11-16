@@ -37,6 +37,7 @@
       gm
       (case (:game gm)
         "Res Arcana" (assoc gm :state (ramodel/obfuscate (:state gm) uname))
+        "Death Angel" (assoc gm :state (damodel/obfuscate (:state gm) uname))
         gm)))
         
 (defn obfuscate-state [ uid ]
