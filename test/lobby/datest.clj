@@ -70,8 +70,8 @@
         :teams)))))
   
 ; Start 1p game
-(expect true
-  (-> onepgm (damodel/parseaction :start "p1") some?))
+;(expect true
+;  (-> onepgm (damodel/parseaction :start "p1") some?))
   
 ; 1. Setup decks
 ;; :event, :events & obfuscation
@@ -156,3 +156,9 @@
         (map #(-> % :swarm count))
         (apply +)
         int))
+        
+        
+(expect nil
+  (let [gid (newgamegid "Death Angel")]
+    (-> (model/leavegame! "p1" gid)
+        :games gid)))

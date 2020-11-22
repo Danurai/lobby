@@ -50,21 +50,29 @@
       :artifacts
       count))
       
+; new player :action is :selectmage
+(expect :selectmage
+  (-> (ramodel/setup ["p1"])
+      :players
+      (get "p1")
+      :action))
+      
 ; New AI Player has a Public/private selected Mage
 (expect 1
-  (-> (ramodel/setup ["p1" "AI"])
-      :players
-      (get "AI")
-      :public
-      :mage))
+  (let [aip (-> "AI" gensym str)]
+    (-> (ramodel/setup ["p1" aip])
+        :players
+        (get aip)
+        :public
+        :mage)))
 (expect 1
-  (count 
-    (filter :selected
-      (-> (ramodel/setup ["p1" "AI"])
+  (let [aip (-> "AI" gensym str)]
+    (count (filter :selected 
+      (-> (ramodel/setup ["p1" aip])
           :players
-          (get "AI")
+          (get aip)
           :private
-          :mages))))
+          :mages)))))
 
 ; 1 player game has 1 player etc
 (expect 2
@@ -141,13 +149,13 @@
           )))
      
 ;; Select Magic Item
-(expect "AI"
-  (-> (ramodel/setup ["AI"])
-      ramodel/check-start
-      :magicitems 
-      first 
-      :owner
-      ))
+;(expect #(some? (re-matches #"AI\d+" %))
+;  (-> (ramodel/setup [(-> "AI" gensym str)])
+;      ramodel/check-start
+;      :magicitems 
+;      first 
+;      :owner
+;      ))
     
 (expect :selectmagicitem
   (let [gs (ramodel/setup ["p1"])]

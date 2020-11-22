@@ -69,13 +69,13 @@
   (let [gm (-> @appstate :games gid)]
     (when (> (:maxp gm) (-> gm :plyrs count))
       (addchat! nil uname (str "joined " (:title :gm)) :gamestate)
-      (swap! appstate update-in [:games gid :plyrs] conj (if (= uname "AI") (gensym uname) uname)))))
+      (swap! appstate update-in [:games gid :plyrs] conj (if (= uname "AI") (-> "AI" gensym str) uname)))))
 
 (defn leavegame! [ uname gid ]
   (let [gm (-> @appstate :games gid)]
     (addchat! nil (str uname (if (= (:owner gm) uname) " (owner)")) (str "left game " (-> @appstate :games gid :title)) :gamestate)
     (swap! appstate assoc :games
-      (reduce-kv (fn [m k v] (if (= (:owner v) uname) (dissoc m k) (update-in m [k :plyrs] disj uname))) {} (:games @appstate)))))
+      (reduce-kv (fn [m k v] (if (= (:owner v) uname) (dissoc m k) (assoc m k  (update-in v [:plyrs] disj uname)))) {} (:games @appstate)))))
     
 (defn- gamesetup [ gname plyrs ]
   (case gname 
@@ -95,5 +95,5 @@
       (swap! appstate assoc-in [:games gid :state]
         (case (:game game)
           "Res Arcana"  (ramodel/parseaction (:state game) ?data uname)
-          "Death Angel" (ramodel/parseaction (:state game) ?data uname)
+          "Death Angel" (damodel/parseaction (:state game) ?data uname)
           (:state game))))))

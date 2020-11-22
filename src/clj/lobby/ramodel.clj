@@ -49,12 +49,12 @@
           ) {} (:players state)))))
           
 (defn- make-ai-choices [ players ]
-  ;(prn players)
   (reduce-kv  
     (fn [m k v]
       (assoc m k
-        (if (= "AI" k) ;(re-matches #"AI\d+" k)
+        (if (some? (re-matches #"AI\d+" k))
             (-> v 
+                (dissoc :action)
                 (assoc-in [:private :mages 0 :selected] true) 
                 (assoc-in [:public :mage] 1))
             v))) {} players))
@@ -66,6 +66,7 @@
       (fn [id nm]
         (let [mstart (* id 2) astart (* id 8)]
           (-> playerdata
+              (assoc :action :selectmage)
               (assoc-in [:private :mages]     (mapv #(assoc % :target? true) (subvec mages mstart (+ mstart 2))))
               (assoc-in [:private :artifacts] (subvec artifacts astart (+ astart 8))))))
       plyrs)))
@@ -98,15 +99,12 @@
             (let [artifacts (-> v :private :artifacts)]
               (-> m
                   (assoc k v)
+                  (dissoc :action)
                   (assoc-in [k :public :mage] (->> v :private :mages (filter :selected) first)) ; Switch Selected Mage to Public
-                  (assoc-in [k :private :artifacts] (take 3 artifacts))    ; Draw 2 artifacts
-                  (assoc-in [k :secret :artifacts] (nthrest artifacts 3))  ; Artifact deck
-          ))) {} (:players gs)))
+                  (assoc-in [k :private :artifacts] (take 3 artifacts))                         ; Draw 2 artifacts
+                  (assoc-in [k :secret :artifacts] (nthrest artifacts 3))                       ; Artifact deck
+          ))) {} (:players gs)))))
   
-  ))
-  
-
-    
 (defn selectmagicitem [ gamestate ?data uname ]
   (assoc gamestate
     :players (reduce-kv 
@@ -123,7 +121,6 @@
       
       
 (defn- choose-magicitem [ gs choosing-player ]
-;(prn "Choose MI " choosing-player)
   (assoc gs :players
     (reduce-kv
       (fn [m k v]
@@ -132,7 +129,6 @@
             (assoc m k (dissoc v :action)))) {} (:players gs))))
             
 (defn- choose-magicitem-ai [ gs choosing-player ]
-;(prn "AI Choose MI "  (->> gs :magicitems (filter #(nil? (:owner %))) first str))
   (selectmagicitem 
     gs
     {:card (->> gs :magicitems (filter #(nil? (:owner %))) first)}
@@ -145,14 +141,13 @@
          (mapv #(if (contains? nomi %) % nil))
          (remove nil?)
          first)))
-
-      
+         
 (defn check-start [ gs ]
   (let [nplayers (-> gs :players keys count)]
     (if (= nplayers (reduce + (map (fn [[k v]] (-> v :public :mage)) (:players gs))))             ; All players have selected a Mage
         (if (> nplayers (reduce + (map (fn [[k v]] (if (-> v :public :magicitem nil?) 0 1)) (:players gs))))  ; Not all players have selected a Magic Item
             (let [cp (choosing-player gs)]
-              (if (= "AI" cp) 
+              (if (some? (re-matches #"AI\d+" cp)) 
                   (check-start (choose-magicitem-ai gs cp))
                   (choose-magicitem gs cp)))
             (start-game gs))
@@ -178,7 +173,7 @@
       check-start))    
     
 (defn parseaction [ gamestate ?data uname ]
-  ;(println "Action:" ?data)
+  (println "Action:" ?data)
   (case (:action ?data)
     :selectstartmage (selectstartmage gamestate ?data uname)
     :selectstartitem (selectstartitem gamestate ?data uname)

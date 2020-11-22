@@ -104,7 +104,11 @@
 (defn magicitems [ gid gm uname ]
   (let [select? (-> gm :state :players (get uname) :action (= :selectmagicitem))]
     [:div.mb-2 {:hidden (not select?)}; show based on select? or global setting
-      [:div uname (-> gm :state :players (get uname) :action)]
+      [:h5.text-center {:hidden (nil? select?)} "Select a Magic Item" 
+        [:button.btn.btn-sm.btn-secondary {
+          ;:disabled (nil? (:selected @ra-app))
+          :on-click #(comms/ra-send! {:gid gid :action :selectstartitem :card (-> @ra-app :selected str)})}
+          "OK"]]
       [:div.d-flex.justify-content-center
         (doall (for [magicitem (-> gm :state :magicitems)]
           (rendercard gid "magicitem" (assoc magicitem :target? select?))))]]))
@@ -241,12 +245,16 @@
         pri (-> gm :state :players (get uname) :private)]
     [:div.h-100.p-1.border.rounded {:style {:background "rgba(50,50,50,0.5)"}}
       (case (-> gm :state :status) 
-        :setup [:div
-                [:div.h5.text-center "Choose Your Mage"]
-                [:div.d-flex.justify-content-center
-                  (doall (for [c (-> gm :state :players (get uname) :private :mages)]
-                    (rendercard gid "mage" c)))]
-                [:div.d-flex [:button.btn.btn-dark.ml-auto.btn-sm {:disabled (-> @ra-app :selected nil?) :on-click #(select-start-mage! gid (:selected @ra-app))} "OK"]]]
+        :setup (if (= (-> gm :state :players (get uname) :action) :selectmage)
+                [:div
+                  [:div.h5.text-center "Choose Your Mage"]
+                  [:div.d-flex.justify-content-center
+                    (doall (for [c (:mages pri)]
+                      (rendercard gid "mage" c)))]
+                  [:div.d-flex [:button.btn.btn-dark.ml-auto.btn-sm {:disabled (-> @ra-app :selected nil?) :on-click #(select-start-mage! gid (:selected @ra-app))} "OK"]]]
+                [:div 
+                  [:div.h5.text-center "Mage:"]
+                  [:div.d-flex.justify-content-center (rendercard gid "mage" (->> pri :mages (filter :selected) first))]])
         [:div "Player Hand, First Player Token"
           [:div.d-flex
             (for [a (-> pri :artifacts)]
@@ -274,7 +282,7 @@
   ;(-> ((js* "$") "#navbar") (.attr "hidden" true))
   [:div.container-fluid.my-2 {:on-mouse-move #(swap! ra-app dissoc :preview)}
     (settings)
-    ;(showdata gm)
+    (showdata gm)
     [:div.row
       [:div.col-9
         (players gid gm uname)

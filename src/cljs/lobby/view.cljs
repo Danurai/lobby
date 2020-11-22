@@ -99,17 +99,17 @@
     (fn []
       (let [uname (.. js/document (getElementById "loginname") -textContent)
             gid   (reduce-kv #(if (contains? (:plyrs %3) uname) %2) {} (:games @model/app))
-            gm    (-> @model/app :games gid)]
+            gm    (if gid (-> @model/app :games gid) nil)
+            ]
         (-> ((js* "$") "body") (.removeAttr "style"))
         [:div
-          ;[:div (str gm)]
           (if (:state gm)
             (gamehooks gid gm uname)
             [:div.container.my-3 {:style {:min-height "400px"}}
               [:div.row
                 (if gm
                   (gamelobby gid gm uname)
-                  (createjoin))
+                  (createjoin))    
                 [:div.col-sm-4.h-100
                   [:div.p-2.border.rounded.mb-2 {:style {:height "50%"}}
                     [:h5 "Connected"]

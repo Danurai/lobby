@@ -120,6 +120,7 @@
   (let [teamcount (->> gs :teams (filter (fn [[k v]] (-> v :cmdr some?))) count)
         events (shuffle data/events)]
     (-> gs
+        (assoc :status :started)
         (assoc :blipdeck blipdeck)  ; blip pile
         (assoc :path   (get data/paths teamcount))                                    ; set mission path
         (assoc :spawns (get data/spawns teamcount))                                   ; set spawn numbers (Void Lock)
