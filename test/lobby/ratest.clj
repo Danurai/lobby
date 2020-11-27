@@ -95,48 +95,15 @@
         :public 
         :mage)))
 ; ..even if they do it multiple times
-; Removed
-;(expect 1
-;  (let [gid   (newgamegid)
-;        p2    (model/joingame! "p2" gid)
-;        state (model/startgame! gid)
-;        cards (-> state :games gid :state :players (get "p1") :private :mages)]
-;   (do 
-;       (model/updategame! {:gid gid :action :selectstartmage :select? true :card (first cards)} "p1")
-;       (model/updategame! {:gid gid :action :selectstartmage :select? false :card (first cards)} "p1")
-;       (model/updategame! {:gid gid :action :selectstartmage :select? true :card (second cards)} "p1"))
-;    (-> @model/appstate  (ramodel/obfuscate "p1")
-;        ;(model/obfuscate-state "p1")
-;        :games
-;        gid
-;        :state
-;        :players
-;        (get "p1")
-;        :public 
-;        :mage
-;        )))
+;; TODO ??
         
-; Deselect
-; removed
-; Private, select mage twice    
-; removed    
-;(expect 1
-;  (let [gs (ramodel/setup ["p1" "p2" "AI"])]
-;    (count
-;      (filter :selected
-;        (-> gs
-;            (ramodel/selectstartmage {:card (-> gs :players (get "p1") :private :mages first) :select? true} "p1")
-;            (ramodel/selectstartmage {:card (-> gs :players (get "p1") :private :mages second) :select? true} "p1")
-;            :players
-;            (get "p1")
-;            :private
-;            :mages)))))
-
 ; All players selected a mage (including AI setup), and a Magic Item game on!
+;; TODO 
 ;(expect :started
 ;  (let [gs (ramodel/setup ["p1" "AI"])]
 ;    (-> gs
 ;        (ramodel/selectstartmage {:card (-> gs :players (get "p1") :private :mages first :name)} "p1")
+
 ;        :status)))
           
 (expect 2
@@ -147,37 +114,23 @@
           (map :name)
           count
           )))
-     
+
+;; Select Mage 
+;; TODO 
+
+          
 ;; Select Magic Item
-;(expect #(some? (re-matches #"AI\d+" %))
-;  (-> (ramodel/setup [(-> "AI" gensym str)])
-;      ramodel/check-start
-;      :magicitems 
-;      first 
-;      :owner
-;      ))
-    
-(expect :selectmagicitem
-  (let [gs (ramodel/setup ["p1"])]
-    (-> (ramodel/selectstartmage gs {:card (-> gs :players (get "p1") :private :mages first :name)} "p1")
-        :players
-        (get "p1")
-        :action
-        )))
 ; one at a time
-;(expect 1
-;  (let [gs (ramodel/setup ["p1" "p2"])]
-;    (->> (ramodel/selectstartmage gs {:card (-> gs :players (get "p1") :private :mages first :name)} "p1")
-;          :players
-;          (reduce-kv
-;            #(if (= :selectmagicitem (:action %3)) (update %1 :c inc) %1)
-;            {:c 0}
-;            )
-;          :c)))
+;; TODO 
 ; reverse turn order
-(expect "p1"
-  (let [gs (ramodel/setup ["p1" "p2"])]
-    (ramodel/choosing-player (assoc gs :turnorder ["p2" "p1"]))))
+;; TODO
+;(expect :selectmagicitem
+;  (let [gs (ramodel/setup ["p1"])]
+;    (-> (ramodel/selectstartmage gs {:card (-> gs :players (get "p1") :private :mages first :name)} "p1")
+;        :players
+;        (get "p1")
+;        :action
+;        )))
      
 ; Obfuscation 
 ; Public = P1 can see P1 public data, P2 can see P1 public data

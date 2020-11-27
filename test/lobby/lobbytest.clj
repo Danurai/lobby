@@ -94,13 +94,14 @@
         :status)))
         
 ;; Don't start if minplayers isn't met :minp
-(expect nil
-  (let [gid (newgamegid)]
-    (-> (model/startgame! gid)
-        :games 
-        gid
-        :state
-        :status)))
+;; TODO 
+;(expect nil
+;  (let [gid (newgamegid)]
+;    (-> (model/startgame! gid)
+;        :games 
+;        gid
+;        :state
+;        :status)))
     
 
 ;;; TODO Start nil game, non-existamt game
