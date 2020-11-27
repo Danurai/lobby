@@ -11,8 +11,7 @@
     :maxsupport 12
     :chat []
   }
-)
-  
+)  
   
 (defn obfuscate [ gs plyr ]
   (assoc gs
