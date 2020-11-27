@@ -1,6 +1,10 @@
 (ns lobby.daview
   (:require 
-    [lobby.comms :as comms]))
+    [reagent.core :as r]
+    [lobby.comms :as comms]
+    [lobby.model :as model]))
+    
+(defonce formation (r/atom nil))
     
 (defn- teambox [ gid id tm plyr? ]
   [:div.col-sm.border.border-light.rounded.m-2.p-2 {
@@ -41,17 +45,55 @@
         )]
         
   ])
+  
+(defn draw_page [ canvas f ]
+  (let [ctx (.getContext canvas "2d")
+        w (.-clientWidth canvas) 
+        h (.-clientHeight canvas)]
+    (.clearRect ctx 0 0 w h)
+    
+    (.drawImage ctx (.getElementById js/document "tm") 0 0 170 207)
+    
+    (set! (.-fillStyle ctx) "rgb(200,0,0)")
+    (set! (.-strokeStyle ctx) "rgb(200,0,0)")
+    ;(.fillRect ctx 0,0,100,100)
+    ;(.strokeText ctx (-> f count str) 10 10 )
+    ))
+         
+(defn canvasclass [ gid gm uname ]
+  (let [dom-node (r/atom nil)]
+    (r/create-class
+     {:component-did-update
+        (fn [ this ]
+          (draw_page (.getElementById js/document "drawing") (-> gm :state :formation)))
+      :component-did-mount
+        (fn [ this ]
+          (reset! dom-node (r/dom-node this)))
+      :reagent-render
+        (fn [ ]
+          @model/app
+          (let [zones (-> gm :state :formation count)]
+            [:div ;{:style {:overflow-x "scroll"}}
+              [:canvas#drawing.border (if-let [node @dom-node]  {
+                :style {:width "1000px" :height "500px"}
+                ;:on-click      mouseclick
+                ;:on-mouse-move mousemove
+                ;:on-mouse-out  #(swap! appstate dissoc :mx :my)
+              })]]))})))
 
 (defn damain [ gid gm uname ]
   (-> ((js* "$") "body") 
       (.css "background-color" "#222222")
       (.css "color" "grey"))
   [:div.container-fluid.my-3 
+    [:div ;{:display "none"}
+      [:img#tm {:src "/img/da/term.jpg" :width "170px" :height "207px"}]]
     (case (-> gm :state :status)
       :setup (chooseteams gid gm uname)
-      [:div 
+      [:div
         [:h5 "Welcome to The Hulk"]
-        [:div (str gm)]])
+        [canvasclass gid gm uname]
+        [:div.my-3 (str gm)]])
     [:div (-> gm :state :teams str)]
     [:div.py-3
       [:button.btn.btn-sm.btn-dark.float-right {:on-click #(if (js/confirm "Are you sure you want to Quit?") (comms/leavegame gid))} "Quit"]]])

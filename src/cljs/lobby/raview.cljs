@@ -274,7 +274,6 @@
           [:div.d-flex.justify-content-between
             (doall (rendercard gid "mage" (-> pub :mage)))]])))
           
-          
 (defn ramain [ gid gm uname ]
   (-> ((js* "$") "body") 
       (.css "background-image" "url(/img/ra/ra-bg.png")
@@ -282,7 +281,7 @@
   ;(-> ((js* "$") "#navbar") (.attr "hidden" true))
   [:div.container-fluid.my-2 {:on-mouse-move #(swap! ra-app dissoc :preview)}
     (settings)
-    (showdata gm)
+    ;(showdata gm)
     [:div.row
       [:div.col-9
         (players gid gm uname)
