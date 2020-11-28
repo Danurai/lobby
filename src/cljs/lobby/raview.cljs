@@ -274,7 +274,6 @@
           [:div.d-flex.justify-content-between
             (doall (rendercard gid "mage" (-> pub :mage)))]])))
           
-          
 (defn ramain [ gid gm uname ]
   (-> ((js* "$") "body") 
       (.css "background-image" "url(/img/ra/ra-bg.png")

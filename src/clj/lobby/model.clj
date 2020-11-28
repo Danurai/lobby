@@ -6,7 +6,7 @@
 
 (defonce gamelist {
   "Res Arcana" {
-    :minp 2
+    :minp 1
     :maxp 4
     :has-ai true
   }
