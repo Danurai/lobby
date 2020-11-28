@@ -57,9 +57,8 @@
 
 (defmethod event-msg-handler :chsk/recv [{:as ev-msg :keys [?data]}]
   (let [chan (first ?data) state (second ?data)]
-    ;(prn "chsk/recv" ?data)
     (case chan
-      :lobby/appstate (reset! model/app state)
+      :lobby/appstate (model/reset-app-state! state)
       (prn "unhandled" chan)
       )))
 

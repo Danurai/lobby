@@ -282,7 +282,7 @@
   ;(-> ((js* "$") "#navbar") (.attr "hidden" true))
   [:div.container-fluid.my-2 {:on-mouse-move #(swap! ra-app dissoc :preview)}
     (settings)
-    (showdata gm)
+    ;(showdata gm)
     [:div.row
       [:div.col-9
         (players gid gm uname)

@@ -87,6 +87,7 @@
   (let [gm (-> @appstate :games gid)]
     (when (>= (-> gm :plyrs count) (:minp gm))
       (addchat! nil (:owner gm) (str "started " (-> @appstate :games gid :name)) :gamestate)
+      (swap! appstate assoc-in [:games gid :started] true)
       (swap! appstate assoc-in [:games gid :state] (gamesetup (:game gm) (:plyrs gm))))))
            
 (defn updategame! [ ?data uname ]
