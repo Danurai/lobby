@@ -64,9 +64,10 @@
           selected? (or (:selected card) (-> @ra-app :selected (= (:name card))))]
       [:img.img-fluid.card.mr-2 {
         :key (gensym)
-        :style {:display "inline-block"}
-        :width  (* (-> @ra-app :settings :cardsize :w) scale)
-        :height (* (-> @ra-app :settings :cardsize :h) scale)
+        :style {
+          :display "inline-block"
+          :width  (* (-> @ra-app :settings :cardsize :w) scale) 
+          :height (* (-> @ra-app :settings :cardsize :h) scale)}
         :src imgsrc
         :class (cond selected? "active" (:target? card) "target" :else nil)
         :on-click #(if (:target? card) (card-click-handler gid card))
@@ -102,14 +103,15 @@
       (rendercard gid "monument" monument :lg)))])
        
 (defn magicitems [ gid gm uname ]
-  (let [select? (-> gm :state :players (get uname) :action (= :selectmagicitem))]
+  (let [select? (-> gm :state :players (get uname) :action (= :selectstartitem))]
     [:div.mb-2 {:hidden (not select?)}; show based on select? or global setting
       [:h5.text-center {:hidden (nil? select?)} "Select a Magic Item" 
-        [:button.btn.btn-sm.btn-secondary {
-          ;:disabled (nil? (:selected @ra-app))
+        [:div (:selected @ra-app)]
+        [:button.btn.btn-sm.btn-secondary.float-right {
+          :disabled (nil? (:selected @ra-app))
           :on-click #(comms/ra-send! {:gid gid :action :selectstartitem :card (-> @ra-app :selected str)})}
           "OK"]]
-      [:div.d-flex.justify-content-center
+      [:div.d-flex
         (doall (for [magicitem (-> gm :state :magicitems)]
           (rendercard gid "magicitem" (assoc magicitem :target? select?))))]]))
         
@@ -158,7 +160,6 @@
           :value (:msg @ra-app)
           :on-change #(swap! ra-app assoc :msg (-> % .-target .-value))}]
         [:span.input-group-append [:button.btn.btn-sm.btn-outline-secondary {:type "btn"} [:i.fas.fa-arrow-right]]]]]])
-        
         
 ; Player Data
 ;;  (def playerdata {
@@ -255,8 +256,9 @@
                 [:div 
                   [:div.h5.text-center "Mage:"]
                   [:div.d-flex.justify-content-center (rendercard gid "mage" (->> pri :mages (filter :selected) first))]])
-        [:div "Player Hand, First Player Token"
-          [:div.d-flex
+        [:div 
+          [:div "Player Hand, First Player Token"]
+          [:div
             (for [a (-> pri :artifacts)]
               (doall (rendercard gid "artifact" a)))]])]))
       
@@ -271,8 +273,10 @@
             (doall (for [c (-> gm :state :players (get uname) :private :artifacts)]
               (rendercard gid "artifact" c)))]]
         [:div "Places of Power, Artifacts and Magic Item"
-          [:div.d-flex.justify-content-between
-            (doall (rendercard gid "mage" (-> pub :mage)))]])))
+          
+            (rendercard gid "mage" (-> pub :mage))
+            (rendercard gid "magicitem" (->> gm :state :magicitems (filter #(= (:owner %) uname)) first))
+              ])))
           
 (defn ramain [ gid gm uname ]
   (-> ((js* "$") "body") 
@@ -281,7 +285,7 @@
   ;(-> ((js* "$") "#navbar") (.attr "hidden" true))
   [:div.container-fluid.my-2 {:on-mouse-move #(swap! ra-app dissoc :preview)}
     (settings)
-    ;(showdata gm)
+    ;[:div (-> gm :state :players (get uname) str)]
     [:div.row
       [:div.col-9
         (players gid gm uname)
@@ -291,12 +295,13 @@
           (monuments gid gm)]]
       [:div.col-3
         [:div.row.d-flex.px-2.h-100
-          [:i.fas.fa-cog.fa-lg.ml-auto {:style {:cursor "pointer"} :on-click #(togglesettings!) :title "Settings"}]
-          (tips (-> @ra-app :settings :tips))
+          [:div.col
+            [:i.fas.fa-cog.fa-lg.ml-auto {:style {:cursor "pointer"} :on-click #(togglesettings!) :title "Settings"}]]
+          ;(tips (-> @ra-app :settings :tips))
           [:button.btn.btn-sm.btn-danger.ml-auto.mt-auto {:on-click #(if (js/confirm "Are you sure you want to Quit?") (comms/leavegame gid))} "Quit"]]
         (let [preview (:preview @ra-app)] 
           [:img.img-fluid.preview.card {:hidden (nil? preview) :src preview}])]]
-    [:div.row {:style {:position "fixed" :bottom "15px" :width "100%"}}
+    [:div.row ;{:style {:position "fixed" :bottom "15px" :width "100%"}}
       [:div.col-3
         (player-hand gid gm uname)]
       [:div.col-6

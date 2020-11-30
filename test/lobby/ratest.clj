@@ -164,7 +164,7 @@
         mi (-> gm :state :magicitems first)
         to (-> gm :state :turnorder)]
     (= (last to)
-      (-> (model/updategame! {:gid gid :action :selectstartitem :select? true :card mi} (last to))
+      (-> (model/updategame! {:gid gid :action :selectstartitem :select? true :card (:name mi)} (last to))
           :games gid :state :magicitems first :owner))))
 ;
 ;;; 2nd choice - reverse turn order
@@ -173,14 +173,14 @@
         gm (-> @model/appstate :games gid)
         mi (-> gm :state :magicitems first)
         to (-> gm :state :turnorder)]
-    (-> (model/updategame! {:gid gid :action :selectstartitem :select? true :card mi} (last to))
+    (-> (model/updategame! {:gid gid :action :selectstartitem :select? true :card (:name mi)} (last to))
         :games gid :state :players (get (nth to 2)) :action)))
 (expect 1
   (let [gid (newgameselectmages ["p1" "p2" "p3"])
         gm (-> @model/appstate :games gid)
         mi (-> gm :state :magicitems first)
         to (-> gm :state :turnorder)]
-    (->> (model/updategame! {:gid gid :action :selectstartitem :select? true :card mi} (last to))
+    (->> (model/updategame! {:gid gid :action :selectstartitem :select? true :card (:name mi)} (last to))
          :games gid :state :players (filter (fn [[k v]] (= (:action v) :selectstartitem))) keys count)))
       
 ; All players selected a mage (including AI setup), and a Magic Item game on!
@@ -191,8 +191,8 @@
         mis (-> gm :state :magicitems)
         to  (-> gm :state :turnorder)]
     (do 
-      (model/updategame! {:gid gid :action :selectstartitem :select? true :card (first mis)} (first to))
-      (model/updategame! {:gid gid :action :selectstartitem :select? true :card (last mis)} (last to)))
+      (model/updategame! {:gid gid :action :selectstartitem :select? true :card (-> mis first :name)} (first to))
+      (model/updategame! {:gid gid :action :selectstartitem :select? true :card (-> mis last :name)} (last to)))
     (->> @model/appstate :games gid :state :players (reduce-kv (fn [m k v] (if (= :pass (:action v)) (inc m) m)) 0))))
 (expect :started
   (let [gid (newgameselectmages ["p1" "p2"])
@@ -200,8 +200,8 @@
         mis (-> gm :state :magicitems)
         to  (-> gm :state :turnorder)]
     (do 
-      (model/updategame! {:gid gid :action :selectstartitem :select? true :card (first mis)} (first to))
-      (model/updategame! {:gid gid :action :selectstartitem :select? true :card (last mis)} (last to)))
+      (model/updategame! {:gid gid :action :selectstartitem :select? true :card (-> mis first :name)} (first to))
+      (model/updategame! {:gid gid :action :selectstartitem :select? true :card (-> mis last :name)} (last to)))
     (-> @model/appstate
         :games gid :state :status)))          
 

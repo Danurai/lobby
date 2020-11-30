@@ -102,9 +102,9 @@
               (-> m
                   (assoc k v)
                   (dissoc :action)
-                  (assoc-in [k :public :mage] (->> v :private :mages (filter :selected) first)) ; Switch Selected Mage to Public
-                  (assoc-in [k :private :artifacts] (take 3 artifacts))                         ; Draw 2 artifacts
-                  (assoc-in [k :secret :artifacts] (nthrest artifacts 3))                       ; Artifact deck
+                  (assoc-in [k :public :mage] (dissoc (->> v :private :mages (filter :selected) first) :selected)) ; Switch Selected Mage to Public
+                  (assoc-in [k :private :artifacts] (take 3 artifacts))                                            ; Draw 3 artifacts
+                  (assoc-in [k :secret :artifacts] (nthrest artifacts 3))                                          ; Artifact deck
           ))) {} (:players gs)))))
   
       
@@ -167,7 +167,7 @@
     :magicitems (mapv 
                   #(if (= (:owner %) uname)
                        (dissoc % :owner)
-                       (if (= (:name %) (-> ?data :card :name))
+                       (if (= (:name %) (-> ?data :card))
                             (assoc % :owner uname)
                             %)) (:magicitems gamestate))))
                             
