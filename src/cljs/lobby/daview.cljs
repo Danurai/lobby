@@ -41,54 +41,86 @@
       [:div.row
         (for [team (-> gm :state :teams)]
           (teambox gid (key team) (val team) false)
-          )]
-          
-    ]))
-    
-(defn bn [ ] [:img#bn.img-fluid {:hidden true :src "img/da/death-angel-brother-noctis.png"}])
+          )]]))
  
-(defn draw_page [ canvas ]
+(defn draw_page [ canvas hitmap ]
   (let [ctx (.getContext canvas "2d")
         w   (.-clientWidth  canvas) 
         h   (.-clientHeight canvas)
-        ;bnt (set! (.-src (js/Image.)) "img/da/death-angel-brother-noctis.png")
+        formation (-> @gm :state :formation)
+        img (.createElement js/document "img")
+        ctx2 (.getContext hitmap "2d")
         ]
+        
     (.clearRect ctx 0 0 w h)
-    (set! (.-fillStyle ctx) "rgb(200,0,0)")
-    (.fillRect ctx -100,100,100,100)
-    (.fillRect ctx -100,100,100,100)
-    (.drawImage ctx (.getElementById js/document "bn") 0 0 220 250 0 0 220 250)
-    (.save ctx)
-    (.setTransform ctx -1 0 0 1 0 0)
-    (.drawImage ctx (.getElementById js/document "bn") 0 0 220 250 -440 0 220 250)
-    (.restore ctx)
-    ))
+    (set! (.-src img) "img/da/bn_1.png")
+    
+    ;(.setTransform ctx 1 0 0 1 0 0)
+    (doseq [f formation]
+      (.beginPath ctx)
+      (.drawImage ctx img 0 0 96 96 (-> f :zone dec (* 150) (+ 27)) 102 96  96)
+      
+      (set! (.-strokeStyle ctx)  (-> f :marine :squad name str))
+      (set! (.-lineWidth ctx)  6)
+      (.arc ctx (-> (:zone f) dec (* 150) (+ 75)) 150 46 0 (* 2 Math.PI))
+      
+      (.stroke ctx)
+      
+      (.beginPath ctx2)
+      (set! (.-fillStyle ctx2)  (-> f :marine :squad name str))
+      (.arc ctx2 (-> (:zone f) dec (* 150) (+ 75)) 150 50 0 (* 2 Math.PI))
+      (.fill ctx2)
+    )
+    
+    (prn (.-getImageData hitmap));
+    
+    ;(.setTransform ctx -1 0 0 1 0 0)
+    ;(.drawImage ctx img 0 0 220 250 -440 0 220 250)
+    ;(.restore ctx)
+  ))
+  
+(def mouse (r/atom nil))
+
+(defn mousemove [ evt ]
+  (let [ctx2 (.getContext (.getElementById js/document "hitmap") "2d")
+        ele (.-target evt)
+        x (- (.-pageX evt) (.-offsetLeft ele))
+        y (- (.-pageY evt) (.-offsetTop ele))]
+    (swap! mouse assoc :x x 
+                       :y y
+                       :id (.-data (.getImageData ctx2 x y 1 1)))))
   
 (defn canvas [ ]
   (let [dom-node (r/atom nil)]
     (r/create-class
      {:component-did-update
         (fn [ this ]
-          (draw_page (.getElementById js/document "drawing")))
+          (draw_page (.getElementById js/document "drawing") (.getElementById js/document "hitmap")))
       :component-did-mount
         (fn [ this ]
           (reset! dom-node (r/dom-node this)))
       :reagent-render
         (fn [ ]
           @gm
-          [:canvas#drawing.border (if-let [node @dom-node] {
-            :width "1000px" 
-            :height "600px"
-            ;:on-mouse-move mousemove
-            ;:on-click      mouseclick
-            ;:on-mouse-out  #(swap! appstate dissoc :mx :my)
-            })])})))
-
+          @mouse
+          [:div
+            [:canvas#drawing.border (if-let [node @dom-node] {
+              :width "1000px" 
+              :height "300px"
+              :on-mouse-move mousemove
+              ;:on-click      mouseclick
+              ;:on-mouse-out  #(swap! appstate dissoc :mx :my)
+              })]
+            [:canvas#hitmap.border (if-let [node @dom-node] {
+              :width "1000px" 
+              :height "300px"
+            })]])})))
   
 (defn- hulk [ ]
-  [:div 
-    [:h5 "Welcome to The Hulk"]
-    [bn]
+  [:div
+    [:div.d-flex
+      [:h5 "Welcome to The Hulk"]
+      [:div (str @mouse)]]
     [:div
       [canvas]]
     [:div (str @gm)]])
