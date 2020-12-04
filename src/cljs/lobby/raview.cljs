@@ -59,7 +59,15 @@
           :style {:cursor "pointer"}
           :on-click #(if (-> @ra-app :settings :tips :active) 
                          (swap! ra-app update-in [:settings :tips] dissoc :active) 
-                         (swap! ra-app assoc-in [:settings :tips :active] true))}]]]])
+                         (swap! ra-app assoc-in  [:settings :tips :active] true))}]]
+      [:div.d-flex
+        [:div "Show Magic Items"][:i.ml-auto.fas.fa-2x.text-light {
+            :class (if (-> @ra-app :settings :showmi :active) "fa-toggle-on" "fa-toggle-off")
+            :style {:cursor "pointer"}
+            :on-click #(if (-> @ra-app :settings :showmi :active) 
+                           (swap! ra-app update-in [:settings :showmi] dissoc :active) 
+                           (swap! ra-app assoc-in  [:settings :showmi :active] true))}]]]
+  ])
                          
 (defn- settings-button []
   [:i.fas.fa-cog.fa-lg.float-right {
@@ -99,7 +107,7 @@
         :width  (* (-> @ra-app :settings :cardsize :w) scale) 
         :style {
           :border "4px dashed goldenrod"
-          :opacity "0.8"
+          :opacity "0.6"
           :display "inline-block"
           ;:height (* (-> @ra-app :settings :cardsize :h) scale)
         }
@@ -136,7 +144,7 @@
        
 (defn- magicitems [ pdata ]
   (let [target? (contains? #{:selectstartitem :selectmagicitem} (:action pdata))]
-    [:div.flex-wrap.justify-content-center {:class (if (or target? (-> @ra-app :showmi)) "d-flex" "d-none")}
+    [:div.flex-wrap.justify-content-center {:class (if (or target? (-> @ra-app :settings :showmi :active)) "d-flex" "d-none")}
       (doall (for [magicitem (-> @gm :state :magicitems)]
         (if (-> magicitem :owner some?)
             (render-taken-card magicitem)
@@ -196,17 +204,8 @@
         ]]])
     
     
-    
-    ;(doall (for [p (-> @gm :plyrs) :let [pdata (-> @gm :state :players (get p))]]
-    ;  [:div.border.rounded.mb-2.p-1 {:key (gensym) :class (if (= @uname p) "border-primary" (if (= p (-> @gm :state :turnorder first)) "border-success"))}
-    ;    [:div.d-flex 
-    ;      [:h5.mr-2 p]
-    ;      (rendercard (->> pdata :public :mage) :sm)
-    ;      (rendercard (->> @gm :state :magicitems (filter #(= (:owner %) p)) first) :sm)
-    ;      ]
-    ;    ]))
         
-(defn player-resource []  
+(defn player-resource [ plyr ]  
   [:table.table-hover
     [:thead [:tr 
       [:td ]
@@ -216,32 +215,31 @@
       [:th.text-center.px-2 "VP"]]]
     [:tbody
       (doall (for [p (-> @gm :state :turnorder) :let [d (-> @gm :state :players (get p))]]
-        [:tr {:key (gensym)} 
+        [:tr {:key (gensym) :class (if (= plyr p) "bg-light")} 
           [:td.px-2 (if (-> @gm :state :turnorder first (= p)) [:img.p1.ml-auto {:src "/img/ra/player-1.png"}])]
           [:td.px-2 [:b.mr-2 p]]
           (doall (for [r [:gold :calm :elan :life :death]]
             [:td.border.border-secondary.text-center {:key (gensym)} (-> d :public :resources r)]))
           [:td.px-2.text-center.border.border-secondary (+ (if (-> @gm :state :p1 (= p)) 1 0) (-> d :public :vp))]]))]])
     
+(defn- player-board [ p size ]
+  (let [pdata (-> @gm :state :players (get p) :public)]
+    [:div.d-flex.justify-content-left
+      (rendercard (:mage pdata) size)
+      (rendercard (->> @gm :state :magicitems (filter #(= (:owner %) p)) first) size)
+      (doall (for [art (:artifacts pdata)] (rendercard art size)))]))
     
 (defn- gamestate [ ]
-  [:div.col-9 {:style {:position "relative"}}
-    [:div.row.mb-2
-      [:div.col-3 (player-resource)]
-      [:div.col-9 ]]      
-    [magicitems (-> @gm :state :players (get @uname) :action)]
-    [:div.d-flex.justify-content-around
-      [placesofpower]
-      [monuments]]
-  ])
-  
-(defn- board []
-  (let [pdata (-> @gm :state :players (get @uname) :public)]
-    [:div.d-flex.justify-content-center
-      (rendercard (:mage pdata) :lg)
-      (rendercard (->> @gm :state :magicitems (filter #(-> % :owner (= @uname))) first) :lg)
-      (doall (for [art (:artifacts pdata)] (rendercard art :lg)))]))
-        
+  (let [p (->> @gm :state :players (reduce-kv #(if (= (:action %3) :play) (conj %1 %2) %1) #{}) first)]
+    [:div.col-9 {:style {:position "relative"}}
+      [:div.row.mb-2
+        [:div.col-3 (player-resource p)]
+        [:div.col-9 (player-board p :sm)]]      
+      [magicitems (-> @gm :state :players (get @uname) :action)]
+      [:div.d-flex.justify-content-around
+        [placesofpower]
+        [monuments]]
+    ]))
     
 (defn ramain [ ]
   (-> ((js* "$") "body") 
@@ -260,7 +258,7 @@
           [settings-button]]]
       [:div.row.w-100 {:style {:position "fixed" :bottom "5px" :height (-> @ra-app :settings :cardsize :h (* 2.5))}}
         [:div.col-9
-          [board]]
+          [player-board@uname :lg]]
         [:div.col-3
           [chat]]]
       [hand]
