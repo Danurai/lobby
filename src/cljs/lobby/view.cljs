@@ -84,16 +84,15 @@
     [:div.d-flex
       [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]
       (if (= uname (:owner gm))
-          [:button.btn.btn-primary.ml-auto {:disabled (< (-> gm :plyrs count) (-> gm :minp)) :on-click #(comms/startgame gid)} "Start"])]
-    ])
+          [:button.btn.btn-primary.ml-auto {:disabled (< (-> gm :plyrs count) (-> gm :minp)) :on-click #(comms/startgame gid)} "Start"])]])
     
-(defn gamehooks [ gid gm uname ]
-  (case (:game gm)
-    "Res Arcana"  (ramain gid gm uname)
+(defn gamehooks [ ]
+  (case (:game @gm)
+    "Res Arcana"  (ramain)
     "Death Angel" (damain)
     [:div.row-fluid
       [:h5 "Game not found"]
-      [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]]))
+      [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame @gid)} "Leave"]]))
     
 (defn main []
   (let [msg (r/atom "")]
@@ -101,7 +100,7 @@
       (-> ((js* "$") "body") (.removeAttr "style"))
       [:div
         (if (:state @gm)
-          (gamehooks @gid @gm @uname)
+          (gamehooks)
           [:div.container.my-3 {:style {:min-height "400px"}}
             [:div.row
               (if @gm

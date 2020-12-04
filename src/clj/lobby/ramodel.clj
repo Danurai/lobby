@@ -15,7 +15,6 @@
   
 (def playerdata {
   :public {
-    :mage 0
     :resources {
       :gold 1
       :calm 1
@@ -47,22 +46,115 @@
                       (reduce-kv #(assoc %1 %2 (count %3)) {} (:private v))))
                 (assoc-in [k :secret] (reduce-kv #(assoc %1 %2 (count %3)) {} (:secret v))))
           ) {} (:players state)))))
+ 
+(defn- start-game [ gs ]
+  (-> gs
+      (assoc :status :started)    ; Start State
+      (assoc :players
+        (reduce-kv 
+          (fn [m k v]
+            (let [artifacts (-> v :private :artifacts)]
+              (-> m
+                  (assoc k v)
+                  (assoc-in [k :action] (if (= k (-> gs :turnorder first)) :play :waiting))
+                  (assoc-in [k :public :mage] (->> v :private :mages (filter #(= (:uid %) (-> v :public :mage))) first)) ; Switch Selected Mage to Public
+                  (update-in [k :private] dissoc :mages)                                                                 ; Remove Mages
+                  (assoc-in [k :private :artifacts] (take 3 artifacts))                                                  ; Draw 3 artifacts
+                  (assoc-in [k :secret :artifacts] (nthrest artifacts 3))                                                ; Artifact deck
+          ))) {} (:players gs)))))
+
+
+(defn- selectmagicitem [ gamestate ?data uname ]
+  (assoc gamestate
+    :players (reduce-kv 
+              (fn [m k v]
+                (if (= k uname)
+                  (assoc m k (assoc v :action :pass))
+                  (assoc m k v))) {} (:players gamestate))
+    :magicitems (mapv 
+                  #(if (= (:owner %) uname)
+                       (dissoc % :owner)
+                       (if (= (:uid %) (:card ?data))
+                            (assoc % :owner uname)
+                            %)) (:magicitems gamestate))))
+                            
+
+(defn ai-choose-magicitem [ gs uname ]
+  (selectmagicitem
+    gs 
+    {:card (->> gs :magicitems (filter #(-> % :owner nil?)) first :uid)}
+    uname))
           
-(defn- make-ai-choice [ players ]
-;; TODO push out reduce-kv loop
-;; base on (case (:action value))
+(defn choosing-player [ gs ]
+  (->> gs 
+      :turnorder 
+      (remove #(contains? (->> gs :magicitems (map :owner) (remove nil?) set) %)) 
+      last))
+         
+(defn check-start [ gs ]
+  (let [nplayers (-> gs :players keys count)
+        nmages   (->> gs :players (reduce-kv (fn [m k v] (if (-> v :public :mage some?) (inc m) m)) 0))
+        nitems   (->> gs :magicitems (filter :owner) count)]
+    ;(prn nplayers nmages nitems)
+    (if (= nplayers nitems)
+        (start-game gs)
+        (if (= nplayers nmages)
+            (let [cp (choosing-player gs)]
+              (if (some? (re-matches #"AI\d+" cp))
+                  (-> gs 
+                      (ai-choose-magicitem cp)
+                      check-start)
+                  (assoc-in gs [:players cp :action] :selectstartitem)))
+            gs))))
+            
+(defn- set-selected-mage [ v cardid ]
+  (if (contains? (->> v :private :mages (map :uid) set) cardid)
+    (-> v 
+      (assoc-in [:public :mage] cardid)
+      (assoc-in [:private :mages] (->> v :private :mages (map #(dissoc % :target?))))
+      (assoc :action :waiting))
+    v))
+    
+(defn- ai-choose-mage [ players ]
+;; TODO push out reduce-kv loop?
   (reduce-kv  
     (fn [m k v]
       (assoc m k
         (if (some? (re-matches #"AI\d+" k))
           (case (:action v)
-            :selectmage (-> v 
-                            (dissoc :action)
-                            (assoc-in [:private :mages 0 :selected] true) 
-                            (assoc-in [:public :mage] 1))
+            :selectmage (set-selected-mage v (-> v :private :mages first :uid))
             v)
           v))) {} players))
+          
             
+(defn selectmage [ gamestate ?data uname ]
+; Only runs for game setup
+; ?data = {:card <id>}
+  (-> gamestate
+    (assoc :players 
+      (reduce-kv  
+        (fn [m k v]
+          (assoc m k
+            (if (= k uname)
+                (set-selected-mage v (:card ?data))
+                v))) {} (:players gamestate)))
+    check-start))
+  
+(defn selectstartitem [ gamestate ?data uname ]
+  (-> gamestate
+     (selectmagicitem ?data uname)
+     check-start
+     ))
+
+(defn parseaction [ gamestate ?data uname ]
+  (println ?data uname)
+  (case (:action ?data)
+    :selectmage (selectmage gamestate ?data uname)
+    :selectstartitem (selectstartitem gamestate ?data uname)
+    :selectmagicitem (selectmagicitem gamestate ?data uname)
+    gamestate))
+
+    
 (defn- set-player-hands [ plyrs mages artifacts ]
   (zipmap 
     plyrs 
@@ -75,109 +167,22 @@
               (assoc-in [:private :artifacts] (subvec artifacts astart (+ astart 8))))))
       plyrs)))
       
-
+(defn- add-uid [ coll t ]
+  (map #(assoc % :uid (-> t gensym keyword)) coll))
+      
 (defn setup [ plyrs ]
-  (let [mages (-> @data :mages shuffle)
-        artifacts (-> @data :artifacts shuffle)
-        monuments (-> @data :monuments shuffle)
-        pops (-> @data :placesofpower)
-        players (set-player-hands plyrs mages artifacts) ]
-    (assoc gs 
-      :status :setup
-      :pops (map (fn [base] (rand-nth (filter #(= (:base %) base) pops))) (->> pops (map :base) frequencies keys))
-      :monuments {
-        :public (take 2 monuments)
-        :secret (nthrest monuments 2)}
-      :magicitems (:magicitems @data)
-      :turnorder (shuffle plyrs)
-      :players (make-ai-choice players)))) ;(make-ai-choices players))))
-      
-(defn- start-game [ gs ]
-  (-> gs
-      (assoc :status :started)    ; Start State
-      (assoc :players
-        (reduce-kv 
-          (fn [m k v]
-            (let [artifacts (-> v :private :artifacts)]
-              (-> m
-                  (assoc k v)
-                  (dissoc :action)
-                  (assoc-in [k :public :mage] (dissoc (->> v :private :mages (filter :selected) first) :selected)) ; Switch Selected Mage to Public
-                  (assoc-in [k :private :artifacts] (take 3 artifacts))                                            ; Draw 3 artifacts
-                  (assoc-in [k :secret :artifacts] (nthrest artifacts 3))                                          ; Artifact deck
-          ))) {} (:players gs)))))
-  
-      
-      
-(defn- choose-magicitem [ gs choosing-player ]
-  (assoc gs :players
-    (reduce-kv
-      (fn [m k v]
-        (if (= k choosing-player)
-            (assoc m k (assoc v :action :selectmagicitem))
-            (assoc m k (dissoc v :action)))) {} (:players gs))))
-            
-;(defn- choose-magicitem-ai [ gs choosing-player ]
-;  (selectmagicitem 
-;    gs
-;    {:card (->> gs :magicitems (filter #(nil? (:owner %))) first)}
-;    choosing-player))
-            
-(defn choosing-player [ gs ]
-  (let [nomi (reduce-kv #(if (-> %3 :public :magicitem nil?) (conj %1 %2)) #{} (:players gs))]
-    (->> (:turnorder gs)
-         (mapv #(if (contains? nomi %) % nil))
-         (remove nil?)
-         last)))
-
-(defn check-start [ gs ]
-  (let [nplayers (-> gs :players keys count)
-        nmages   (->> gs :players (reduce-kv (fn [m k v] (+ m (-> v :public :mage))) 0))
-        nitems   (->> gs :magicitems (filter :owner) count)]
-    ;(prn nplayers nmages nitems)
-    (if (= nplayers nitems)
-        (start-game gs)
-        (if (= nplayers nmages)
-            (assoc-in gs [:players (choosing-player gs) :action] :selectstartitem)
-            gs))))
-  
-(defn selectstartmage [ gamestate ?data uname ]
-; Only runs for game setup..
-  (-> gamestate
-    (assoc :players 
-      (reduce-kv  
-        (fn [m k v]
-          (assoc m k
-            (if (= k uname)
-                (-> v 
-                    (assoc-in [:private :mages] (map #(if (= (:name %) (:card ?data)) (assoc % :selected true :target? nil) (dissoc % :selected :target?)) (-> v :private :mages)))
-                    (assoc-in [:public :mage] 1)
-                    (assoc :action :waiting))
-                v))) {} (:players gamestate)))
-    check-start
-    ))
-
-(defn selectmagicitem [ gamestate ?data uname ]
-  (assoc gamestate
-    :players (reduce-kv 
-              (fn [m k v]
-                (if (= k uname)
-                  (assoc m k (assoc v :action :pass))       ;(assoc-in [:public :magicitem] (-> ?data :card name))))
-                  (assoc m k v))) {} (:players gamestate))
-    :magicitems (mapv 
-                  #(if (= (:owner %) uname)
-                       (dissoc % :owner)
-                       (if (= (:name %) (-> ?data :card))
-                            (assoc % :owner uname)
-                            %)) (:magicitems gamestate))))
-                            
-(defn selectstartitem [ gamestate ?data uname ]
-  (check-start (selectmagicitem gamestate ?data uname)))
-
-(defn parseaction [ gamestate ?data uname ]
-  (println ?data uname)
-  (case (:action ?data)
-    :selectstartmage (selectstartmage gamestate ?data uname)
-    :selectstartitem (selectstartitem gamestate ?data uname)
-    :selectmagicitem (selectmagicitem gamestate ?data uname)
-    gamestate))
+  (let [mages     (-> @data :mages         (add-uid "mag") shuffle)
+        artifacts (-> @data :artifacts     (add-uid "art") shuffle)
+        monuments (-> @data :monuments     (add-uid "mon") shuffle)
+        pops      (-> @data :placesofpower (add-uid "pop") shuffle)
+        players   (set-player-hands plyrs mages artifacts) ]
+    (-> gs 
+      (assoc :status :setup
+            :pops (map (fn [base] (rand-nth (filter #(= (:base %) base) pops))) (->> pops (map :base) frequencies keys))
+            :monuments {
+              :public (take 2 monuments)
+              :secret (nthrest monuments 2)}
+            :magicitems (-> @data :magicitems (add-uid "itm"))
+            :turnorder (shuffle plyrs)
+            :players (ai-choose-mage players))
+      check-start)))

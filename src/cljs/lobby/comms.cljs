@@ -1,7 +1,7 @@
 (ns lobby.comms
   (:require 
     [taoensso.sente :as sente :refer [cb-success?]]
-		[lobby.model :as model]))
+		[lobby.model :as model :refer [gid uname]]))
 
 (defonce channel-socket
   (sente/make-channel-socket! "/chsk" {:type :auto :ws-kalive-ms 20000}))
@@ -37,7 +37,8 @@
 ; RA Send
   
 (defn ra-send! [ ?data ]
-  (chsk-send! [:lobby/game-action ?data] 5000 nil))
+  (prn ?data)
+  (chsk-send! [:lobby/game-action (assoc ?data :gid @gid)] 5000 nil))
 
 ;;;; Sente send functions
 
