@@ -17,7 +17,6 @@
 
 (defn reset-app-state! [ state ]
   (let [gameid (->> state :games (reduce-kv (fn [m k v] (if (contains? (:plyrs v) @uname) (assoc m :gid k) m)) {:gid nil}) :gid)]
-  (reset! gid gameid)
-  (reset! gm (if (some? gameid) (-> state :games gameid) nil))
-  (reset! app state)
-  ))
+    (reset! gid gameid)
+    (reset! gm (if (some? gameid) (-> state :games gameid) nil))
+    (reset! app state)))

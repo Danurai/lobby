@@ -2,100 +2,100 @@
 
 (def data (atom {
   :mages [
-    {:id 0 :name "Necromancer" :type "Mage"}
-    {:id 1 :name "Duelist"     :type "Mage"}
-    {:id 2 :name "Transmuter"  :type "Mage"}
-    {:id 3 :name "Druid"       :type "Mage"}
-    {:id 4 :name "Artificer"   :type "Mage"}
-    {:id 5 :name "Healer"      :type "Mage"}
-    {:id 6 :name "Alchemist"   :type "Mage"}
-    {:id 7 :name "Witch"       :type "Mage"}
-    {:id 8 :name "Scholar"     :type "Mage"}
-    {:id 9 :name "Seer"        :type "Mage"}
+    {:id 0 :name "Necromancer" :type "mage"}
+    {:id 1 :name "Duelist"     :type "mage"}
+    {:id 2 :name "Transmuter"  :type "mage"}
+    {:id 3 :name "Druid"       :type "mage"}
+    {:id 4 :name "Artificer"   :type "mage"}
+    {:id 5 :name "Healer"      :type "mage"}
+    {:id 6 :name "Alchemist"   :type "mage"}
+    {:id 7 :name "Witch"       :type "mage"}
+    {:id 8 :name "Scholar"     :type "mage"}
+    {:id 9 :name "Seer"        :type "mage"}
   ]
   :monuments [
-    {:id 0 :name "Colossus"         :type "Monument" :cost {:gold 4} :action [] :vp 2}
-    {:id 1 :name "Golden Statue"    :type "Monument" :cost {:gold 4} :action [] :vp 1}
-    {:id 2 :name "Great Pyramid"    :type "Monument" :cost {:gold 4} :vp 3}
-    {:id 3 :name "Hanging Gardens"  :type "Monument" :cost {:gold 4} :collect {} :vp 1}
-    {:id 4 :name "Library"          :type "Monument" :cost {:gold 4} :action [] :vp 1}
-    {:id 5 :name "Mausoleum"        :type "Monument" :cost {:gold 4} :action [] :vp 2}
-    {:id 6 :name "Obelisk"          :type "Monument" :cost {:gold 4} :bought [] :vp 1}
-    {:id 7 :name "Oracle"           :type "Monument" :cost {:gold 4} :action [] :vp 1}
-    {:id 8 :name "Solomon's Mine"   :type "Monument" :cost {:gold 4} :action [] :vp 1}
-    {:id 9 :name "Temple"           :type "Monument" :cost {:gold 4} :action [] :vp 1}
+    {:id 0 :name "Colossus"         :type "monument" :cost {:gold 4} :action [] :vp 2}
+    {:id 1 :name "Golden Statue"    :type "monument" :cost {:gold 4} :action [] :vp 1}
+    {:id 2 :name "Great Pyramid"    :type "monument" :cost {:gold 4} :vp 3}
+    {:id 3 :name "Hanging Gardens"  :type "monument" :cost {:gold 4} :collect {} :vp 1}
+    {:id 4 :name "Library"          :type "monument" :cost {:gold 4} :action [] :vp 1}
+    {:id 5 :name "Mausoleum"        :type "monument" :cost {:gold 4} :action [] :vp 2}
+    {:id 6 :name "Obelisk"          :type "monument" :cost {:gold 4} :bought [] :vp 1}
+    {:id 7 :name "Oracle"           :type "monument" :cost {:gold 4} :action [] :vp 1}
+    {:id 8 :name "Solomon's Mine"   :type "monument" :cost {:gold 4} :action [] :vp 1}
+    {:id 9 :name "Temple"           :type "monument" :cost {:gold 4} :action [] :vp 1}
   ]
   :magicitems [
-    {:id 0 :name "Alchemy"        :action []}
-    {:id 1 :name "Reanimate"      :action []}
-    {:id 2 :name "Calm | Elan"    :collect "collect or :calm :elan"}
-    {:id 3 :name "Death | Life"   :collect "collect or :death :life"}
-    {:id 4 :name "Protection"     :action []}
-    {:id 5 :name "Divination"     :action []}
-    {:id 6 :name "Research"       :action []}
-    {:id 7 :name "Transmutation"  :action []}
+    {:id 0 :name "Alchemy"        :type "magicitem" :action []}
+    {:id 1 :name "Reanimate"      :type "magicitem" :action []}
+    {:id 2 :name "Calm | Elan"    :type "magicitem" :collect "collect or :calm :elan"}
+    {:id 3 :name "Death | Life"   :type "magicitem" :collect "collect or :death :life"}
+    {:id 4 :name "Protection"     :type "magicitem" :action []}
+    {:id 5 :name "Divination"     :type "magicitem" :action []}
+    {:id 6 :name "Research"       :type "magicitem" :action []}
+    {:id 7 :name "Transmutation"  :type "magicitem" :action []}
   ]
   :placesofpower [
-    {:id 6 :base 6 :name "Sacred Grove"          :type "Place of Power" :cost {:life 8 :calm 4} :action [] :vp nil}
-    {:id 0 :base 6 :name "Alchemists Tower"      :type "Place of Power" :cost {:gold 3}  :action [] :vp nil}
-    
-    {:id 1 :base 1 :name "Catacombs of the Dead" :type "Place of Power" :cost {:death 9} :action [] :vp nil}
-    {:id 7 :base 1 :name "Sacrificial Pit"       :type "Place of Power" :cost {:elan 8 :death 4} :action [] :vp nil}
-    
-    {:id 3 :base 3 :name "Cursed Forge"          :type "Place of Power" :cost {:elan 5 :life 5 :calm 5} :action [] :vp nil}
-    {:id 5 :base 3 :name "Dwarven Mines"         :type "Place of Power" :cost {:elan 4 :life 2 :gold 1} :action [] :vp nil}
-    
-    {:id 2 :base 2 :name "Coral Castle"          :type "Place of Power" :cost {:elan 3 :life 3 :calm 3 :death 3} :action [] :vp nil}
-    {:id 9 :base 2 :name "Sunken Reef"           :type "Place of Power" :cost {:calm 5 :elan 2 :life 2} :action [] :vp nil}
-    
-    {:id 4 :base 4 :name "Dragon's Lair"         :type "Place of Power" :cost {:elan 6 :death 3} :action [] :vp nil}
-    {:id 8 :base 4 :name "Sorcerer's Bestiary"   :type "Place of Power" :cost {:life 4 :elan 2 :calm 2 :death 2} :action [] :vp nil}
+    {:id 6 :base 6 :name "Sacred Grove"          :type "pop" :cost {:life 8 :calm 4} :action [] :vp nil}
+    {:id 0 :base 6 :name "Alchemists Tower"      :type "pop" :cost {:gold 3}  :action [] :vp nil}
+                                                        
+    {:id 1 :base 1 :name "Catacombs of the Dead" :type "pop" :cost {:death 9} :action [] :vp nil}
+    {:id 7 :base 1 :name "Sacrificial Pit"       :type "pop" :cost {:elan 8 :death 4} :action [] :vp nil}
+                                                        
+    {:id 3 :base 3 :name "Cursed Forge"          :type "pop" :cost {:elan 5 :life 5 :calm 5} :action [] :vp nil}
+    {:id 5 :base 3 :name "Dwarven Mines"         :type "pop" :cost {:elan 4 :life 2 :gold 1} :action [] :vp nil}
+                                                        
+    {:id 2 :base 2 :name "Coral Castle"          :type "pop" :cost {:elan 3 :life 3 :calm 3 :death 3} :action [] :vp nil}
+    {:id 9 :base 2 :name "Sunken Reef"           :type "pop" :cost {:calm 5 :elan 2 :life 2} :action [] :vp nil}
+                                                        
+    {:id 4 :base 4 :name "Dragon's Lair"         :type "pop" :cost {:elan 6 :death 3} :action [] :vp nil}
+    {:id 8 :base 4 :name "Sorcerer's Bestiary"   :type "pop" :cost {:life 4 :elan 2 :calm 2 :death 2} :action [] :vp nil}
   ]
   
   :artifacts [
-    {:id 0  :name "Athanor" :cost {:gold 1 :elan 1} :action []}
-    {:id 1  :name "Bone Dragon" :type "Dragon" :cost {:death 4 :life 1} :action [] :vp 1}
-    {:id 2  :name "Celestial Horse" :type "Creature" :cost {:calm 2 :elan 1} :collect []}
-    {:id 3  :name "Chalice of Fire" :cost {:gold 1 :elan 1} :collect {:elan 2}}
-    {:id 4  :name "Chalice of Life" :cost {:gold 1 :elan 1} :collect {:calm 1 :life 1}}
-    {:id 5  :name "Corrupt Altar" :cost {:any 3 :death 2} :collect {:life 1 :death 1}}
-    {:id 6  :name "Crypt" :cost {:any 3 :death 2} :action []}
-    {:id 7  :name "Cursed Skull" :cost {:death 2} :action []}
-    {:id 8  :name "Dancing Sword" :cost {:gold 1 :elan 1} :collect {:death 1 :elan 1} :action []}
-    {:id 9  :name "Dragon Bridle" :cost {:elan 1 :life 1 :calm 1 :death 1} :action [] :react []}
+    {:id 0  :type "artifact" :name "Athanor" :cost {:gold 1 :elan 1} :action []}
+    {:id 1  :type "artifact" :name "Bone Dragon" :subtype "Dragon" :cost {:death 4 :life 1} :action [] :vp 1}
+    {:id 2  :type "artifact" :name "Celestial Horse" :subtype "Creature" :cost {:calm 2 :elan 1} :collect []}
+    {:id 3  :type "artifact" :name "Chalice of Fire" :cost {:gold 1 :elan 1} :collect {:elan 2}}
+    {:id 4  :type "artifact" :name "Chalice of Life" :cost {:gold 1 :elan 1} :collect {:calm 1 :life 1}}
+    {:id 5  :type "artifact" :name "Corrupt Altar" :cost {:any 3 :death 2} :collect {:life 1 :death 1}}
+    {:id 6  :type "artifact" :name "Crypt" :cost {:any 3 :death 2} :action []}
+    {:id 7  :type "artifact" :name "Cursed Skull" :cost {:death 2} :action []}
+    {:id 8  :type "artifact" :name "Dancing Sword" :cost {:gold 1 :elan 1} :collect {:death 1 :elan 1} :action []}
+    {:id 9  :type "artifact" :name "Dragon Bridle" :cost {:elan 1 :life 1 :calm 1 :death 1} :action [] :react []}
+            
+    {:id 10 :type "artifact" :name "Dragon Egg" :cost {:gold 1} :vp 1}
+    {:id 11 :type "artifact" :name "Dragon Teeth" :cost {:elan 1 :death 1}}
+    {:id 12 :type "artifact" :name "Dwarven Pickaxe" :cost {:elan 1}}
+    {:id 13 :type "artifact" :name "Earth Dragon" :subtype "Dragon" :cost {:elan 4 :life 3} :vp 1}
+    {:id 14 :type "artifact" :name "Elemental Spring" :cost {:elan 2 :life 1 :calm 1}}
+    {:id 15 :type "artifact" :name "Elvish Bow" :cost {:elan 2 :life 1}}
+    {:id 16 :type "artifact" :name "Fiery Whip" :cost {:elan 2 :death 2}}
+    {:id 17 :type "artifact" :name "Fire Dragon" :subtype "Dragon" :cost {:elan 6} :vp 1}
+    {:id 18 :type "artifact" :name "Flaming Pit" :cost {:elan 2}}
+    {:id 19 :type "artifact" :name "Fountain of Youth" :cost {:calm 1 :death 1}}
     
-    {:id 10 :name "Dragon Egg" :cost {:gold 1} :vp 1}
-    {:id 11 :name "Dragon Teeth" :cost {:elan 1 :death 1}}
-    {:id 12 :name "Dwarven Pickaxe" :cost {:elan 1}}
-    {:id 13 :name "Earth Dragon" :type "Dragon" :cost {:elan 4 :life 3} :vp 1}
-    {:id 14 :name "Elemental Spring" :cost {:elan 2 :life 1 :calm 1}}
-    {:id 15 :name "Elvish Bow" :cost {:elan 2 :life 1}}
-    {:id 16 :name "Fiery Whip" :cost {:elan 2 :death 2}}
-    {:id 17 :name "Fire Dragon" :type "Dragon" :cost {:elan 6} :vp 1}
-    {:id 18 :name "Flaming Pit" :cost {:elan 2}}
-    {:id 19 :name "Fountain of Youth" :cost {:calm 1 :death 1}}
+    {:id 20 :type "artifact" :name "Guard Dog" :subtype "Creature" :cost {:elan 1}}
+    {:id 21 :type "artifact" :name "Hand of Glory" :cost {:life 1 :death 1}}
+    {:id 22 :type "artifact" :name "Hawk" :subtype "Creature" :cost {:life 1 :calm 1}}
+    {:id 23 :type "artifact" :name "Horn of Plenty" :cost {:gold 2}}
+    {:id 24 :type "artifact" :name "Hypnotic Basin"}
+    {:id 25 :type "artifact" :name "Magical Shard"}
+    {:id 26 :type "artifact" :name "Jeweled Statuette"}
+    {:id 27 :type "artifact" :name "Mermaid" :subtype "Creature"}
+    {:id 28 :type "artifact" :name "Nightingale"         :subtype "Creature"}
+    {:id 29 :type "artifact" :name "Philosopher's Stone" :vp 1}
     
-    {:id 20 :name "Guard Dog" :type "Creature" :cost {:elan 1}}
-    {:id 21 :name "Hand of Glory" :cost {:life 1 :death 1}}
-    {:id 22 :name "Hawk" :type "Creature" :cost {:life 1 :calm 1}}
-    {:id 23 :name "Horn of Plenty" :cost {:gold 2}}
-    {:id 24 :name "Hypnotic Basin"}
-    {:id 25 :name "Magical Shard"}
-    {:id 26 :name "Jeweled Statuette"}
-    {:id 27 :name "Mermaid" :type "Creature"}
-    {:id 28 :name "Nightingale" :type "Creature"}
-    {:id 29 :name "Philosopher's Stone" :vp 1}
-    
-    {:id 30 :name "Prism"}
-    {:id 31 :name "Ring of Midas"}
-    {:id 32 :name "Sacrificial Dagger"}
-    {:id 33 :name "Sea Serpent"}
-    {:id 34 :name "Treant"}
-    {:id 35 :name "Tree of Life"}
-    {:id 36 :name "Vault"}
-    {:id 37 :name "Water Dragon"}
-    {:id 38 :name "Wind Dragon"}
-    {:id 39 :name "Windup Man"}
+    {:id 30 :type "artifact" :name "Prism"}
+    {:id 31 :type "artifact" :name "Ring of Midas"}
+    {:id 32 :type "artifact" :name "Sacrificial Dagger"}
+    {:id 33 :type "artifact" :name "Sea Serpent"}
+    {:id 34 :type "artifact" :name "Treant"}
+    {:id 35 :type "artifact" :name "Tree of Life"}
+    {:id 36 :type "artifact" :name "Vault"}
+    {:id 37 :type "artifact" :name "Water Dragon"}
+    {:id 38 :type "artifact" :name "Wind Dragon"}
+    {:id 39 :type "artifact" :name "Windup Man"}
     
   ]
 }))
