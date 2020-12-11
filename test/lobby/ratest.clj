@@ -6,7 +6,14 @@
     [lobby.lobbytest :refer :all]))
     
     
-; RA 
+; RA
+;; parse action
+(expect {}
+  (ramodel/parseaction {} {:uname "testname"} "p1"))
+(expect {}
+  (ramodel/parseaction {} {} "p1"))
+
+ 
 ;; New game has 5 distinct :base places of power, 2 public monumnets and 8 hidden
 (expect 5
   (->> (ramodel/setup ["p1"]) :pops (map :base) distinct count))
@@ -89,7 +96,7 @@
         (ramodel/selectmage {:card (:uid m1)} "p1")
         (ramodel/selectmage {:card (:uid m2)} "p2")
         :players 
-        (get (-> gs :turnorder last))
+        (get (-> gs :plyr-to last))
         :action
         )))
 ; one at a time
@@ -113,7 +120,7 @@
         (-> gs
           (ramodel/selectmage {:card (:uid m1)} "p1")
           (ramodel/selectmage {:card (:uid m2)} "p2")
-          (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :turnorder last))
+          (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :plyr-to last))
           :magicitems
           )))))
 (expect :pass
@@ -124,8 +131,8 @@
     (-> gs
       (ramodel/selectmage {:card (:uid m1)} "p1")
       (ramodel/selectmage {:card (:uid m2)} "p2")
-      (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :turnorder last))
-      :players (get (-> gs :turnorder last)) :action)))
+      (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :plyr-to last))
+      :players (get (-> gs :plyr-to last)) :action)))
       
 ;; 1player INVALID Mage ID
 (expect nil
@@ -157,7 +164,7 @@
       (-> gs
         (ramodel/selectmage {:card (:uid m1)} "p1")
         (ramodel/selectmage {:card (:uid m2)} "p2")
-        (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :turnorder last))
+        (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :plyr-to last))
         :players)))))
 ;; in reverse player order
 (expect :selectstartitem 
@@ -168,22 +175,31 @@
     (-> gs
         (ramodel/selectmage {:card (:uid m1)} "p1")
         (ramodel/selectmage {:card (:uid m2)} "p2")
-        (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :turnorder last))
-        :players  (get (-> gs :turnorder first)) :action)))
+        (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :plyr-to last))
+        :players  (get (-> gs :plyr-to first)) :action)))
       
+(defn started2pgm []
+  (let [setup  (assoc (ramodel/setup ["p1" "p2"]) :plyr-to (sorted-set "p1" "p2"))]
+    (-> setup
+        (ramodel/selectmage {:card (-> setup :players (get "p1") :private :mages first :uid)} "p1")
+        (ramodel/selectmage {:card (-> setup :players (get "p2") :private :mages first :uid)} "p1")
+        (ramodel/selectstartitem {:card (-> setup :magicitems first :uid)} "p2")
+        (ramodel/selectstartitem {:card (-> setup :magicitems last :uid)} "p1"))))
+        
 ; All players selected a mage (including AI setup), and a Magic Item game on!
 (expect :started
-  (let [gs (ramodel/setup ["p1" "p2"])
-        m1 (-> gs :players (get "p1") :private :mages first)
-        m2 (-> gs :players (get "p2") :private :mages first)
-        mi1 (-> gs :magicitems first)
-        mi2 (-> gs :magicitems last)]
-    (-> gs
-        (ramodel/selectmage {:card (:uid m1)} "p1")
-        (ramodel/selectmage {:card (:uid m2)} "p2")
-        (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :turnorder first))
-        (ramodel/selectstartitem {:card (:uid mi2)} (-> gs :turnorder last))
-        :status)))
+  (-> (started2pgm) :status))
+  ;(let [gs (ramodel/setup ["p1" "p2"])
+  ;      m1 (-> gs :players (get "p1") :private :mages first)
+  ;      m2 (-> gs :players (get "p2") :private :mages first)
+  ;      mi1 (-> gs :magicitems first)
+  ;      mi2 (-> gs :magicitems last)]
+  ;  (-> gs
+  ;      (ramodel/selectmage {:card (:uid m1)} "p1")
+  ;      (ramodel/selectmage {:card (:uid m2)} "p2")
+  ;      (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :plyr-to first))
+  ;      (ramodel/selectstartitem {:card (:uid mi2)} (-> gs :plyr-to last))
+  ;      :status)))
 ;; With AI
 (expect :started
   (let [aip (-> "AI" gensym str)
@@ -200,6 +216,7 @@
         aip2 (-> "AI" gensym str)]
     (-> (ramodel/setup [aip1 aip2])
         :status)))
+        
 ;; Start game sets Public Mage, private artiftacts = 3, secret artifacts = 5, private mages nil
 (expect some?
   (let [aip (-> "AI" gensym str)]
@@ -221,6 +238,176 @@
     (-> (ramodel/setup [aip]) :players (get aip) :action)))
 
     
+; New round places resources on cards
+(expect true
+  (let [gs  (started2pgm)]
+    (=  (-> gs :players (get "p1") :public :mage :collect)
+        (-> gs :players (get "p1") :public :mage :collect-resource))))
+    
+; Take Resource from card
+(expect 2
+  (let [gs (started2pgm)]
+    (-> gs 
+        (ramodel/collect-resource {:resources {:death 1} :card (-> gs :players (get "p1") :public :mage)} "p1")
+        :players (get "p1") :public :resources :death)))
+
+(expect nil
+  (let [gs (started2pgm)]
+    (-> gs 
+        (ramodel/collect-resource {:resources {:death 1} :card (-> gs :players (get "p1") :public :mage)} "p1")
+        :players (get "p1") :public :mage :collectresource)))    
+    
+    
+; Resource Change
+
+(expect {:life 1 :death 1 :elan 1 :calm 1 :gold 1}
+  (-> (ramodel/setup ["p1"]) :players (get "p1") :public :resources))
+      
+(expect {:life 1 :death 1 :elan 1 :calm 1 :gold 1}
+  (-> (ramodel/setup ["p1"]) 
+      (ramodel/amendresource {:resources {}} "p1") :players (get "p1") :public :resources))
+      
+(expect {:life 0 :death 1 :elan 2 :calm 3 :gold 4}
+  (-> (ramodel/setup ["p1"]) 
+      (ramodel/amendresource {:resources {:life -1 :elan 1 :calm 2 :gold 3} :action :amendresource} "p1")
+      :players (get "p1") :public :resources))
+      
+
+; Play card from hand
+(expect [1 2 {:life 1 :death 1 :elan 1 :calm 1 :gold 0}]
+  (let [gsetup  (ramodel/setup ["p1"])
+        m1      (-> gsetup :players (get "p1") :private :mages first)
+        mi1     (-> gsetup :magicitems first)
+        gs      (-> gsetup 
+                    (ramodel/selectmage {:card (:uid m1)} "p1")
+                    (ramodel/selectstartitem {:card (:uid mi1)} "p1"))
+        art1    (-> gs :players (get "p1") :private :artifacts first)
+        art2    (-> gs :players (get "p1") :private :artifacts last)
+        afterplay (ramodel/playcard gs {:card art1 :resources {:gold 1}} "p1")
+        ]
+    [ (-> afterplay :players (get "p1") :public  :artifacts count)
+      (-> afterplay :players (get "p1") :private :artifacts count)
+      (-> afterplay :players (get "p1") :public  :resources) ]))
+
+       
+; Done
+(expect  [:waiting :play] ; current player action = :waiting, next player action = :play
+  (let [gs (ramodel/done (started2pgm) "p1")]
+    [(-> gs :players (get "p1") :action)
+     (-> gs :players (get "p2") :action)]))
+     
+(expect  [:play :waiting] ; current player action = :waiting, next player action = :play
+  (let [gs (-> (started2pgm)
+               (ramodel/done "p1")
+               (ramodel/done "p2"))]
+    [(-> gs :players (get "p1") :action)
+     (-> gs :players (get "p2") :action)]))
+      
+;; p1 pass
+(expect  ["p1" ["p2"] :pass :play] ; current player action = :waiting, next player action = :play
+  (let [gs (-> (started2pgm)
+               (ramodel/pass "p1"))]
+    [(-> gs :pass-to first)
+     (-> gs :plyr-to)
+     (-> gs :players (get "p1") :action)
+     (-> gs :players (get "p2") :action)]))
+;; p2 pass 
+(expect  ["p2" ["p1"] :play :pass] ; current player action = :waiting, next player action = :play
+  (let [gs (-> (started2pgm)
+               (ramodel/done "p1")
+               (ramodel/pass "p2"))]
+    [(-> gs :pass-to first)
+     (:plyr-to gs)
+     (-> gs :players (get "p1") :action)
+     (-> gs :players (get "p2") :action)]))
+;; Both passed
+(expect  [[] ["p2" "p1"] :waiting :play] ; Empty pass-to Turnorder based on pass-to players set to :play or :waiting
+  (let [gs (-> (started2pgm)
+               (ramodel/done "p1")
+               (ramodel/pass "p2")
+               (ramodel/pass "p1"))]
+    [(-> gs :pass-to)
+     (-> gs :plyr-to)
+     (-> gs :players (get "p1") :action)
+     (-> gs :players (get "p2") :action)]))
+      
+
+;; next player is active player
+      
+
+      
+; Toggle card exhausted
+;; Magic Item
+(expect true
+  (let [gsetup  (ramodel/setup ["p1"])
+        m1      (-> gsetup :players (get "p1") :private :mages first)
+        mi1     (-> gsetup :magicitems first)
+        gs      (-> gsetup 
+                    (ramodel/selectmage {:card (:uid m1)} "p1")
+                    (ramodel/selectstartitem {:card (:uid mi1)} "p1"))]
+    (->> (ramodel/exhausttoggle gs {:card mi1} "p1") :magicitems
+         (filter #(= (:uid %) (:uid mi1))) first :exhausted)))
+;; Magic Item toggle
+(expect nil
+  (let [gsetup  (ramodel/setup ["p1"])
+        m1      (-> gsetup :players (get "p1") :private :mages first)
+        mi1     (-> gsetup :magicitems first)
+        gs      (-> gsetup 
+                    (ramodel/selectmage {:card (:uid m1)} "p1")
+                    (ramodel/selectstartitem {:card (:uid mi1)} "p1"))]
+    (->> (-> gs (ramodel/exhausttoggle {:card mi1} "p1") (ramodel/exhausttoggle {:card mi1} "p1"))
+         :magicitems
+         (filter #(= (:uid %) (:uid mi1))) first :exhausted)))
+;; Mage
+(expect true
+  (let [gsetup  (ramodel/setup ["p1"])
+        m1      (-> gsetup :players (get "p1") :private :mages first)
+        mi1     (-> gsetup :magicitems first)
+        gs      (-> gsetup 
+                    (ramodel/selectmage {:card (:uid m1)} "p1")
+                    (ramodel/selectstartitem {:card (:uid mi1)} "p1"))]
+    (-> gs (ramodel/exhausttoggle {:card m1} "p1") :players (get "p1") :public :mage :exhausted)))
+;; Mage toggle
+(expect nil
+  (let [gsetup  (ramodel/setup ["p1"])
+        m1      (-> gsetup :players (get "p1") :private :mages first)
+        mi1     (-> gsetup :magicitems first)
+        gs      (-> gsetup 
+                    (ramodel/selectmage {:card (:uid m1)} "p1")
+                    (ramodel/selectstartitem {:card (:uid mi1)} "p1"))]
+    (-> gs 
+       (ramodel/exhausttoggle {:card m1} "p1")
+       (ramodel/exhausttoggle {:card m1} "p1")
+       :players (get "p1") :public :mage :exhausted)))
+;; Artifact
+(expect true
+  (let [gsetup  (ramodel/setup ["p1"])
+        m1      (-> gsetup :players (get "p1") :private :mages first)
+        mi1     (-> gsetup :magicitems first)
+        gs      (-> gsetup 
+                    (ramodel/selectmage {:card (:uid m1)} "p1")
+                    (ramodel/selectstartitem {:card (:uid mi1)} "p1")
+                    )
+        art1    (-> gs :players (get "p1") :private :artifacts first)]
+    (-> gs 
+       (ramodel/playcard {:card art1} "p1")
+       (ramodel/exhausttoggle {:card art1} "p1")
+       :players (get "p1") :public :artifacts first :exhausted)))
+;; Artifact - toggle
+(expect nil
+  (let [gsetup  (ramodel/setup ["p1"])
+        m1      (-> gsetup :players (get "p1") :private :mages first)
+        mi1     (-> gsetup :magicitems first)
+        gs      (-> gsetup 
+                    (ramodel/selectmage {:card (:uid m1)} "p1")
+                    (ramodel/selectstartitem {:card (:uid mi1)} "p1"))
+        art1    (-> gs :players (get "p1") :private :artifacts first)]
+    (-> gs 
+       (ramodel/playcard {:card art1} "p1")
+       (ramodel/exhausttoggle {:card art1} "p1")
+       (ramodel/exhausttoggle {:card art1} "p1")
+       :players (get "p1") :public :artifacts first :exhausted)))
+
     
     
 ; Obfuscation 
