@@ -25,7 +25,7 @@
   (if (-> @ra-app :settings :hide) 
       (swap! ra-app update-in [:settings] dissoc :hide) 
       (swap! ra-app assoc-in [:settings :hide] true)))
- 
+      
 (defn update-card-size [ base ]
   (let [w (* base 10) h (* base 14)] 
     (swap! ra-app assoc-in [:settings :cardsize] {:scale (/ base 2) :w w :h h})
@@ -74,26 +74,48 @@
     :style {:cursor "pointer"} 
     :on-click #(togglesettings!) 
     :title "Settings"}])
-
+    
+(defn- info-button []
+  [:i.fas.fa-info.float-right.mx-2 {
+    :style {:cursor "pointer"} 
+    :data-target "#infomodal"
+    :data-toggle "modal"
+    :title "Information"}])
+    
+    
+(defn- resourceimg [ r ]
+  [:span
+    [:img.resource-sm.mr-1 {:src (str "/img/ra/res-" (-> r first key name) ".png")}]
+    [:b (str "x" (-> r first val))]])
+    
 (defn rendercard 
   ([ card size ]
     (let [imgsrc (str "/img/ra/" (:type card) "-" (:id card) ".jpg")
           scale (case size :lg 1.5 :sm 0.9  1)
           selected? (or (:selected card) (-> @ra-app :selected (= (:uid card))))]
-      [:img.img-fluid.card.mx-1.mb-1 {
-        ;:title (str card)
-        :key (gensym)
-        :width  (* (-> @ra-app :settings :cardsize :w) scale) 
+      [:div {:style {:position "relative"}}
+        [:div.d-flex.w-100.justify-content-around {
+          :style {
+            :position "absolute" 
+            :top (str (-> @ra-app :settings :cardsize :h (* scale) (/ 2)) "px")
+            :z-index "99"}}
+          (for [res (:collect-resource card)]
+            [:button.btn.btn-light {:key (gensym) :on-click #(comms/ra-send! {:action :collect-resource :resources res :card card})} 
+              (resourceimg res)])]
+        [:img.img-fluid.card.mx-1.mb-1 {
+          :title (str card)
+          :key (gensym)
+          :width  (* (-> @ra-app :settings :cardsize :w) scale) 
           ;:height (* (-> @ra-app :settings :cardsize :h) scale)
-        :style {
-          :display "inline-block"
-          }
-        :src imgsrc
-        :class (cond selected? "active" (:target? card) "target" :else nil)
-        :on-click #(if (:target? card) (card-click-handler @gid card))
-        :on-mouse-move (fn [e] (.stopPropagation e) (reset! ra-preview imgsrc))
-        :on-mouse-out #(reset! ra-preview nil)
-        }]))
+          :style {
+            :display "inline-block"
+            }
+          :src imgsrc
+          :class (cond selected? "active" (:target? card) "target" :else nil)
+          :on-click #(if (:target? card) (card-click-handler @gid card))
+          :on-mouse-move (fn [e] (.stopPropagation e) (reset! ra-preview imgsrc))
+          :on-mouse-out #(reset! ra-preview nil)
+          }]]))
   ([ card ]
     (rendercard card nil)))
     
@@ -150,11 +172,26 @@
             (render-taken-card magicitem)
             (rendercard (assoc magicitem :target? target?)))))]))
             
+            
+(defn- canplay? [ card resources ]
+  (->> (:cost card)
+       (reduce-kv 
+        (fn [m k v] (update m k - v)) resources) 
+        vals 
+        (apply min)
+        (< -1)))
+            
 (defn- hand [ ]
-  [:div.d-flex.w-100 {:style {:position "fixed" :bottom "-75px"}}
-    (doall (for [art (map-indexed #(assoc %2 :idx %1) (-> @gm :state :players (get @uname) :private :artifacts))]
-      [:div.hand {:key (gensym) :style {:left (-> art :idx (* 100))}}
-        (rendercard art :lg)]))])
+  (let [resources (-> @gm :state :players (get @uname) :public :resources)]
+    [:div.d-flex.w-100 {:style {:position "fixed" :bottom "-75px"}}
+      (doall (for [art (map-indexed #(assoc %2 :idx %1) (-> @gm :state :players (get @uname) :private :artifacts))]
+        [:div.hand {
+          :key (gensym) 
+          :style {:left (-> art :idx (* (-> @ra-app :settings :cardsize :w (* 1.5))) (+ 200 ))}
+          :class (if (and (-> @gm :state :players (get @uname) :action (= :play)) (canplay? art resources)) "canplay")
+          :on-click #(if (and (-> @gm :state :players (get @uname) :action (= :play)) (canplay? art resources)) (comms/ra-send! {:action :playcard :card art :resources (:cost art)}))
+          }
+          (rendercard art :lg)]))]))
   
 (defn- chat [ ]
   [:div.chat
@@ -205,49 +242,99 @@
     
     
         
-(defn player-resource [ plyr ]  
-  [:table.table-hover
-    [:thead [:tr 
-      [:td ]
-      [:td ]
-      (for [r ["gold" "calm" "elan" "life" "death"]]
-        [:th {:key (gensym)} [:img.resource-sm.mx-1.mb-1 {:src (str "/img/ra/res-" r ".png")}]])
-      [:th.text-center.px-2 "VP"]]]
-    [:tbody
-      (doall (for [p (-> @gm :state :turnorder) :let [d (-> @gm :state :players (get p))]]
-        [:tr {:key (gensym) :class (if (= plyr p) "bg-light")} 
-          [:td.px-2 (if (-> @gm :state :turnorder first (= p)) [:img.p1.ml-auto {:src "/img/ra/player-1.png"}])]
-          [:td.px-2 [:b.mr-2 p]]
-          (doall (for [r [:gold :calm :elan :life :death]]
-            [:td.border.border-secondary.text-center {:key (gensym)} (-> d :public :resources r)]))
-          [:td.px-2.text-center.border.border-secondary (+ (if (-> @gm :state :p1 (= p)) 1 0) (-> d :public :vp))]]))]])
+(defn resource-table [ plyr ]
+  (let [p1 (or (-> @gm :state :pass-to first) (-> @gm :state :plyr-to first))]
+    [:table.table-hover
+      [:thead [:tr
+        [:td ]
+        [:td ]
+        [:td ]
+        (for [r ["gold" "calm" "elan" "life" "death"]]
+          [:th {:key (gensym)} [:img.resource-sm.mx-1.mb-1 {:src (str "/img/ra/res-" r ".png")}]])
+        [:th.text-center.px-2 "VP"]]]
+      [:tbody
+        (doall (for [[p d] (-> @gm :state :players)]
+          [:tr {:key (gensym) :class (if (= plyr p) "selected")} 
+            (if (contains? (-> @gm :state :plyr-to set) p)
+              [:td.text-center 
+                [:duv.btn-group
+                  [:button.btn.btn-xs.btn-light {:on-click #(comms/ra-send! {:action :done :uname p})} "d"]
+                  [:button.btn.btn-xs.btn-light {:on-click #(comms/ra-send! {:action :pass :uname p})} "p"]]]
+              [:td.text-center [:small "Passed"]])
+            [:td.px-2 (if (= p p1) [:img.p1.ml-auto {:src "/img/ra/player-1.png"}])]
+            [:td.px-2 [:b.mr-2 p]]
+            (doall (for [r [:gold :calm :elan :life :death]]
+              [:td.border.border-secondary.text-center {:key (gensym)} (-> d :public :resources r)]))
+            [:td.px-2.text-center.border.border-secondary (+ (if (-> @gm :state :p1 (= p)) 1 0) (-> d :public :vp))]]))]]))
+      
+(defn- resource [[k v]]
+  [:div.d-flex.mb-1 {:key (gensym)}
+    [:img.resource-sm..my-auto.mr-2 {:src (str "/img/ra/res-" (name k) ".png")}]
+    [:b.my-auto.mr-2 v]
+    [:div.btn-group.btn-group-xs
+      [:button.btn.btn-light {:on-click #(comms/ra-send! {:action :amendresource :resources {k -1}})} [:i.fas.fa-xs.fa-caret-left]]
+      [:button.btn.btn-light {:on-click #(comms/ra-send! {:action :amendresource :resources {k  1}})} [:i.fas.fa-xs.fa-caret-right]]]
+    ])
+
+(defn- player-resources []
+  [:div.d-flex.flex-column.mr-2
+    (doall (for [res (-> @gm :state :players (get @uname) :public :resources)]
+      (resource res)))
+    [:button.btn.btn-sm.btn-secondary.w-100.my-1 {:on-click #(comms/ra-send! {:action :pass})} "Pass"]
+    [:button.btn.btn-sm.btn-secondary.w-100.my-1 {:on-click #(comms/ra-send! {:action :done})} "Done"]
+  ])
     
 (defn- player-board [ p size ]
   (let [pdata (-> @gm :state :players (get p) :public)]
     [:div.d-flex.justify-content-left
-      (rendercard (:mage pdata) size)
-      (rendercard (->> @gm :state :magicitems (filter #(= (:owner %) p)) first) size)
+      (if (-> pdata :mage :uid) (rendercard (:mage pdata) size))
+      (if-let [mi (->> @gm :state :magicitems (filter #(= (:owner %) p)) first)] (rendercard mi size))
       (doall (for [art (:artifacts pdata)] (rendercard art size)))]))
     
 (defn- gamestate [ ]
   (let [p (->> @gm :state :players (reduce-kv #(if (= (:action %3) :play) (conj %1 %2) %1) #{}) first)]
     [:div.col-9 {:style {:position "relative"}}
       [:div.row.mb-2
-        [:div.col-3 (player-resource p)]
-        [:div.col-9 (player-board p :sm)]]      
+        [:div.col-4 (resource-table p)]
+        [:div.col-8 (player-board p :sm)]]      
       [magicitems (-> @gm :state :players (get @uname) :action)]
       [:div.d-flex.justify-content-around
         [placesofpower]
         [monuments]]
     ]))
     
+    
+(defn- modal []
+  [:div#infomodal.modal {:tab-index "-1" :role "dialog"}
+    [:div.modal-dialog {:role "document"}
+      [:div.modal-content 
+        [:div#infocarousel.carousel.slide {:data-ride "carousel"}
+          [:ol.carousel-indicators
+            [:li.active {:data-target "#infocarousel" :data-slide-to "0"}]
+            [:li {:data-target "#infocarousel" :data-slide-to "1"}]
+            [:li {:data-target "#infocarousel" :data-slide-to "2"}]
+            [:li {:data-target "#infocarousel" :data-slide-to "3"}]]
+          [:div.carousel-inner
+            [:div.carousel-item.active [:img.d-block.w-100 {:src "/img/ra/ref-0.jpg"}]]
+            [:div.carousel-item [:img.d-block.w-100 {:src "/img/ra/ref-1.jpg"}]]
+            [:div.carousel-item[:img.d-block.w-100 {:src "/img/ra/ref-2.jpg"}]]
+            [:div.carousel-item[:img.d-block.w-100 {:src "/img/ra/ref-3.jpg"}]]]
+          [:a.carousel-control-prev {:href "#infocarousel" :role "button" :data-slide "prev"}
+            [:span.carousel-control-prev-icon]]
+          [:a.carousel-control-next {:href "#infocarousel" :role "button" :data-slide "next"}
+            [:span.carousel-control-next-icon]]]]]])
+    
 (defn ramain [ ]
   (-> ((js* "$") "body") 
       (.css "background-image" "url(/img/ra/ra-bg.png")
-      (.css "background-size" "100%"))
+      (.css "background-size" "100%")
+      
+      )
   ;(-> ((js* "$") "#navbar") (.attr "hidden" true))
   (let [pdata (-> @gm :state :players (get @uname))]
     [:div.container-fluid.my-2.h-100 {:style {:position "relative"} :on-mouse-move #(reset! ra-preview nil)}
+      (modal)
+      [:div.row (-> pdata str)]
       [:div.row
         (case (-> @gm :state :status)
           :setup [setup pdata]
@@ -255,10 +342,13 @@
         [:div.col-3
           [preview]
           [settings]
+          [info-button]
           [settings-button]]]
       [:div.row.w-100 {:style {:position "fixed" :bottom "5px" :height (-> @ra-app :settings :cardsize :h (* 2.5))}}
         [:div.col-9
-          [player-board@uname :lg]]
+          [:div.d-flex
+            [player-resources]
+            [player-board@uname :lg]]]
         [:div.col-3
           [chat]]]
       [hand]
@@ -287,133 +377,3 @@
 ;;;    :secret { ; no-one knows
 ;;;      :discard nil
 ;;;    }})
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-      
-; Element functions 
-
-
-;(defn resource-icon [ res v ]
-;  [:div.mr-1 {
-;    :key (gensym) 
-;    :style {
-;      :background-image (str "url(/img/ra/res-" (name res) ".jpg)")
-;      :background-size "2rem 2rem"
-;      :background-repeat "no-repeat"
-;      :width "32px" 
-;      :height "2rem"}}
-;    [:div.text-center {:class (if (= res :death) "text-white")} v]])
-
-;  
-;(defn showdata [ gm ]
-;  [:div 
-;    [:div.mb-2 (str @ra-app)]
-;    [:div (str gm)]])
-;    
-;  
-;  
-;        
-;        
-;(defn tips [ tipsettings ]
-;  [:div.tip.pt-2
-;    (if (:active tipsettings)
-;      [:div.text-center
-;        [:i.fas.fa-question-circle.mr-2]
-;        [:span (:tip tipsettings)]])])
-;        
-;        
-;
-
-;            
-;            
-;          
-;; |X|   | |
-;(defn player-hand [ gid gm uname ]
-;  (let [pub (-> gm :state :players (get uname) :public)
-;        pri (-> gm :state :players (get uname) :private)]
-;    [:div.h-100.p-1.border.rounded {:style {:background "rgba(50,50,50,0.5)"}}
-;      (case (-> gm :state :status) 
-;        :setup (if (= (-> gm :state :players (get uname) :action) :selectmage)
-;                [:div
-;                  [:div.h5.text-center "Choose Your Mage"]
-;                  [:div.d-flex.justify-content-center
-;                    (doall (for [c (:mages pri)]
-;                      (rendercard gid "mage" c)))]
-;                  [:div.d-flex [:button.btn.btn-dark.ml-auto.btn-sm {:disabled (-> @ra-app :selected nil?) :on-click #(select-start-mage! gid (:selected @ra-app))} "OK"]]]
-;                [:div 
-;                  [:div.h5.text-center "Mage:"]
-;                  [:div.d-flex.justify-content-center (rendercard gid "mage" (->> pri :mages (filter :selected) first))]])
-;        [:div 
-;          [:div "Player Hand, First Player Token"]
-;          [:div
-;            (for [a (-> pri :artifacts)]
-;              (doall (rendercard gid "artifact" a)))]])]))
-;      
-;; | | XX | |
-;(defn player-board [ gid gm uname ]
-;  (let [pub (-> gm :state :players (get uname) :public)
-;        pri (-> gm :state :players (get uname) :private)]
-;    (if (= (-> gm :state :status) :setup)
-;        [:div.row-fluid {:style {:height (* 2 (-> @ra-app :settings :cardsize :h))}}
-;          [:div.h5.text-center "Artifact Deck:"]
-;          [:div.d-flex.justify-content-center
-;            (doall (for [c (-> gm :state :players (get uname) :private :artifacts)]
-;              (rendercard gid "artifact" c)))]]
-;        [:div "Places of Power, Artifacts and Magic Item"
-;          
-;            (rendercard gid "mage" (-> pub :mage))
-;            (rendercard gid "magicitem" (->> gm :state :magicitems (filter #(= (:owner %) uname)) first))
-;              ])))
-;          
-;          
-;          
-;(defn ramainx [ gid gm uname ]
-;  (-> ((js* "$") "body") 
-;      (.css "background-image" "url(/img/ra/ra-bg.png")
-;      (.css "background-size" "100%"))
-;  ;(-> ((js* "$") "#navbar") (.attr "hidden" true))
-;  [:div.container-fluid.my-2 {:on-mouse-move #(swap! ra-app dissoc :preview)}
-;    (settings)
-;    ;[:div (-> gm :state :players (get uname) str)]
-;    [:div.row
-;      [:div.col-9
-;        (players gid gm uname)
-;        [:div.row.justify-content-around
-;          (magicitems gid gm uname)
-;          (placesofpower gid gm)
-;          (monuments gid gm)]]
-;      [:div.col-3
-;        [:div.row.d-flex.px-2.h-100
-;          [:div.col
-;            [:i.fas.fa-cog.fa-lg.ml-auto {:style {:cursor "pointer"} :on-click #(togglesettings!) :title "Settings"}]]
-;          ;(tips (-> @ra-app :settings :tips))
-;          [:button.btn.btn-sm.btn-danger.ml-auto.mt-auto {:on-click #(if (js/confirm "Are you sure you want to Quit?") (comms/leavegame gid))} "Quit"]]
-;        (let [preview (:preview @ra-app)] 
-;          [:img.img-fluid.preview.card {:hidden (nil? preview) :src preview}])]]
-;    [:div.row ;{:style {:position "fixed" :bottom "15px" :width "100%"}}
-;      [:div.col-3
-;        (player-hand gid gm uname)]
-;      [:div.col-6
-;        (player-board gid gm uname)]
-;      [:div.col-3 (chat gid (:chat gm))]]
-;  ])
