@@ -138,12 +138,25 @@
   ([ card ]
     (render-taken-card card nil)))
   
-;(defn rendercardback [ type ]
-;  (let [scale (case type "pop" 1.5 "magicitem" 0.9  1)]
-;    [:img.img-fluid.mr-2 {
-;      :width  (* (-> @ra-app :settings :cardsize :w) scale)
-;      :height (* (-> @ra-app :settings :cardsize :h) scale)
-;      :src (str "/img/ra/" type "-back.jpg")}]))  
+(defn rendercardback [ card size ]
+  (let [imgsrc (str "/img/ra/" (:type card) "-back.jpg")
+        scale (case size :lg 1.5 :sm 0.9  1)]
+    [:img.img-fluid.mx-1.mb-1 {
+      :title (str card)
+      :key (gensym)
+      :width  (* (-> @ra-app :settings :cardsize :w) scale) 
+      ;:height (* (-> @ra-app :settings :cardsize :h) scale)
+      :style {
+        :display "inline-block"
+        }
+      :src imgsrc
+      }]))  
+    
+       
+(defn- ok-btn-handler [ action ]
+  (comms/ra-send! {:action action :card (:selected @ra-app)})
+  (swap! ra-app dissoc :selected))
+    
     
 
 ; Section Elements
@@ -166,11 +179,16 @@
        
 (defn- magicitems [ pdata ]
   (let [target? (contains? #{:selectstartitem :selectmagicitem} (:action pdata))]
-    [:div.flex-wrap.justify-content-center {:class (if (or target? (-> @ra-app :settings :showmi :active)) "d-flex" "d-none")}
-      (doall (for [magicitem (-> @gm :state :magicitems)]
-        (if (-> magicitem :owner some?)
-            (render-taken-card magicitem)
-            (rendercard (assoc magicitem :target? target?)))))]))
+    [:div
+      (if (= (:action pdata) :selectmagicitem)
+        [:div.d-flex.justify-content-center.mb-1
+          [:h5.mr-2.my-auto "Choose a new Magic Item"]
+          [:button.btn.btn-secondary.mt-auto {:disabled (-> @ra-app :selected nil?) :on-click #(ok-btn-handler (:action pdata))} "OK"]])
+      [:div.flex-wrap.justify-content-center {:class (if (or target? (-> @ra-app :settings :showmi :active)) "d-flex" "d-none")}
+        (doall (for [magicitem (-> @gm :state :magicitems)]
+          (if (-> magicitem :owner some?)
+              (render-taken-card magicitem)
+              (rendercard (assoc magicitem :target? target?)))))]]))
             
             
 (defn- canplay? [ card resources ]
@@ -198,8 +216,8 @@
     [:div.border.rounded.p-1.chatbox   {:style {:min-height (* 45 (-> @ra-app :settings :cardsize :scale))}}
       (for [msg (-> @gm :state :chat) :let [{:keys [msg uname timestamp]} msg]]
         [:div {:key (gensym) :style {:word-wrap "break-word"}}
-          [:span.mr-1 (model/timeformat timestamp)]
-          [:b.text-primary.mr-1 (str uname ":")]
+          ;[:span.mr-1 (model/timeformat timestamp)]
+          [:b.text-primary.mr-1 uname]
           [:span msg]])
           ]
     [:form {:on-submit (fn [e] (.preventDefault e) (comms/sendmsg! (:msg @ra-app) @gid ) (swap! ra-app assoc :msg ""))}
@@ -211,11 +229,6 @@
         [:span.input-group-append [:button.btn.btn-sm.btn-outline-secondary {:type "btn"} [:i.fas.fa-arrow-right]]]]]])
        
 ; SETUP
-       
-(defn- ok-btn-handler [ action ]
-  (comms/ra-send! {:action action :card (:selected @ra-app)})
-  (swap! ra-app dissoc :selected))
-    
 (defn- setup [ pdata ]
   [:div.col-9
     [:div.d-flex.justify-content-around
@@ -255,12 +268,13 @@
       [:tbody
         (doall (for [[p d] (-> @gm :state :players)]
           [:tr {:key (gensym) :class (if (= plyr p) "selected")} 
-            (if (contains? (-> @gm :state :plyr-to set) p)
+            (case (-> @gm :state :players (get p) :action)
+              :selectmagicitem [:td.text-center [:small "Passing"]]
+              :pass [:td.text-center [:small "Passed"]]
               [:td.text-center 
-                [:duv.btn-group
+                [:div.btn-group
                   [:button.btn.btn-xs.btn-light {:on-click #(comms/ra-send! {:action :done :uname p})} "d"]
-                  [:button.btn.btn-xs.btn-light {:on-click #(comms/ra-send! {:action :pass :uname p})} "p"]]]
-              [:td.text-center [:small "Passed"]])
+                  [:button.btn.btn-xs.btn-light {:on-click #(comms/ra-send! {:action :pass :uname p})} "p"]]])
             [:td.px-2 (if (= p p1) [:img.p1.ml-auto {:src "/img/ra/player-1.png"}])]
             [:td.px-2 [:b.mr-2 p]]
             (doall (for [r [:gold :calm :elan :life :death]]
@@ -288,16 +302,19 @@
   (let [pdata (-> @gm :state :players (get p) :public)]
     [:div.d-flex.justify-content-left
       (if (-> pdata :mage :uid) (rendercard (:mage pdata) size))
-      (if-let [mi (->> @gm :state :magicitems (filter #(= (:owner %) p)) first)] (rendercard mi size))
+      (if-let [mi (->> @gm :state :magicitems (filter #(= (:owner %) p)) first)] 
+        (if (-> @gm :state :players (get p) :action (= :pass))
+          (rendercardback mi size)
+          (rendercard mi size)))
       (doall (for [art (:artifacts pdata)] (rendercard art size)))]))
     
-(defn- gamestate [ ]
+(defn- gamestate [ pdata ]
   (let [p (->> @gm :state :players (reduce-kv #(if (= (:action %3) :play) (conj %1 %2) %1) #{}) first)]
     [:div.col-9 {:style {:position "relative"}}
       [:div.row.mb-2
         [:div.col-4 (resource-table p)]
         [:div.col-8 (player-board p :sm)]]      
-      [magicitems (-> @gm :state :players (get @uname) :action)]
+      [magicitems pdata]
       [:div.d-flex.justify-content-around
         [placesofpower]
         [monuments]]
@@ -338,7 +355,7 @@
       [:div.row
         (case (-> @gm :state :status)
           :setup [setup pdata]
-          [gamestate])
+          [gamestate pdata])
         [:div.col-3
           [preview]
           [settings]
