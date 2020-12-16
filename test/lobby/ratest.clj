@@ -189,17 +189,7 @@
 ; All players selected a mage (including AI setup), and a Magic Item game on!
 (expect :started
   (-> (started2pgm) :status))
-  ;(let [gs (ramodel/setup ["p1" "p2"])
-  ;      m1 (-> gs :players (get "p1") :private :mages first)
-  ;      m2 (-> gs :players (get "p2") :private :mages first)
-  ;      mi1 (-> gs :magicitems first)
-  ;      mi2 (-> gs :magicitems last)]
-  ;  (-> gs
-  ;      (ramodel/selectmage {:card (:uid m1)} "p1")
-  ;      (ramodel/selectmage {:card (:uid m2)} "p2")
-  ;      (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :plyr-to first))
-  ;      (ramodel/selectstartitem {:card (:uid mi2)} (-> gs :plyr-to last))
-  ;      :status)))
+  
 ;; With AI
 (expect :started
   (let [aip (-> "AI" gensym str)
@@ -302,17 +292,30 @@
                (ramodel/done "p2"))]
     [(-> gs :players (get "p1") :action)
      (-> gs :players (get "p2") :action)]))
-      
+
+; PASS     
 ;; p1 pass
-(expect  ["p1" ["p2"] :pass :play] ; current player action = :waiting, next player action = :play
+(expect  ["p1" ["p2"] :selectmagicitem :waitingforpass] ; Pass Turn Order; New Turn Order; Pass Player :action; Other Player :action
   (let [gs (-> (started2pgm)
                (ramodel/pass "p1"))]
     [(-> gs :pass-to first)
      (-> gs :plyr-to)
      (-> gs :players (get "p1") :action)
      (-> gs :players (get "p2") :action)]))
-;; p2 pass 
-(expect  ["p2" ["p1"] :play :pass] ; current player action = :waiting, next player action = :play
+;; p1 pass, choose MagicItem
+(expect  [["p1" "p2"] ["p2"] :pass :play 4 4] ; Pass Turn Order; New Turn Order; Pass player action; Other player action; Artifacts in Hand; Artifacts in Deck
+  (let [s2pg  (started2pgm)
+        gs (-> s2pg
+               (ramodel/pass "p1")
+               (ramodel/selectmagicitem {:card (-> s2pg :state :magicitems (nth 3))} "p1"))]
+    [(-> gs :pass-to)
+     (-> gs :plyr-to)
+     (-> gs :players (get "p1") :action)
+     (-> gs :players (get "p2") :action)
+     (-> gs :players (get "p1") :private :artifacts count)
+     (-> gs :players (get "p1") :secret :artifacts count)]))
+;;; p2 pass 
+(expect  ["p2" ["p1"] :waitingforpass :selectmagicitem] ; current player action = :waiting, next player action = :play
   (let [gs (-> (started2pgm)
                (ramodel/done "p1")
                (ramodel/pass "p2"))]
@@ -320,20 +323,45 @@
      (:plyr-to gs)
      (-> gs :players (get "p1") :action)
      (-> gs :players (get "p2") :action)]))
-;; Both passed
-(expect  [[] ["p2" "p1"] :waiting :play] ; Empty pass-to Turnorder based on pass-to players set to :play or :waiting
-  (let [gs (-> (started2pgm)
+;; p2 pass, choose mi
+(expect  [["p2" "p1"] ["p1"] :play :pass] ; Empty pass-to Turnorder based on pass-to players set to :play or :waiting
+  (let [s2pg  (started2pgm)
+        gs (-> s2pg
                (ramodel/done "p1")
                (ramodel/pass "p2")
-               (ramodel/pass "p1"))]
+               (ramodel/selectmagicitem {:card (-> s2pg :state :magicitems (nth 3) :uid)} "p2"))]
     [(-> gs :pass-to)
      (-> gs :plyr-to)
      (-> gs :players (get "p1") :action)
      (-> gs :players (get "p2") :action)]))
-      
+;; P2 passed, P1 pass
+(expect  [["p2" "p1"] [] :selectmagicitem :pass] ; Empty pass-to Turnorder based on pass-to players set to :play or :waiting
+  (let [s2pg  (started2pgm)
+        gs (-> s2pg
+               (ramodel/done "p1")
+               (ramodel/pass "p2")
+               (ramodel/selectmagicitem {:card (-> s2pg :state :magicitems (nth 3) :uid)} "p2")
+               (ramodel/pass "p1")
+               )]
+    [(-> gs :pass-to)
+     (-> gs :plyr-to)
+     (-> gs :players (get "p1") :action)
+     (-> gs :players (get "p2") :action)]))
 
-;; next player is active player
-      
+;; P2 passed, P1 pass & select MI
+(expect  [[] ["p2" "p1"] :waiting :play] ; Empty pass-to Turnorder based on pass-to players set to :play or :waiting
+  (let [s2pg  (started2pgm)
+        gs (-> s2pg
+               (ramodel/done "p1")
+               (ramodel/pass "p2")
+               (ramodel/selectmagicitem {:card (-> s2pg :state :magicitems (nth 3) :uid)} "p2")
+               (ramodel/pass "p1")
+               (ramodel/selectmagicitem {:card (-> s2pg :state :magicitems (nth 4) :uid)} "p1")
+               )]
+    [(-> gs :pass-to)
+     (-> gs :plyr-to)
+     (-> gs :players (get "p1") :action)
+     (-> gs :players (get "p2") :action)]))
 
       
 ; Toggle card exhausted
