@@ -4,6 +4,11 @@
     [lobby.model :as model :refer [uname gid gm]]
     [lobby.comms :as comms]))
     
+    
+(def da-app (r/atom {
+  :style {
+    :cursor "auto"}}))
+    
 (defn- teambox [ gid id tm plyr? ]
   [:div.col-sm.border.border-light.rounded.m-2.p-2 {
     :key (gensym)
@@ -53,7 +58,7 @@
         ]
         
     (.clearRect ctx 0 0 w h)
-    (set! (.-src img) "img/da/bn_1.png")
+    (set! (.-src img) "img/da/out.png")
     
     ;(.setTransform ctx 1 0 0 1 0 0)
     (doseq [f formation]
@@ -72,7 +77,7 @@
       (.fill ctx2)
     )
     
-    (prn (.-getImageData hitmap));
+    ;(prn (.-getImageData hitmap));
     
     ;(.setTransform ctx -1 0 0 1 0 0)
     ;(.drawImage ctx img 0 0 220 250 -440 0 220 250)
@@ -117,10 +122,10 @@
             })]])})))
   
 (defn- hulk [ ]
-  [:div
+  [:div {:style (:style @da-app)}
     [:div.d-flex
       [:h5 "Welcome to The Hulk"]
-      [:div (str @mouse)]]
+      [:div.ml-2 (str @mouse) (get (:id @mouse) 0)]]
     [:div
       [canvas]]
     [:div (str @gm)]])
