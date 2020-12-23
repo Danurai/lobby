@@ -76,7 +76,7 @@
           #(hash-map 
               :zone (inc %1)
               ;:terrain [] :swarm []
-              :marine (assoc %2 :facing (if (< %1 (/ teamcount 2)) :top :bottom))))))
+              :marine (assoc %2 :facing (if (< %1 teamcount) :top :bot))))))
     
 (defn spawn [ gs {:keys [spawnzone spawnfacing spawnqty]}] ;spawnzone spawnfacing spawnqty ]
   (let [sq (min (-> gs :blips spawnfacing) spawnqty)

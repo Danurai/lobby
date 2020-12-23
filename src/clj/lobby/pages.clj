@@ -25,6 +25,8 @@
     [:script {
       :src "https://kit.fontawesome.com/3e3abf4a33.js"
       :crossorigin "anonymous"}]
+    [:link {:rel "preconnect" :href "https://fonts.gstatic.com"}]
+    [:link {:href "https://fonts.googleapis.com/css2?family=Orbitron&display=swap" :rel "stylesheet"}]
     (h/include-css "/css/ra.css")
   ])
 			
