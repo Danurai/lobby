@@ -16,7 +16,6 @@
     :on-click #(comms/ra-send! {:gid gid :action :pickteam :team id})
     }
     [:h5 {:style {:color id :text-transform "capitalize"}} id]
-    
     (for [m (-> tm :members)]
       [:div {:key (str id (:id m))} (:name m)])
   ])
@@ -120,22 +119,59 @@
               ;:on-click      mouseclick
               ;:on-mouse-out  #(swap! appstate dissoc :mx :my)
               })]
-            [:img#img {:hidden true :src "/img/da/outx.png"}]
             [:canvas#hitmap.border (if-let [node @dom-node] {
               :width "1000px" 
               :height "300px"
               :hidden true
             })]])})))
   
+(def order-icon {
+  :support "fa-plus-square"
+  :move    "fa-arrows-alt"
+  :attack  "fa-crosshairs"
+})
+  
+(defn convert
+"Converts single element to hiccup or reagent"
+[pre txt]
+  (if-let [symbol (re-matches #"\[(\w+)\]" txt)]
+    [:i {:class (str pre (second symbol))}]
+    txt))
+
+(defn makespan [res] 
+  (apply conj [:span] 
+    (reduce 
+      #(if (string? %2) 
+        (if (string? (last %1)) 
+          (conj (-> %1 drop-last vec) (str (last %1) %2)) 
+          (conj (vec %1) %2)) 
+        (conj (vec %1) %2)) [""] res)))
+        
+(defn- markdown [ txt ]
+  (->> txt
+      (re-seq #"\[\w+\]|\w+|." )
+      (map #(convert "lotr-type-" %))
+      makespan))
+(defn- orders [ ]
+  [:div.d-flex.justify-content-around
+    (for [[k team] (-> @gm :state :teams)]
+      (if (= (:cmdr team) @uname)
+        (for [order (:orders team)]
+          [:div {:key (->> order :id (str "order_")) :style {:width "18rem" :color k}}
+            [:div.card-title.text-center 
+              [:span (:name order)]]
+            [:div.card-title.text-center
+              [:i.fas.mr-2 {:class (-> order :type order-icon)}]
+              [:span.mr-2 (->> order :id )]]
+            [:div.card-body.text-secondary   (:text order)]])))])
+  
 (defn- hulk [ ]
   (let [ui8ca (:id @mouse)]
     [:div {:style (:style @da-app)}
       [:div.d-flex
-        [:h5 "Welcome to The Hulk"]
-        ;[:div.ml-2 (str @mouse) (-> @mouse :id first)]
-        ]
-      [:div
-        [canvas]]
+        [:h5 "Welcome to The Hulk"]]
+      [canvas]
+      [orders]
       [:div (str @gm)]]))
       
 (defn damain [ ]
@@ -143,11 +179,12 @@
       (.css "background-color" "#222222")
       (.css "color" "grey"))
   [:div.container-fluid.my-3 
+    [:img#img {:hidden true :src "/img/da/outx.png"}]
     (case (-> @gm :state :status)
       :setup (chooseteams @gid @gm)
       [hulk]
       )
-    [:div (-> gm :state :teams str)]
+    [:div (-> @gm :state :teams str)]
     [:div.py-3
       [:button.btn.btn-sm.btn-dark.float-right {:on-click #(if (js/confirm "Are you sure you want to Quit?") (comms/leavegame @gid))} "Quit"]]])
       
