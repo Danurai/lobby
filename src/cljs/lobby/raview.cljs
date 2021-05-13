@@ -43,7 +43,6 @@
       (swap! ra-app assoc  :selected (:uid c)))))
       
   
-<<<<<<< HEAD
 (defn placesofpower [ gid gm ]
   [:div
     (doall (for [pop (-> gm :state :pops)]
@@ -67,9 +66,6 @@
           (rendercard gid "magicitem" (assoc magicitem :target? select?))))]]))
         
 (defn settings []
-=======
-(defn- settings []
->>>>>>> 80b821a130d0e26b1cec6a03b258c81535fa37ad
   [:div.settings.bg-dark.rounded-left.p-1 {:style {:right (if (-> @ra-app :settings :hide) "-200px" "0px")}}
     [:div [:button.btn.close.mr-1 {:on-click #(togglesettings!)} [:i.fas.fa-times]]]
     [:div.my-1 [:b "Settings"]]
