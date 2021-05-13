@@ -2,18 +2,18 @@
   (:require 
     [lobby.ramodel :as ramodel]
     [lobby.damodel :as damodel]
+    [lobby.bbmodel :as bbmodel]
   ))
 
 (defonce gamelist {
   "Res Arcana" {
-    :minp 1
-    :maxp 4
-    :has-ai true
+    :minp 1 :maxp 4 :has-ai true
   }
-  "Death Angel"
-  {
-    :minp 1
-    :maxp 6
+  "Death Angel" {
+    :minp 1 :maxp 6
+  }
+  "BBTM" {
+    :minp 2 :maxp 2 :has-ai true
   }})
   
 (defonce appstate 
@@ -27,7 +27,7 @@
   ([ gid uname txt event ]
     (let [msg {:msg txt :uname uname :timestamp (new java.util.Date)}]
       (if gid
-          (swap! appstate update-in [:games gid :chat] conj msg)
+          (swap! appstate update-in [:games gid :state :chat] conj msg)
           (swap! appstate update-in [:chat] conj msg))))
   ([ gid uname txt ]
     (addchat! gid uname txt :usermsg)))
@@ -36,8 +36,9 @@
   (if (nil? (:state gm))
       gm
       (case (:game gm)
-        "Res Arcana" (assoc gm :state (ramodel/obfuscate (:state gm) uname))
+        "Res Arcana"  (assoc gm :state (ramodel/obfuscate (:state gm) uname))
         "Death Angel" (assoc gm :state (damodel/obfuscate (:state gm) uname))
+        "BBTM"        (assoc gm :state (bbmodel/obfuscate (:state gm) uname))
         gm)))
         
 (defn obfuscate-state [ uid ]
@@ -81,6 +82,7 @@
   (case gname 
     "Res Arcana"  (ramodel/setup plyrs)
     "Death Angel" (damodel/setup plyrs)
+    "BBTM"        (bbmodel/setup plyrs)
     {}))
     
 (defn startgame! [ gid ]
@@ -97,4 +99,5 @@
         (case (:game game)
           "Res Arcana"  (ramodel/parseaction (:state game) ?data uname)
           "Death Angel" (damodel/parseaction (:state game) ?data uname)
+          "BBTM"        (bbmodel/parseaction (:state game) ?data uname)
           (:state game))))))

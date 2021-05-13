@@ -21,7 +21,6 @@
     [lobby.pages :as pages]
 		[lobby.users :as users :refer [users]]
 		[lobby.model :as model]
-    [lobby.ramodel :as ramodel]
 		))   
         
 ; sente
