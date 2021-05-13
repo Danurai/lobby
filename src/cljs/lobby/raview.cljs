@@ -106,7 +106,6 @@
   (let [select? (-> gm :state :players (get uname) :action (= :selectstartitem))]
     [:div.mb-2 {:hidden (not select?)}; show based on select? or global setting
       [:h5.text-center {:hidden (nil? select?)} "Select a Magic Item" 
-        [:div (:selected @ra-app)]
         [:button.btn.btn-sm.btn-secondary.float-right {
           :disabled (nil? (:selected @ra-app))
           :on-click #(comms/ra-send! {:gid gid :action :selectstartitem :card (-> @ra-app :selected str)})}
