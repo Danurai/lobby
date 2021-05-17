@@ -28,6 +28,7 @@
     [:link {:rel "preconnect" :href "https://fonts.gstatic.com"}]
     [:link {:href "https://fonts.googleapis.com/css2?family=Orbitron&display=swap" :rel "stylesheet"}]
     (h/include-css "/css/ra.css")
+    (h/include-css "/css/bb.css")
   ])
 			
 (defn loginform []

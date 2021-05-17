@@ -37,7 +37,7 @@
 ; RA Send
   
 (defn ra-send! [ ?data ]
-  ;(prn ?data)
+  (prn ?data)
   (chsk-send! [:lobby/game-action (assoc ?data :gid @gid)] 5000 nil))
 
 ;;;; Sente send functions

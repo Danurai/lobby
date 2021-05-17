@@ -43,28 +43,28 @@
       (swap! ra-app assoc  :selected (:uid c)))))
       
   
-(defn placesofpower [ gid gm ]
-  [:div
-    (doall (for [pop (-> gm :state :pops)]
-      (rendercard gid "pop" pop :lg)))])
-        
-(defn monuments [ gid gm ]
-  [:div
-    (doall (for [monument (-> gm :state :monuments :public)]
-      (rendercard gid "monument" monument :lg)))])
-       
-(defn magicitems [ gid gm uname ]
-  (let [select? (-> gm :state :players (get uname) :action (= :selectstartitem))]
-    [:div.mb-2 {:hidden (not select?)}; show based on select? or global setting
-      [:h5.text-center {:hidden (nil? select?)} "Select a Magic Item" 
-        [:button.btn.btn-sm.btn-secondary.float-right {
-          :disabled (nil? (:selected @ra-app))
-          :on-click #(comms/ra-send! {:gid gid :action :selectstartitem :card (-> @ra-app :selected str)})}
-          "OK"]]
-      [:div.d-flex
-        (doall (for [magicitem (-> gm :state :magicitems)]
-          (rendercard gid "magicitem" (assoc magicitem :target? select?))))]]))
-        
+;(defn placesofpower [ gid gm ]
+;  [:div
+;    (doall (for [pop (-> gm :state :pops)]
+;      (rendercard gid "pop" pop :lg)))])
+;        
+;(defn monuments [ gid gm ]
+;  [:div
+;    (doall (for [monument (-> gm :state :monuments :public)]
+;      (rendercard gid "monument" monument :lg)))])
+;       
+;(defn magicitems [ gid gm uname ]
+;  (let [select? (-> gm :state :players (get uname) :action (= :selectstartitem))]
+;    [:div.mb-2 {:hidden (not select?)}; show based on select? or global setting
+;      [:h5.text-center {:hidden (nil? select?)} "Select a Magic Item" 
+;        [:button.btn.btn-sm.btn-secondary.float-right {
+;          :disabled (nil? (:selected @ra-app))
+;          :on-click #(comms/ra-send! {:gid gid :action :selectstartitem :card (-> @ra-app :selected str)})}
+;          "OK"]]
+;      [:div.d-flex
+;        (doall (for [magicitem (-> gm :state :magicitems)]
+;          (rendercard gid "magicitem" (assoc magicitem :target? select?))))]]))
+;        
 (defn settings []
   [:div.settings.bg-dark.rounded-left.p-1 {:style {:right (if (-> @ra-app :settings :hide) "-200px" "0px")}}
     [:div [:button.btn.close.mr-1 {:on-click #(togglesettings!)} [:i.fas.fa-times]]]
@@ -110,7 +110,7 @@
     [:img.resource-sm.mr-1 {:src (str "/img/ra/res-" (-> r first key name) ".png")}]
     [:b (str "x" (-> r first val))]])
     
-(defn rendercard 
+(defn rendercard
   ([ card size ]
     (let [imgsrc (str "/img/ra/" (:type card) "-" (:id card) ".jpg")
           scale (case size :lg 1.5 :sm 0.9  1)
