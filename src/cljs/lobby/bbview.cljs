@@ -42,12 +42,14 @@
 (defn- player-bar [ hl zone ]
   (let [tzones (get-team-zone-map  hl) pteam (-> @gm :state :players (get @uname) :team :team)]
     [:div.col-4 
-      (if (or (empty? tzones)
-              (-> tzones (get pteam) (= zone)) 
-              (and (-> tzones (get pteam) nil?) (-> hl :zone zone empty?) )) 
-        (if (-> @bb-app :matchupcommit? some?)
-            (if (and (-> @bb-app :matchupcommit? :id (= (:id hl))) (-> @bb-app :matchupcommit? :zone (= zone))) [:button.btn.btn.sm.w-100.btn-warning "Select a player to commit (Cancel)"])
-            [:button.btn.btn-sm.w-100.btn-light {:on-click (fn [e] (.stopPropagation e) (swap! bb-app assoc :matchupcommit? {:id (:id hl) :zone zone}))} "Commit"]))
+      (if (and (= (-> @gm :state :activeplyr) @uname)
+               (->> @gm :state :players (get @uname) :passed? ((complement true?))))
+        (if (or (empty? tzones)
+                (-> tzones (get pteam) (= zone)) 
+                (and (-> tzones (get pteam) nil?) (-> hl :zone zone empty?) )) 
+          (if (-> @bb-app :matchupcommit? some?)
+              (if (and (-> @bb-app :matchupcommit? :id (= (:id hl))) (-> @bb-app :matchupcommit? :zone (= zone))) [:button.btn.btn.sm.w-100.btn-warning "Select a player to commit (Cancel)"])
+              [:button.btn.btn-sm.w-100.btn-light {:on-click (fn [e] (.stopPropagation e) (swap! bb-app assoc :matchupcommit? {:id (:id hl) :zone zone}))} "Commit"])))
       (for [ p (-> hl :zone zone) ]
         (let [url (str "/img/bb/images/" (:team p) " - " (:position p) ".png")]
           [:div.bar.bgimg.d-flex {
