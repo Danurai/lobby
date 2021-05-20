@@ -117,21 +117,31 @@
 (defn- teamcard [ team ]
   )
 
+; SETUP
 
 (defn setupview [ state ]
-  [:div "Setup View"]
-  (let [ choose?  (= uname (get (-> state :turnorder repeat) (:turn state)))
+  (let [ ap (get (:turnorder state) (:turn state))
+         isap?  (= @uname (get (:turnorder state) (:turn state)))
          chosenteams (->> @gm :state :players vals (map :team) set)
-         team (:team @bb-app) ]
+         team (or (:team @bb-app) "Human") ]
     [:div.col
-      [:div.row
-        (for [ p (:turnorder state) ]
-          [:div.col-3 
+      [:div.row.mb-2
+        (for [ p (:turnorder state) :let [pteam (-> state :players (get p) :team)]]
+          [:div.col
             {:key (gensym)}
             [:div.p-3.border.round
-              [:h5.text-center p]
-              [:div.text-center (str "Team: " (-> state :players (get p) :team))]
-          ]])]
+              [:h5.text-center (str "Coach " p)] 
+              [:div.text-center [:b (if (some? pteam) pteam (if (and isap? (= ap p)) "Choosing Team" "Waiting for Coach Choices"))]]]])]
+      [:div.row-fluid [:div.h5.text-center "Starting Rosters"]]
+      [:div.row-fluid.d-flex
+        [:ul.list-group
+          (for [ t (->> state :teams (map :team) distinct) :let [active? (= t team)]]
+            [:li.list-group-item {:class (if active? "active") :on-click #(swap! bb-app assoc :team t)} t])]
+        [:div.d-flex.justify-content-center
+          (for [ tq (->> state :teams (filter #(= (:team %) team)) (sort-by :id) (map :position) frequencies) ]
+            [:div.p-2 {:key (gensym)}
+              (teamplyrcard {:position (first tq) :qty (last tq) :team team })])]]
+
       [:div.d-flex.justify-content-around
         (for [ t (->> state :teams (map :team) distinct) :let [chosen? (contains? chosenteams t)]]
           [:img.choicebox {
@@ -146,7 +156,6 @@
             {:key (gensym)}
             (teamplyrcard {:position (first tq) :qty (last tq) :team team })
             ])]]))
-
 
 
 (defn bbmain [ ]
