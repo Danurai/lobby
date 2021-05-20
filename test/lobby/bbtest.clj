@@ -2,6 +2,7 @@
   (:require
     [expectations :refer :all]
     [lobby.model :as model]
+    [lobby.bbdata :as data]
     [lobby.bbmodel :as bbmodel]
     [lobby.lobbytest :refer :all]))
 
@@ -74,7 +75,6 @@
         (bbmodel/parseaction {:action :commitplayer :plid (:id p1) :hlid (:id h1) :zone :a} "p1")
         :players (get "p1") :team :private count)))
 
-
 ; Pass
 (expect true
   (let [gs twoplyrgame
@@ -82,7 +82,17 @@
     (-> gs
         (bbmodel/parseaction {:action :pass} p1)
         :players (get p1) :passed?)))
+; Both Pass
+(expect :scoreboard
+  (let [gs twoplyrgame
+        p1 (-> gs :turnorder first)
+        p2 (-> gs :turnorder last)]
+    (-> gs
+        (bbmodel/parseaction {:action :pass} p1)
+        (bbmodel/parseaction {:action :pass} p2)
+        :status)))
 
+; Both out of players
 (expect :scoreboard
   (let [gs twoplyrgame
         p1 (-> gs :turnorder first)
@@ -98,13 +108,10 @@
         (range 6))
       :status))) 
 
-; Commit-Player
+
+
 
 ; AI Tests
-;(def twoplyrgamewithai   
-;  (let [gs (->> (bbmodel/setup ["p1" "AI1234"]))
-;        p1team (if (= (-> gs :players (get "AI1234") :team) "Orc") "Human" "Orc")]
-;    (bbmodel/parseaction gs {:action :chooseteam :team p1team} "p1") ))
 
 ; AI-CHOOSE-TEAM
 (expect "Orc"
@@ -127,3 +134,29 @@
       (and (-> ai-commit first number?)
            (-> ai-commit second number?)
            (or (-> ai-commit last (= :a))(-> ai-commit last (= :b))))))
+
+          
+(def ability-test-state {
+  :turn 0
+  :status :started
+  :activeplyr "p1"
+  :turnorder ["p1" "p2"]
+  :players {
+    "p1" {:state :matchup :team {:team "Human" :private (->> data/players (take 6) vec)}}
+  }
+  :highlights {
+    :public (->> data/highlights (take 2) (mapv #(assoc % :zone {:a [ ] :b []})) )
+  }
+})
+
+;(expect :abilities
+;  (-> ability-test-state
+;      (bbmodel/parseaction {:action :commitplayer :plid 4 :hlid 0 :zone :a} "p1")
+;      :players (get "p1") :status
+;      ))
+;
+;(expect "p1"
+;  (-> ability-test-state
+;      (bbmodel/parseaction {:action :commitplayer :plid 4 :hlid 0 :zone :a} "p1")
+;      :activeplyr
+;      ))
