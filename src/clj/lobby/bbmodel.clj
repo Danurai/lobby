@@ -23,13 +23,16 @@
           to    (->> state :turnorder (repeat 2) (apply concat) (remove #(-> state :players (get %) :passed true?)) vec)
           apidx (.indexOf to ap)
           np    (get to (inc apidx))]
-      (prn "end turn" ap np "pass?" pass )
-      (-> state
-          (update :turn inc)
-          (assoc :activeplyr np)
-          (update-in [:players ap] dissoc :state)
-          (assoc-in [:players ap :passed?] pass)
-          (assoc-in [:players np :state] :matchup))))
+      (prn "end turn" ap np "pass?" pass)
+      ;(if (and (-> state :players (get ap) :abilitylist count (> 0)) (-> state :players (get ap) :status (= :abilities)))
+      ;    state
+          (-> state
+              (update :turn inc)
+              (assoc :activeplyr np)
+              (update-in [:players ap] dissoc :state)
+              (assoc-in [:players ap :passed?] pass)
+              (assoc-in [:players np :state] :matchup))))
+      ;)
   ([ state ] 
     (let [ap (-> state :activeplyr)]
       (end-turn state (-> state :players (get ap) :team :private empty?)))))
@@ -38,6 +41,8 @@
   (let [p (->> (-> state :players (get uname) :team :private) (filter #(= (:id %) playerid)) first)]
     (-> state 
       (assoc-in [:players uname :team :private] (remove #(= (:id %) playerid) (-> state :players (get uname) :team :private)))
+      ;(assoc-in [:players uname :status] :abilities)
+      ;(assoc-in [:players uname :abilitylist] (:abilities p))
       (assoc-in [:highlights :public]
         (mapv 
           #(if (= (:id %) highlightid)
@@ -51,7 +56,7 @@
   (let [chosen-teams (->> state :players (map #(-> % last :team)) (remove nil?) set) 
         teams        (->> state :teams (map :team) distinct (remove chosen-teams)) ]
     ;(prn "ai-choose-team" (first teams))
-    (first teams)))
+    (rand-nth teams)))
 
 (defn get-team-zone-map [ hl ]
   (reduce-kv
@@ -154,5 +159,5 @@
   (case (:action ?data)
     :chooseteam   (-> state (choose-team (:team ?data) uname) check-start)
     :commitplayer (-> state (commit-player uname (:plid ?data) (:hlid ?data) (:zone ?data)) start-turn)
-    :pass         (end-turn state true)
+    :pass         (-> state (end-turn true) start-turn)
     state))
