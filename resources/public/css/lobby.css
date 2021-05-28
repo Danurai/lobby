@@ -15,3 +15,22 @@
 ::placeholder {
   font-style: italic;
 }
+
+
+.chat {
+  display: flex;
+  flex-flow: column;
+  max-height: 200px;
+}
+
+.chatbox {
+  flex: 1;
+  font-size: 0.8rem;
+  overflow-y: scroll;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.chat div {
+  background: white;
+}

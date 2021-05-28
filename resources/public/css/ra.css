@@ -76,25 +76,6 @@ table tr {
 table tr.selected {
   background-color: rgba(196,196,196,0.2);
 }
-  
-  
-.chat {
-  display: flex;
-  flex-flow: column;
-  height: 100%;
-}
-
-.chatbox {
-  flex: 1;
-  font-size: 0.8rem;
-  overflow-y: scroll;
-  display: flex;
-  flex-direction: column-reverse;
-}
-
-.chat div {
-  background: white;
-}
 
 .resource-sm {
   width: 1rem;
