@@ -58,8 +58,8 @@
 ; SKILLS
 
 (defn- next-skill [ state uname ] 
-  (if verbose? (prn uname "nextskill" (-> state :players (get uname) :committed :id))) 
-  (update-in state [:players uname :committed :activeskill] inc))
+  (if verbose? (prn uname "nextskill" (-> state :srcplayer :id))) 
+  (update state :activeskill inc))
 
 ;; Responses
 (def discard {
@@ -89,66 +89,85 @@
   :id :waiting
   :msg "Waiting for other Players to complete an action"
 })
+
+(defn- player-down [state hlid zone plyr coach]
+  (if (:prone? plyr)
+      (-> state
+          (assoc-in [:highlights :public]
+            (mapv (fn [hl]
+              (if (= (:id hl) hlid)
+                  (assoc-in hl [:zone zone] (->> hl :zone zone (remove #(= (:id %) (:id plyr))) vec))
+                  hl)) (-> state :highlights :public)))
+          (update-in [:players coach :team :injured] conj plyr))
+      (assoc-in state [:highlights :public]
+        (mapv (fn [hl]
+          (if (= (:id hl) hlid)
+              (assoc-in hl [:zone zone] 
+                (mapv (fn [p]
+                  (if (= (:id p) (:id plyr))
+                      (assoc p :prone? true)
+                      p)) (-> hl :zone zone)))
+              hl)) (-> state :highlights :public) ))))
+
 (def tackle-results {
   :id :tackle-results
   :msg "Select Result"
   :options :dice
-  :dice []
   :cb (fn [ state ?data uname ] 
-        (let [data (-> state :players (get uname) :response)
-              zone (:tgtzone data)
-              tgt  (->> state :highlights :public (filter #(= (:id %) (:hlid data))) first :zone zone (filter #(= (:id %) (:tgtid data))) first)
-              tgtcoach (:tgtcoach data)]
-          (if verbose? (prn uname "fn[] tackle-results" ?data zone tgt tgtcoach ))
-          (case (:dice ?data)
-            :tgtdown  (if (:prone? tgt)
-                        (-> state
-                            (assoc-in [:highlights :public]
-                              (mapv (fn [hl]
-                                (if (= (:id hl) (:hlid data))
-                                    (assoc-in hl [:zone zone] (->> hl :zone zone (remove #(= (:id %) (:tgtid data))) vec))
-                                    hl)) (-> state :highlights :public)))
-                            (update-in [:players tgtcoach :team :injured] conj tgt))
-                        (assoc-in state [:highlights :public]
-                          (mapv (fn [hl]
-                            (if (= (:id hl) (:hlid data))
-                                (assoc-in hl [:zone (:tgtzone data)] 
-                                  (mapv (fn [p]
-                                    (if (= (:id p) (:tgtid data))
-                                        (assoc p :prone? true)
-                                        p)) (-> hl :zone (get zone))))
-                                hl)) (-> state :highlights :public) )))
-            :tackdown state
-            state)))
+        (let [tgtzone   (:tgtzone state)
+              srczone   (if (= :a tgtzone) :b :a) ;; won't work for cups
+              tgtplayer (:tgtplayer state)
+              tgtcoach  (:tgtcoach state)
+              srcplayer (:srcplayer state)
+              srccoach  (:srccoach state)]
+          (if verbose? (prn uname "fn[] tackle-results" ?data))
+          (next-skill 
+            (case (:dice ?data)
+              :tgtdown  (player-down state (:hlid state) tgtzone tgtplayer tgtcoach)
+              :tackdown (player-down state (:hlid state) srczone srcplayer srccoach)
+              state)
+            srccoach)))
 })
+
+(defn- get-highlight [ state id ]
+  (->> state :highlights :public (filter #(= (:id %) id)) first))
+(defn- get-highlightplayer [ state hlid zone plid ]
+  (->> (get-highlight state hlid)
+       :zone zone
+       (filter #(= (:id %) plid)) 
+       first))
 
 (def tackle-target {
   :id :tackle-target
   :msg "Choose Target"
   :options :matchup-opponent
-  :cb (fn [ state ?data uname ] 
-        (let [src (-> state :players (get uname) :committed)
-              hl  (->> state :highlights :public (filter #(= (:id %) (:hlid ?data))) first)
-              zone (:zone ?data)
-              tgt (->> hl :zone zone (filter #(= (:id %) (:id ?data))) first)
-              srcspp (get-tackle-spp src)
-              tgtspp (get-tackle-spp tgt)
-              tgtcoach (:coach (reduce-kv (fn [m k v] (if (= (-> v :team :team) (:team tgt)) (assoc m :coach k) m)) {:coach nil} (:players state)))
-              dice (if (= srcspp tgtspp) [ (rolldice) ] [ (rolldice) (rolldice) ]) 
-              tackle-response (-> tackle-results (assoc :dice dice :hlid (:hlid ?data) :tgtzone zone :tgtid (:id tgt) :coach uname :tgtcoach tgtcoach) )]
-          (if verbose? (prn uname "fn[] tackle-target" ?data (:id src) srcspp (:id tgt) tgtspp tgtcoach))
-          (if (< srcspp tgtspp)
-              (-> state 
-                  (assoc-in [:players tgtcoach :response] tackle-response)
-                  (assoc-in [:players uname :response] waiting))
-              (-> state 
-                  (assoc-in [:players uname :response] tackle-response)))))
+  :cb (fn [ state ?data uname ]  ; ?data {:action :response :id n :hl n :zone k :gid k}
+        (let [tgtplayer  (get-highlightplayer state (:hlid state) (:zone ?data) (:id ?data))
+              tgtcoach   (:coach (reduce-kv (fn [m k v] (if (= (-> v :team :team) (:team tgtplayer)) (assoc m :coach k) m)) {:coach nil} (:players state)))
+              srcspp     (get-tackle-spp (:srcplayer state))
+              tgtspp     (get-tackle-spp tgtplayer)
+              plyr-state (if (< srcspp tgtspp)
+                            (-> state 
+                                (assoc-in [:players tgtcoach :response] tackle-results)
+                                (assoc-in [:players uname :response] waiting))
+                            (-> state 
+                                (assoc-in [:players uname :response] tackle-results)))]
+          (if verbose? (prn uname "fn[] tackle-target" ?data tgtplayer srcspp tgtspp))
+          (assoc plyr-state :tgtplayer tgtplayer
+                            :tgtzone (:zone ?data)
+                            :tgtcoach tgtcoach
+                            :srczone nil
+                            :srccoach uname
+                            :dice (if (= srcspp tgtspp) [ (rolldice) ] [ (rolldice) (rolldice) ]))))
 })
 
 
 (defn end-response [ state uname ]
-  ;(prn "End Response" (-> state :players (get uname) :response))
-  (update-in state [:players uname ] dissoc :response))
+  (if verbose? (prn "End Response" (-> state :players (get uname) :response :id)))
+  (-> state 
+      (dissoc :hlid :tgtplayer :tgtzone :tgtcoach :srczone :srccoach :dice)
+      (update-in [:players (:tgtcoach state) ] dissoc :response)
+      (update-in [:players uname ] dissoc :response)))
 
 ;; Skills
 
@@ -173,14 +192,14 @@
       (assoc-in [:highlights :public]
         (mapv
           (fn [hl] 
-            (if (= (:id hl) (:hlid plyr)) 
-                (assoc-in hl [:zone (:zone plyr)] 
+            (if (= (:id hl) (:hlid state)) 
+                (assoc-in hl [:zone (:srczone state)] 
                   (mapv 
                     (fn [p]
                       (if (= (:id p) (:id plyr))
                           (update-in p [:cheat] conj (:cheatid state))
                           p))
-                    (-> hl :zone (get (:zone plyr)))))
+                    (-> hl :zone (get (:srczone state)))))
                 hl))
           (-> state :highlights :public)))
       (logaction uname "Cheat")
@@ -188,23 +207,23 @@
       (next-skill uname)))
 
 (defn- passball [ state plyr uname ]
-  (let [carrier (->> state :highlights :public (filter #(= (:id %) (:hlid plyr))) first :ballcarrier)]
+  (let [carrier (->> state :highlights :public (filter #(= (:id %) (:hlid state))) first :ballcarrier)]
     (if verbose? (prn uname "Pass Ball from" carrier " to " (:id plyr)))
     (-> (if (nil? carrier)
           (assoc-in state [:highlights :public]
             (mapv 
-              #(if (= (:id %) (:hlid plyr))
-                    (assoc % :ballcarrier {:zone (:zone plyr) :id (:id plyr)})
+              #(if (= (:id %) (:hlid state))
+                    (assoc % :ballcarrier {:zone (:srczone state) :id (:id plyr)})
                     %) (-> state :highlights :public)))
-          (if (= (:zone carrier) (:zone plyr))
+          (if (= (:zone carrier) (:srczone state))
               (assoc-in state [:highlights :public]
                 (mapv
-                  #(if (= (:id %) (:hlid plyr))
+                  #(if (= (:id %) (:hlid state))
                         (assoc-in % [:ballcarrier :id] (:id plyr))
                         %) (-> state :highlights :public)))
               (assoc-in state [:highlights :public]
                 (mapv
-                  #(if (= (:id %) (:hlid plyr))
+                  #(if (= (:id %) (:hlid state))
                         (dissoc % :ballcarrier)
                         %) (-> state :highlights :public)))))
         (logaction uname "Pass Ball")
@@ -224,13 +243,13 @@
       (assoc-in [:players uname :response] tackle-target)))
 
 (defn- skill-use [ state uname skill ]
-  (let [plyr (-> state :players (get uname) :committed)]
+  (let [plyr (-> state :srcplayer)]
     (if verbose? (prn uname skill))
     (-> (case skill
           :pass   (passball state plyr uname)
           :sprint (sprint state uname)
           :cheat  (cheat state plyr uname)
-          ;:tackle (tackle state plyr uname)
+          :tackle (tackle state plyr uname)
           (next-skill state uname)))))
 
 ;; ACTIONS
@@ -239,9 +258,12 @@
   (if-let [resp (-> state :players (get ap) :response)]
     (case (:id resp)
       :discard (-> state ((:cb resp) {:id (-> state :players (get ap) :team :private shuffle last :id)} ap) (end-response ap))
-      (update-in state [:players ap] dissoc :response))
-    (if-let [committed (-> state :players (get ap) :committed)]
-      (skill-use state ap (-> committed :skills (get (-> committed :activeskill))))
+      ;:tackle-target (-> state ((:cb resp) ))
+      (-> state 
+          (update-in [:players ap] dissoc :response)
+          (next-skill ap)))
+    (if-let [srcplayer (:srcplayer state)]
+      (skill-use state ap (-> srcplayer :skills (get (:activeskill state))))
       state
       )))
 
@@ -252,8 +274,7 @@
       (logaction uname "Commit player to matchup")
       (assoc-in [:players uname :team :private] (remove #(= (:id %) playerid) (-> state :players (get uname) :team :private)))
       (assoc-in [:players uname :state] :skills)
-      (assoc-in [:players uname :committed] (assoc p :hlid highlightid :zone zone))
-      (assoc-in [:players uname :committed :activeskill] 0)
+      (assoc :srcplayer p :hlid highlightid :srczone zone :activeskill 0)
       (assoc-in [:highlights :public]
         (mapv 
           #(if (= (:id %) highlightid)
@@ -267,7 +288,8 @@
     (logaction ap "End Turn")
     (update :turn inc)
     (assoc :activeplyr np :loop 0)
-    (update-in [:players ap] dissoc :state :committed)
+    (update-in [:players ap] dissoc :state)
+    (dissoc :srcplayer)
     (assoc-in [:players ap :passed?] pass)
     (assoc-in [:players np :state] :matchup)
     (logaction np "Start Turn")))
@@ -282,15 +304,15 @@
           state (update-in state [:loop] inc)]
       (if verbose? 
         (prn (str ap " Loop - " (:loop state) " state " (-> state :players (get ap) :state) 
-                " skill " (-> state :players (get ap) :committed :activeskill) "/" (-> state :players (get ap) :committed :skills count)
+                " skill " (-> state :activeskill) "/" (-> state :srcplayer :skills count)
                  " resp " (-> state :players (get ap) :response :id) ) ))
         (if (-> state :loop (> 20))
             state
             (if (or 
                   (-> state :players (get ap) :response some?)
                   (and (-> state :players (get ap) :state (= :skills))
-                      (< (-> state :players (get ap) :committed :activeskill) 
-                          (-> state :players (get ap) :committed :skills count))))
+                      (< (-> state :activeskill) 
+                          (-> state :srcplayer :skills count))))
                 (if (isai? ap) (-> state (do-ai-action ap) game-loop) state)
                 (let [et-state (end-turn-cleanup state ap np pass)
                       ap np]

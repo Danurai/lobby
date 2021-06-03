@@ -123,7 +123,7 @@
             [:div.playercard.selectable {:key (gensym)}
               [:img.img-fluid {:src (str "/img/bb/images/" (:team p) " - " (:position p) ".png") :on-click #(comms/ra-send! {:action :response :id (:id p)})}]])]]
     :tackle-target 
-      (let [committed (-> state :players (get @uname) :committed) hlid (:hlid committed) zone (if (= :a (:zone committed)) :b :a)]
+      (let [committed (-> state :players (get @uname) :srcplayer) hlid (:hlid state) zone (if (= :a (:srczone state)) :b :a)]
         [:div 
           [:h5.text-center (:msg resp)]
           (for [p (->> state :highlights :public (filter #(= (:id %) hlid)) first :zone zone)]
@@ -133,9 +133,9 @@
     [:div [:button.btn.btn-success {:on-click #(comms/ra-send! {:action :response})} (:msg resp)]]))
 
 (defn abilities [ state ]
-  (let [plyr   (-> state :players (get @uname) :committed)
+  (let [plyr   (:srcplayer state)
         src    (str "/img/bb/images/" (:team plyr) " - " (:position plyr) ".png") 
-        active (-> plyr :skills (get (:activeskill plyr)))]
+        active (-> plyr :skills (get (:activeskill state)))]
     [:div.abilities.d-flex
       [:div.playercard 
         [:img.img-fluid {
@@ -147,8 +147,8 @@
         (doall (map-indexed 
           (fn [id s] 
             [:div {:key (gensym)}
-              (if (not= id (:activeskill plyr))
-                [:div.h4.mx-2 {:class (if (<= id (:activeskill plyr)) "text-light") } s]
+              (if (not= id (:activeskill state))
+                [:div.h4.mx-2 {:class (if (<= id (:activeskill state)) "text-light") } s]
                 (if-let [resp (-> state :players (get @uname) :response)]
                   (response state resp s)
                   [:div
@@ -221,7 +221,7 @@
       (case (:status state)
         :setup (setupview state)
         (gameview state))
-      (if (true? false)
+      (if (true? true)
         [:div.bg-light
           [:div (-> state :players (get @uname) :response str)]
           [:div (str @bb-app)]

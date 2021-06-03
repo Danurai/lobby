@@ -187,7 +187,7 @@
       (update-in [:players "p1" :team :private 0 :skills] conj :sprint) ; Force CHEAT + SPRINT
       (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
       (bbmodel/parseaction {:action :skill-use :skill :cheat} "p1")
-      :players (get "p1") :committed :activeskill))
+      :activeskill))
 ;; - next cheat token id increased
 (expect 1
   (-> skill-test-state
@@ -436,30 +436,10 @@
       (bbmodel/game-loop  false)
       :players (get "AI1234") :team :discard count))
     
-;;; Commit a player with :tackle to a matchup - turn over
-;(expect nil
-;  (-> ai-skill-test-state
-;      (update-in [:players "AI1234" :team :private 0 :skills] conj :sprint)  ; FORCE SPRINT
-;      (bbmodel/commit-player  "AI1234" 0 0 :a)
-;      (bbmodel/game-loop  false)
-;      :players (get "AI1234") :state))
-;;; Commit a player with :tackle to a matchup - turn over
-;(expect :matchup
-;  (-> ai-skill-test-state
-;      (update-in [:players "AI1234" :team :private 0 :skills] conj :sprint)  ; FORCE SPRINT
-;      (bbmodel/commit-player  "AI1234" 0 0 :a)
-;      (bbmodel/game-loop  false)
-;      :players (get "p2") :state))
 
 
-;; TACKLE
-;; Tackle Started
-;(expect some?
-;  (let [plyrb {:id 10 :cheat [] :skills []}
-;        plyr {:id 0 :cheat [] :skills [:tackle] :activeskill 0 :hlid 0 :zone :a}]
-;    (-> skill-test-state
-;        ()))
-
+; OBFUSCATE 
+;; Removes Callback Function from :response
 (expect nil
   (-> skill-test-state
       start-test
@@ -476,114 +456,149 @@
 ;; TACKLE
 
 ;; Tackle Response - :tackle
-;(expect :tackle-target
-;  (-> skill-test-state
-;      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
-;      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
-;      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
-;      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
-;      :players (get "p2") :response :id ))
-;;; Tackle Response - No Target? - Prevent from client? 
-;;; Tackle Response - Choose Target (SPP=)
-;(expect :tackle-results
-;  (-> skill-test-state
-;      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
-;      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
-;      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
-;      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
-;      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
-;      :players (get "p2") :response :id ))
-;;; Tackle Response - SPP> 2 dice
-;(expect 2
-;  (-> skill-test-state
-;      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
-;      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
-;      (assoc-in [:players "p2" :team :private 0 :spp ] [ 99 99 ]) ; Force SPP
-;      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
-;      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
-;      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
-;      :players (get "p2") :response :dice count))
-;;; Tackle Response - SPP> 2 p1 response
-;;; Tackle Response - SPP< 2 dice  
-;(expect 2
-;  (-> skill-test-state
-;      (assoc-in [:players "p1" :team :private 0 :spp ] [ 99 99 ]) ; Force SPP
-;      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
-;      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
-;      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
-;      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
-;      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
-;      :players (get "p1") :response :dice count))
-;;; Tackle Response - SPP< 2 dice player waiting
-;(expect :waiting
-;  (-> skill-test-state
-;      (assoc-in [:players "p1" :team :private 0 :spp ] [ 99 99 ]) ; Force SPP
-;      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
-;      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
-;      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
-;      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
-;      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
-;      :players (get "p2") :response :id))
-;;; Tackle Response - SPP< 2 p2 reponse
-;
-;;; Tackle Response - SPP= 1 dice  
-;(expect 1
-;  (-> skill-test-state
-;      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
-;      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
-;      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
-;      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
-;      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
-;      :players (get "p2") :response :dice count))
-;;; Tackle Response - SPP= p1 response
-;
+(expect :tackle-target
+  (-> skill-test-state
+      start-test
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      :players (get "p2") :response :id ))
+;; Tackle Response - No Target? - Prevent from client? 
+;; Tackle Response - Choose Target (SPP=)
+(expect :tackle-results
+  (-> skill-test-state
+      start-test
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      :players (get "p2") :response :id ))
+;; Tackle Response - SPP> 2 dice
+(expect 2
+  (-> skill-test-state
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (assoc-in [:players "p2" :team :private 0 :spp ] [ 99 99 ]) ; Force SPP
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      :dice count))
+;; Tackle Response - SPP> 2 p1 response
+;; Tackle Response - SPP< 2 dice  
+(expect 2
+  (-> skill-test-state
+      (assoc-in [:players "p1" :team :private 0 :spp ] [ 99 99 ]) ; Force SPP
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      :dice count))
+;; Tackle Response - SPP< 2 dice player waiting
+(expect :waiting
+  (-> skill-test-state
+      (assoc-in [:players "p1" :team :private 0 :spp ] [ 99 99 ]) ; Force SPP
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      :players (get "p2") :response :id))
+;; Tackle Response - SPP< 2 p2 reponse
+
+;; Tackle Response - SPP= 1 dice  
+(expect 1
+  (-> skill-test-state
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      :dice count))
+;; Tackle Response - SPP= p1 response
+
 ;;; Tackle Result - Target Down (prone)
-;(expect true
-;  (-> skill-test-state
-;      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
-;      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
-;      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
-;      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
-;      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
-;      (bbmodel/parseaction {:action :response :dice :tgtdown} "p2")
-;      :highlights :public first :zone :a first :prone? ))
+(expect true
+  (-> skill-test-state
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      (bbmodel/parseaction {:action :response :dice :tgtdown} "p2")
+      :highlights :public first :zone :a first :prone? ))
 ;;; Tackle Result - Target Down (injured)
-;(expect nil
-;  (-> skill-test-state
-;      start-test
-;      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
-;      (assoc-in [:highlights :public 0 :zone :a 0 :prone?] true) ; Force PRONE
-;      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
-;      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
-;      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
-;      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
-;      (bbmodel/parseaction {:action :response :dice :tgtdown} "p2")
-;      :highlights :public first :zone :a first))
+(expect nil
+  (-> skill-test-state
+      start-test
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (assoc-in [:highlights :public 0 :zone :a 0 :prone?] true) ; Force PRONE
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      (bbmodel/parseaction {:action :response :dice :tgtdown} "p2")
+      :highlights :public first :zone :a first))
 ;; Tackle Result - Target Down (injured)
-;(expect 1
-;  (-> skill-test-state
-;      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
-;      (assoc-in [:highlights :public 0 :zone :a 0 :prone?] true) ; Force PRONE
-;      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
-;      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
-;      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
-;      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
-;      (bbmodel/parseaction {:action :response :dice :tgtdown} "p2")
-;      :players (get "p1") :team :injured count))
+(expect 1
+  (-> skill-test-state
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (assoc-in [:highlights :public 0 :zone :a 0 :prone?] true) ; Force PRONE
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      (bbmodel/parseaction {:action :response :dice :tgtdown} "p2")
+      :players (get "p1") :team :injured count))
 
 ;; Tackle Result - Tackler Down (Prone)
-;(expect true
-;  (-> skill-test-state
-;      (assoc-in [:players "p1" :team :private 0 :spp ] [ 99 99 ]) ; Force SPP
-;      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
-;      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
-;      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
-;      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
-;      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
-;      (bbmodel/parseaction {:action :response :dice :tackdown} "p1")
-;      :highlights :public first :zone :b first :prone? ))
+(expect true
+  (-> skill-test-state
+      (assoc-in [:players "p1" :team :private 0 :spp ] [ 99 99 ]) ; Force SPP
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      (bbmodel/parseaction {:action :response :dice :tackdown} "p1")
+      :highlights :public first :zone :b first :prone? ))
+;; Tackle Result - Tackler Down (Injured) ## EDGE CASE WHEN A PRONE PLAYER CAN TACKLE - MINOTAUR?
+(expect nil
+  (-> skill-test-state
+      (assoc-in [:players "p1" :team :private 0 :spp ] [ 99 99 ]) ; Force SPP
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (assoc-in [:players "p2" :team :private 0 :prone?] true) ; Force PRONE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      (bbmodel/parseaction {:action :response :dice :tackdown} "p1")
+      :highlights :public first :zone :b first))
+;; Tackle Result - Tackler Down (Injured) ## EDGE CASE WHEN A PRONE PLAYER CAN TACKLE - MINOTAUR?
+(expect 1
+  (-> skill-test-state
+      (assoc-in [:players "p1" :team :private 0 :spp ] [ 99 99 ]) ; Force SPP
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (assoc-in [:players "p2" :team :private 0 :prone?] true) ; Force PRONE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      (bbmodel/parseaction {:action :response :dice :tackdown} "p1")
+      :players (get "p2") :team :injured count))
 
 ;; Tackle Result - Target Missed
+(expect nil 
+  (-> skill-test-state
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      (bbmodel/parseaction {:action :response :dice :tgtmiss} "p2")
+      :highlights :public first :zone :a first :prone?))
 
 ;; Ball Carrier Down
 
@@ -626,4 +641,16 @@
 ;; Minotaur - Tackle Back
 
 
+;; AI Tackle
+(expect nil
+    (-> ai-skill-test-state
+        start-test
+        (update-in [:players "AI1234" :team :private 0 :skills] conj :tackle)  ; FORCE TACKLE
+        (bbmodel/commit-player  "AI1234" 0 0 :a)
+        (bbmodel/game-loop false)
+        :players (get "AI1234") :state))
+
+
 ;; Scoreboard Phase
+
+
