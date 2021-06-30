@@ -41,7 +41,7 @@
 
 (defn- highlight-zone [ hl zone ]
   (let [tzones (get-team-zone-map  hl) pteam (-> @gm :state :players (get @uname) :team :team)]
-    [:div.col-4 
+    [:div.col
       (if (and (= :matchup (-> @gm :state :players (get @uname) :state))
                (= (-> @gm :state :activeplyr) @uname)
                (->> @gm :state :players (get @uname) :passed? ((complement true?))))
@@ -71,7 +71,7 @@
       [:div.col {:key (gensym)}
         [:div.row 
           (highlight-zone hl :a)
-          [:div.col-4
+          [:div.col-2
             [:div.row.highlight
               [:div.d-flex.justify-content-around.scoreboard 
                 [:div (->> hl :zone :a (map #(+ (if (= {:zone :a :id (:id %)} (:ballcarrier hl)) 2 0) (if (:prone? %) (-> % :spp last) (-> % :spp first)))) (reduce +) )]
