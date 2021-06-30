@@ -15,8 +15,8 @@
           :private? false})]
     (fn []
       [:form.form-inline {:on-submit #(.preventDefault %)}
-        [:label.my-auto.mr-1 "Game"]
-        [:select.form-control.form-control-sm.mr-2 {
+        [:label.my-auto.me-1 "Game"]
+        [:select.form-control.form-control-sm.me-2 {
           :value (:game @formdata)
           :on-change #(swap! formdata assoc :game (.. % -target -value))}
           [:option "BBTM"]
@@ -24,13 +24,13 @@
           [:option "Death Angel"]
           ;(for [g (:gamelist @model/app)] [:option {:key (gensym)} (key g)])
         ]
-        [:label.my-auto.mr-1 "Title"]
-        [:input.form-control.form-control-sm.mr-2 {
+        [:label.my-auto.me-1 "Title"]
+        [:input.form-control.form-control-sm.me-2 {
           :data-lpignore true
           :type "text"
           :value (:title @formdata)
           :on-change #(swap! formdata assoc :title (.. % -target -value))}]
-        [:button.btn.btn-sm.btn-primary.my-auto {:on-click #(comms/creategame @formdata)}  "Create"]])))
+        [:button.btn.btn-sm.btn-primary.mt-2 {:on-click #(comms/creategame @formdata)}  "Create"]])))
     
 (defn create []
   [:div.row.mb-2
@@ -44,18 +44,18 @@
   (let [gms (:games @model/app)]
     [:div.row
       [:div.col 
-        [:div [:span.h5.mr-2 "Join"][:span (str "(" (count gms) ")")]]
+        [:div [:span.h5.me-2 "Join"][:span (str "(" (count gms) ")")]]
         [:div.list-group
           (for [[k g] gms :let [full? (= (-> g :plyrs count) (-> g :maxp))]]
             [:div.list-group-item.list-group-item-action {:key k}
               [:div.d-flex
                 [:div 
-                  [:span.badge.badge-warning.mr-2 (:game g)]
-                  [:span.mr-2 (:title g)]
-                  [:small.mr-2 (str "Host: " (:owner g))]
+                  [:span.badge.badge-warning.me-2 (:game g)]
+                  [:span.me-2 (:title g)]
+                  [:small.me-2 (str "Host: " (:owner g))]
                   (for [p (:plyrs g)]
-                    [:i.fas.fa-user.mr-2 {:key (gensym) :title p :class (if (= p (:owner g)) "text-primary")}])]
-                [:div.ml-auto
+                    [:i.fas.fa-user.me-2 {:key (gensym) :title p :class (if (= p (:owner g)) "text-primary")}])]
+                [:div.ms-auto
                   (cond
                     (:started g) "In Progress"    ; Watch?
                     (:private? g) "Private Game"  ; Enter Code
@@ -72,21 +72,22 @@
     
 (defn gamelobby [ gid gm uname ]
   [:div.col-sm-8
-    [:div.d-flex
-      [:h4 (:title gm)
-        (if (:private? gm) [:i.fas.fa-lock.text-secondary.ml-3])]
-      [:h4.ml-auto [:span.badge.badge-warning (:game gm)]]]
+    [:div.d-flex.mb-2
+      [:h4 
+        [:span.badge.bg-secondary.me-2 (:game gm)]
+        [:span (:title gm)]
+        (if (:private? gm) [:i.fas.fa-lock.text-secondary.ms-3])]]
     [:div.d-flex.mb-3
       (for [p (:plyrs gm)]
-        [:div.mr-2 {:key p}
+        [:div.me-2 {:key p}
           [:div.d-flex [:i.fas.fa-user.fa-lg.mx-auto {:class (if (= (:owner gm) p) "text-primary")}]]
           [:div p]])
       (if (-> (->> @model/app :plyrs (map #(isAI %)) frequencies) (get true) nil?) 
-        [:button.btn.btn-sm.btn-success.ml-auto {:disabled (= (-> gm :plyrs count) (-> gm :maxp)) :on-click #(comms/addai gid)} [:i.fas.fa-plus.mr-1] "Add AI"])]
+        [:button.btn.btn-sm.btn-success.ms-auto {:disabled (= (-> gm :plyrs count) (-> gm :maxp)) :on-click #(comms/addai gid)} [:i.fas.fa-plus.me-1] "Add AI"])]
     [:div.d-flex
       [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]
       (if (= uname (:owner gm))
-          [:button.btn.btn-primary.ml-auto {:disabled (< (-> gm :plyrs count) (-> gm :minp)) :on-click #(comms/startgame gid)} "Start"])]])
+          [:button.btn.btn-primary.ms-auto {:disabled (< (-> gm :plyrs count) (-> gm :minp)) :on-click #(comms/startgame gid)} "Start"])]])
     
 (defn gamehooks [ ]
   (case (:game @gm)
@@ -118,8 +119,8 @@
                   [:div.border.rounded.mb-1.p-1 {:style {:height "200px" :font-size "0.8rem" :overflow-y "scroll" :display "flex" :flex-direction "column-reverse"}}
                     (for [msg (:chat @model/app) :let [{:keys [msg uname timestamp]} msg]]
                       [:div {:key (gensym) :style {:word-wrap "break-word"}}
-                        [:span.mr-1 (model/timeformat timestamp)]
-                        [:b.text-primary.mr-1 (str uname ":")]
+                        [:span.me-1 (model/timeformat timestamp)]
+                        [:b.text-primary.me-1 (str uname ":")]
                         [:span msg]])]
                   [:form {:on-submit (fn [e] (.preventDefault e) (comms/sendmsg! @msg) (reset! msg ""))}
                     [:div.input-group

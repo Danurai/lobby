@@ -156,14 +156,14 @@
   [:div.d-flex.justify-content-around
     (for [[k team] (-> @gm :state :teams)]
       (if (= (:cmdr team) @uname)
-        (for [order (:orders team)]
+        (doall (for [order (:orders team)]
           [:div {:key (->> order :id (str "order_")) :style {:width "18rem" :color k}}
             [:div.card-title.text-center 
               [:span (:name order)]]
             [:div.card-title.text-center
-              [:i.fas.mr-2 {:class (-> order :type order-icon)}]
-              [:span.mr-2 (->> order :id )]]
-            [:div.card-body.text-secondary   (:text order)]])))])
+              [:i.fas.me-2 {:class (-> order :type order-icon)}]
+              [:span.me-2 (->> order :id )]]
+            [:div.card-body.text-secondary   (:text order)]]))))WW])
   
 (defn- hulk [ ]
   (let [ui8ca (:id @mouse)]
