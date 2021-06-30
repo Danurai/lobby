@@ -16,8 +16,8 @@
     [:div.border.rounded.p-1.chatbox   ;{:style {:min-height (* 45 (-> @ra-app :settings :cardsize :scale))}}
       (for [msg (-> @gm :state :chat reverse) :let [{:keys [msg uname timestamp]} msg]]
         [:div {:key (gensym) :style {:word-wrap "break-word"}}
-          ;[:span.mr-1 (model/timeformat timestamp)]
-          [:b.text-primary.mr-1 uname]
+          ;[:span.me-1 (model/timeformat timestamp)]
+          [:b.text-primary.me-1 uname]
           [:span msg]])]
     [:form {:on-submit (fn [e] (.preventDefault e) (comms/sendmsg! (:msg @bb-app) @gid ) (swap! bb-app assoc :msg ""))}
       [:div.input-group
@@ -60,7 +60,7 @@
               :on-mouse-move #(setbigview url) :on-mouse-out #(setbigview nil) :on-click #(showbigview)} 
             [:img.team-marker {:src (str "/img/bb/images/Marker " (:team p) ".png")}]
             [:span.label 
-              [:span.mr-2 (:position p)]
+              [:span.me-2 (:position p)]
               (if (-> hl :ballcarrier (= {:zone zone :id (:id p)})) [:b "Ball"])]
             [:span.spp (-> p :spp (get (if (:prone? p) 1 0)))]
             ]))]))
@@ -155,10 +155,10 @@
                     [:div.h2.text-center active]
                     [:div 
                       (if (not= :cheat active)
-                        [:button.btn.btn-warning.mr-2 {:on-click #(if (js/confirm "Are you sure you want to skip using this skill?") (comms/ra-send! {:action :skill-pass}))} "Skip"])
+                        [:button.btn.btn-warning.me-2 {:on-click #(if (js/confirm "Are you sure you want to skip using this skill?") (comms/ra-send! {:action :skill-pass}))} "Skip"])
                       [:button.btn.btn-success {:on-click #(comms/ra-send! {:action :skill-use :skill active})} s]]]))])
           (:skills plyr)))]
-      [:div.ml-auto (chat)]
+      [:div.ms-auto (chat)]
     ]))
 
 (defn gameview [ state ]
@@ -196,7 +196,7 @@
                           alliance (->> state :teams (filter #(= (:team %) t)) first :alliance)]]
               [:button.btn.alliance {:key (gensym) :class (if active? "active") :on-click #(swap! bb-app assoc :team t)} [:img.img-fluid {:src (str "/img/bb/images/Marker " t ".png")}]])]
         (if (and isap? (->> team (contains? chosenteams) false?))
-            [:div.d-flex.justify-content-center.mb-2 [:button.btn.btn-light {:on-click #(comms/ra-send! {:action :chooseteam :team team})} "Field " team " team."]])  ;[:img.ml-1 {:src (str "/img/bb/images/Marker " team ".png")}]
+            [:div.d-flex.justify-content-center.mb-2 [:button.btn.btn-light {:on-click #(comms/ra-send! {:action :chooseteam :team team})} "Field " team " team."]])  ;[:img.ms-1 {:src (str "/img/bb/images/Marker " team ".png")}]
         [:div.d-flex.justify-content-center
           (doall (for [ tq (->> state :teams (filter #(= (:team %) team)) (sort-by :id) (map :position) frequencies) ]
             [:div.p-2 {:key (gensym)}
@@ -216,7 +216,7 @@
           [:div.bigviewcontent
             [:img.bigviewimg {:src (:bigview @bb-app)}]]])
       [:div.d-flex.justify-content-center.mb-2
-        [:h4.mr-2 "Blood Bowl: Team Manager - " (:status state)]
+        [:h4.me-2 "Blood Bowl: Team Manager - " (:status state)]
         [:button.btn.btn-sm.btn-danger {:on-click #(if (js/confirm "Are you sure you want to Quit?") (comms/leavegame @gid))} "Quit"]]
       (case (:status state)
         :setup (setupview state)
