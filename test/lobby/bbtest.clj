@@ -616,8 +616,27 @@
 
 ;; Fend - Stand another player if downed
 
-;; Frenzy - +1 SPP during tackle
-
+;; Frenzy - When this player attempts a tackle, increase his Star Power by one during the tackle attempt.
+(expect 2
+  (-> skill-test-state
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (update-in [:players "p2" :team :private 0 :active] conj :frenzy) ; Force FRENZY
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      :dice count))
+;;; Frenzy doesn't count for target
+(expect 1
+  (-> skill-test-state
+      (update-in [:players "p1" :team :private 0 :active] conj :frenzy) ; Force FRENZY
+      (bbmodel/parseaction {:action :commitplayer :plid 0 :hlid 0 :zone :a} "p1")
+      (update-in [:players "p2" :team :private 0 :skills] conj :tackle) ; Force TACKLE
+      (bbmodel/parseaction {:action :commitplayer :plid 12 :hlid 0 :zone :b} "p2")
+      (bbmodel/parseaction {:action :skill-use :skill :tackle} "p2")
+      (bbmodel/parseaction {:action :response :id 0 :hlid 0 :zone :a} "p2")
+      :dice count))
+      
 ;; Guard - downed instead of another player
 
 ;; Juggerneaut - cannot be GUARD ed

@@ -77,10 +77,11 @@
               (update-in [:players uname] dissoc :response)
               (next-skill uname))))})
 
-(defn- get-tackle-spp [ plyr ]
-  (if (:prone? plyr)
-      (-> plyr :spp last)
-      (-> plyr :spp first)))
+(defn- get-tackle-spp [ plyr src ]
+  (let [frenzymod (if (and src (-> plyr :active set (contains? :frenzy))) 1 0)]
+    (if (:prone? plyr)
+        (-> plyr :spp last (+ frenzymod))
+        (-> plyr :spp first (+ frenzymod)))))
 (defn rolldice []
   (rand-nth [:tgtdown :tgtmiss :tackdown]))
 
@@ -144,8 +145,8 @@
   :cb (fn [ state ?data uname ]  ; ?data {:action :response :id n :hl n :zone k :gid k}
         (let [tgtplayer  (get-highlightplayer state (:hlid state) (:zone ?data) (:id ?data))
               tgtcoach   (:coach (reduce-kv (fn [m k v] (if (= (-> v :team :team) (:team tgtplayer)) (assoc m :coach k) m)) {:coach nil} (:players state)))
-              srcspp     (get-tackle-spp (:srcplayer state))
-              tgtspp     (get-tackle-spp tgtplayer)
+              srcspp     (get-tackle-spp (:srcplayer state) true)
+              tgtspp     (get-tackle-spp tgtplayer false)
               plyr-state (if (< srcspp tgtspp)
                             (-> state 
                                 (assoc-in [:players tgtcoach :response] tackle-results)
