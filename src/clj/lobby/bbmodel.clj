@@ -21,7 +21,7 @@
   (let [msg {:msg msg :uname uname :timestamp (new java.util.Date)}]
     (update-in state [:chat] conj msg)))
 
-(defonce verbose? true)
+(defonce verbose? false)
 ;; AI
 
 (defn ai-choose-team [ state ]
@@ -52,7 +52,7 @@
          hlid (->> state :highlights :public (map :id) rand-nth)
          hl   (->> state :highlights :public (filter #(= (:id %) hlid)) first) 
          zone (get-player-zone hl pl)]
-    (prn "ai-commit" plid hlid zone)
+    (if verbose? (prn "ai-commit" plid hlid zone))
     [ plid hlid zone ]))
 
 ; SKILLS

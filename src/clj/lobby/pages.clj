@@ -25,8 +25,9 @@
     [:script {
       :src "https://kit.fontawesome.com/3e3abf4a33.js"
       :crossorigin "anonymous"}]
-    [:link {:rel "preconnect" :href "https://fonts.gstatic.com"}]
-    [:link {:href "https://fonts.googleapis.com/css2?family=Orbitron&display=swap" :rel "stylesheet"}]
+    [:link {:rel "preconnect" :href "https://fonts.googleapis.com"}]
+    [:link {:rel "preconnect" :href "https://fonts.gstatic.com" :crossorigin "true"}]
+    [:link {:href "https://fonts.googleapis.com/css2?family=Orbitron&family=Pirata+One&display=swap" :rel "stylesheet"}]
     (h/include-css "/css/ra.css")
     (h/include-css "/css/bb.css")
   ])
