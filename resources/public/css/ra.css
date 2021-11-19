@@ -1,3 +1,8 @@
+.ra-main {
+  font-family: "Pirata One", cursive ;
+  font-size: 14pt;
+}
+
 .d-flex img {
   align-items: flex-start;
   align-self: flex-start;
@@ -26,14 +31,24 @@
   -moz-box-shadow:    0px 0px 39px 0px rgba(0,0,255,0.75);
   box-shadow:         0px 0px 39px 0px rgba(0,0,255,0.75);
 }
+.card.disabled {
+  filter: grayscale(100%)
+}
 
 .hand {
-    position: absolute;
-    bottom: 0px;
-    transition: 0.3s;
-  }
-.hand:hover {
-  bottom: 75px;
+  position: absolute;
+  bottom: 0px;
+  left: 40px;
+  width: 30%;
+  overflow-y: hidden;
+}
+.hand .card {
+  bottom: -80%;
+  transition: bottom 0.5s;
+}
+.hand .card:hover {
+  bottom: -5px;
+  transition: bottom 0.5s;
 }
 
 .hand.canplay .card {
@@ -90,4 +105,43 @@ table tr.selected {
   font-size: .875rem;
   line-height: .5;
   border-radius: .2rem;
+}
+
+.chat2 {
+  display: flex;
+  flex-flow: column;
+  position: fixed;
+  bottom: 5px;
+  right: 5px;
+  z-index: 98;
+  height: 15%;
+  transition: height 0.2s;
+}
+
+.chat2:hover {
+  height: 40%;
+  transition: height 0.2s;
+}
+
+.chat2 .chatbox {
+  background-color: rgba(255,255,255,0.8);
+}
+
+.chat2.chat-expand {
+  height: 40%;
+  transition: height 0.4s
+}
+
+.resources {
+  position: fixed;
+  left: 5px;
+  bottom: 5px;
+}
+.resources .resource-row {
+  background-color: white;
+}
+
+.active-player {
+  background-color: rgba(255,255,255,0.5);
+  color: darkblue
 }
