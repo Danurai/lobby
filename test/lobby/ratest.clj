@@ -123,6 +123,20 @@
           (ramodel/selectstartitem {:card (:uid mi1)} (-> gs :plyr-to last))
           :magicitems
           )))))
+; prevent selecting an item already taken
+(expect "p1"
+  (let [gs (ramodel/setup ["p1" "p2"])
+        m1 (-> gs :players (get "p1") :private :mages first)
+        m2 (-> gs :players (get "p2") :private :mages first)
+        mi1 (-> gs :magicitems first)]
+    (-> gs
+      (ramodel/selectmage {:card (:uid m1)} "p1")
+      (ramodel/selectmage {:card (:uid m2)} "p2")
+      (ramodel/selectstartitem {:card (:uid mi1)} "p1")
+      (ramodel/selectstartitem {:card (:uid mi1)} "p2")
+      :magicitems first :owner
+      )))
+
 (expect :pass
   (let [gs (ramodel/setup ["p1" "p2"])
         m1 (-> gs :players (get "p1") :private :mages first)
@@ -187,12 +201,12 @@
         (ramodel/selectstartitem {:card (-> setup :magicitems last :uid)} "p1"))))
         
 ; All players selected a mage (including AI setup), and a Magic Item game on!
-(expect :started
+(expect :play
   (-> (started2pgm) :status))
   
 ;; With AI
-(expect :started
-  (let [aip (-> "AI" gensym str)
+(expect :play
+  (let [aip "AI123"
         gs (ramodel/setup ["p1" aip])
         m1 (-> gs :players (get "p1") :private :mages first)
         mi1 (-> gs :magicitems first)]   
@@ -201,7 +215,7 @@
         (ramodel/selectstartitem {:card (:uid mi1)} "p1")
         :status)))
 ; All AI
-(expect :started 
+(expect :play 
   (let [aip1 (-> "AI" gensym str)
         aip2 (-> "AI" gensym str)]
     (-> (ramodel/setup [aip1 aip2])
@@ -482,3 +496,126 @@
       (get "p2")
       :secret
       :discard))
+
+; ai collect generated resources test state
+(def rstate {
+  :chat []
+  :status :play
+  :phase :collect
+  :magicitems [
+    {:name "TESTMAGICITEM" :type "magicitem" :collect-resource [{:elan 1} {:gold 1}] :owner "AI1"}
+    {:name "TESTMAGICITEM" :type "magicitem" :collect-resource [{:elan 1} {:gold 1}] :owner "P1"}
+  ]
+  :players {
+    "AI1" {
+      :public {
+        :mage {:type "mage" :name "TESTMAGE" :collect-resource [{:gold 1} {:death 1}]}
+        :resources {
+          :gold 1
+          :calm 1
+          :life 1
+          :elan 1
+          :death 1
+        }
+        :artifacts [
+          {:id 4  :type "artifact" :name "Chalice of Life"  :cost {:gold 1 :elan 1} :collect [{:calm 1 :life 1}] :collect-resource [{:calm 1 :life 1}]}
+        ]
+      }
+    }
+    "P1" {
+      :public {
+        :resources {
+          :calm 1
+          :life 1
+        }
+        :mage {:type "mage" :name "TESTMAGE" :collect-resource [{:gold 1} {:death 1}]}
+        :artifacts [
+          {:id 4  :type "artifact" :name "Chalice of Life"  :cost {:gold 1 :elan 1} :collect [{:calm 1 :life 1}] :collect-resource [{:calm 1 :life 1}]}
+        ]
+      }
+    }
+  }
+})
+
+; Check ramodel/amendresource
+(expect {:gold 2 :life 2}
+  (-> {:chat [] :players {"AI1" {:public {:resources {:gold 1 :life 1}}}}}
+    (ramodel/amendresource {:resources {:gold 1 :life 1} :card {:name "TESTCARD"}} "AI1")
+    :players 
+    (get "AI1")
+    :public
+    :resources))
+
+; Check ramodel/ai-collect-resources works
+(expect {:calm 2 :life 2 :gold 2 :elan 2 :death 1}
+  (-> rstate ramodel/ai-collect-resources :players (get "AI1") :public :resources))
+; Check ramodel/ai-collect-resources works
+(expect true
+  (-> rstate ramodel/ai-collect-resources :players (get "AI1") :collected?))
+
+; remove from mage
+(expect nil
+  (-> rstate ramodel/ai-collect-resources :players (get "AI1") :public :mage :collect-resource))
+; remove from magicitem
+(expect nil
+  (-> rstate ramodel/ai-collect-resources :magicitems first :collect-resource))
+; remove from artifact
+(expect nil
+  (-> rstate ramodel/ai-collect-resources :players (get "AI1") :public :artifacts first :collect-resource))
+
+; but not for non-ai (#"AI/d+")
+(expect 1
+  (-> rstate ramodel/ai-collect-resources :players (get "P1") :public :resources :calm))
+
+; collect action
+(expect true 
+  (-> {:players {"P1" {} "P2" {}}}
+      (ramodel/parseaction {:action :collected} "P2")
+      :players (get "P2") :collected?
+      ))
+; collect action
+(expect true 
+  (-> {:players {"P1" {} "P2" {}}}
+      (ramodel/parseaction {:action :collected} "P1")
+      :players (get "P1") :collected?
+      ))
+; collect action toggle
+(expect nil
+  (-> {:players {"P1" {} "P2" {}}}
+      (ramodel/parseaction {:action :collected} "P1")
+      (ramodel/parseaction {:action :collected} "P1")
+      :players (get "P1") :collected?
+      ))
+; All players have indicated ready, phase is action
+(expect :action
+  (-> {:phase :collect :players {"P1" {} "P2" {}}}
+      (ramodel/parseaction {:action :collected} "P1")
+      (ramodel/parseaction {:action :collected} "P2")
+      :phase))
+(expect nil
+  (-> {:phase :collect :players {"P1" {} "P2" {}}}
+      (ramodel/parseaction {:action :collected} "P1")
+      (ramodel/parseaction {:action :collected} "P2")
+      :players (get "P1") :collected?))
+(expect :action ;; Needs a proper game setup to trigger all AI
+  (-> rstate
+      (assoc-in [:players "AI1" :collected?] true)
+      (ramodel/parseaction {:action :collected} "P1")
+      :phase))
+
+; Collect-to-Action remove all :collect-resource from Mage, MagicItems and Artifacts
+(expect nil
+  (-> rstate
+      (assoc-in [:players "AI1" :collected?] true)
+      (ramodel/parseaction {:action :collected} "P1")
+      :players (get "P1") :public :mage :collect-resource ))
+(expect nil
+  (-> rstate
+      (assoc-in [:players "AI1" :collected?] true)
+      (ramodel/parseaction {:action :collected} "P1")
+      :players (get "P1") :public :artifacts first :collect-resource ))
+(expect nil
+  (-> rstate
+      (assoc-in [:players "AI1" :collected?] true)
+      (ramodel/parseaction {:action :collected} "P1")
+      :magicitems first :collect-resource ))
