@@ -8,7 +8,10 @@
 
 (def bb-app (r/atom {}))
 
-(defn- setbigview [ url & args ] (if (nil? url) (swap! bb-app dissoc :bigview) (swap! bb-app assoc :bigview url)))
+(defn- setbigview 
+  ([ url plyr ] (if (nil? url) (swap! bb-app dissoc :bigview) (swap! bb-app assoc :bigview {:url url :plyr plyr})))
+  ([ url ] (setbigview url nil)))
+
 (defn- showbigview [] (swap! bb-app assoc :showbigview? true))
 
 (defn- chat [ ]
@@ -57,7 +60,8 @@
               :key (gensym) 
               :class (if (:prone? p) "prone") 
               :style {:background-image (str "url('" url "')" ) }
-              :on-mouse-move #(setbigview url) :on-mouse-out #(setbigview nil) :on-click #(showbigview)} 
+              :on-mouse-move #(setbigview url) :on-mouse-out #(setbigview nil) 
+              :on-click #(showbigview)} 
             [:img.team-marker {:src (str "/img/bb/images/Marker " (:team p) ".png")}]
             [:span.label 
               [:span.me-2 (:position p)]
@@ -76,16 +80,15 @@
               [:div.d-flex.justify-content-around.scoreboard 
                 [:div (->> hl :zone :a (map #(+ (if (= {:zone :a :id (:id %)} (:ballcarrier hl)) 2 0) (if (:prone? %) (-> % :spp last) (-> % :spp first)))) (reduce +) )]
                 [:div (->> hl :zone :b (map #(+ (if (= {:zone :b :id (:id %)} (:ballcarrier hl)) 2 0) (if (:prone? %) (-> % :spp last) (-> % :spp first)))) (reduce +) )]]
-              [:img.img-fluid {:on-mouse-over #(swap! bb-app assoc :bigview src) :on-click #(swap! bb-app assoc :showbigview? true) :src src } ]
+              [:img.img-fluid {:on-mouse-over #(setbigview src) :on-click #(showbigview) :src src } ]
               (if (-> hl :ballcarrier nil?) [:img.football {:src "img/bb/images/Football.png"}])]]
           (highlight-zone hl :b)]]))])
-
 
 (defn- teamplyrcard [ plyr ]
   (let [ src (str "/img/bb/images/" (:team plyr) " - " (:position plyr) ".png" ) matchup (-> @bb-app :matchupcommit?)]
     [:div.playercard {
         :key (gensym) 
-        :on-mouse-move #(setbigview src) 
+        :on-mouse-move #(setbigview src plyr) 
         :on-mouse-out #(setbigview nil) 
         :on-click #(if (some? matchup) 
                         (comms/ra-send! {:action :commitplayer :plid (:id plyr) :hlid (:id matchup) :zone (:zone matchup)}) 
@@ -214,7 +217,14 @@
       (if (:showbigview? @bb-app)
         [:div.bigview {:on-click #(swap! bb-app dissoc :showbigview?)}
           [:div.bigviewcontent
-            [:img.bigviewimg {:src (:bigview @bb-app)}]]])
+            [:div.row 
+              [:div.col
+                [:img.bigviewimg {:src (-> @bb-app :bigview :url)}]]
+              (if-let [plyr (-> @bb-app :bigview :plyr)]
+                [:div.col.bg-light.p-3.rounded.mt-2 
+                  [:div.text-center "Select Matchup"]
+                ])]
+            ]])
       [:div.d-flex.justify-content-center.mb-2
         [:h4.me-2 "Blood Bowl: Team Manager - " (:status state)]
         [:button.btn.btn-sm.btn-danger {:on-click #(if (js/confirm "Are you sure you want to Quit?") (comms/leavegame @gid))} "Quit"]]
