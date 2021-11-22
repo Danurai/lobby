@@ -101,7 +101,7 @@
 (defn main []
   (let [msg (r/atom "")]
     (fn []
-      ;(-> ((js* "$") "body") (.removeAttr "style"))
+      (-> js/document .-body (.removeAttribute "style"))
       [:div
         (if (:state @gm)
           (gamehooks)
