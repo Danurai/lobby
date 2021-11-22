@@ -265,9 +265,8 @@
 
 
 (defn ramain [ ]
-  ;(-> ((js* "$") "body") 
-  ;    (.css "background-image" "url(/img/ra/ra-bg.png")
-  ;    (.css "background-size" "100%"))
+  (-> js/document .-body .-style .-backgroundImage (set! "url(/img/ra/ra-bg.png)"))
+  (-> js/document .-body .-style .-backgroundSize (set! "100%"))
   ;(-> ((js* "$") "#navbar") (.attr "hidden" true))
   (let [gs    (:state @gm)
         pdata (-> gs :players (get @uname))]
