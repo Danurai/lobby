@@ -1,9 +1,9 @@
 (ns lobby.view
 	(:require 
     [reagent.core :as r]
-    ;[lobby.raview :refer [ramain]]
-    ;[lobby.daview :refer [damain]]
-    ;[lobby.bbview :refer [bbmain]]
+    [lobby.raview :refer [ramain]]
+    [lobby.daview :refer [damain]]
+    [lobby.bbview :refer [bbmain]]
 		[lobby.comms :as comms]
 		[lobby.model :as model :refer [uname gid gm]]
   ))
@@ -91,9 +91,9 @@
     
 (defn gamehooks [ ]
   (case (:game @gm)
-    ;"Res Arcana"  (ramain)
-    ;"Death Angel" (damain)
-    ;"BBTM"        (bbmain)
+    "Res Arcana"  (ramain)
+    "Death Angel" (damain)
+    "BBTM"        (bbmain)
     [:div.row-fluid
       [:h5 "Game not found"]
       [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame @gid)} "Leave"]]))
@@ -101,7 +101,7 @@
 (defn main []
   (let [msg (r/atom "")]
     (fn []
-      (-> js/document .-body (.removeAttribute "style"))
+      (-> ((js* "$") "body") (.removeAttr "style"))
       [:div
         (if (:state @gm)
           (gamehooks)
