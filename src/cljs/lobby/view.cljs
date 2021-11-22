@@ -6,7 +6,7 @@
 (defn main []
   (let [msg (r/atom "")]
     (fn [] 
-      (-> ((js* "$") "body") (.removeAttr "style") )
+      ;(-> ((js* "$") "body") (.removeAttr "style") )
       [:div
         [:div.container "Hello, world. Empty @gm? " (-> @gm nil? str)]])))
 
