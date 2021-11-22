@@ -1,9 +1,4 @@
-(ns lobby.model
-  (:require 
-    [lobby.ramodel :as ramodel]
-    [lobby.damodel :as damodel]
-    [lobby.bbmodel :as bbmodel]
-  ))
+(ns lobby.model)
 
 (defonce gamelist {
   "Res Arcana" {
@@ -36,9 +31,6 @@
   (if (nil? (:state gm))
       gm
       (case (:game gm)
-        "Res Arcana"  (assoc gm :state (ramodel/obfuscate (:state gm) uname))
-        "Death Angel" (assoc gm :state (damodel/obfuscate (:state gm) uname))
-        "BBTM"        (assoc gm :state (bbmodel/obfuscate (:state gm) uname))
         gm)))
         
 (defn obfuscate-state [ uid ]
@@ -80,9 +72,6 @@
     
 (defn- gamesetup [ gname plyrs ]
   (case gname 
-    "Res Arcana"  (ramodel/setup plyrs)
-    "Death Angel" (damodel/setup plyrs)
-    "BBTM"        (bbmodel/setup plyrs)
     {}))
     
 (defn startgame! [ gid ]
@@ -97,7 +86,4 @@
     (let [game (-> @appstate :games gid)]
       (swap! appstate assoc-in [:games gid :state]
         (case (:game game)
-          "Res Arcana"  (ramodel/parseaction (:state game) ?data uname)
-          "Death Angel" (damodel/parseaction (:state game) ?data uname)
-          "BBTM"        (bbmodel/parseaction (:state game) ?data uname)
           (:state game))))))
