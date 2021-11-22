@@ -175,11 +175,11 @@
       [:div (str @gm)]]))
       
 (defn damain [ ]
-  (-> ((js* "$") "body") 
-      (.css "background-color" "#222222")
-      (.css "color" "grey"))
+  (-> js/document .-body .-style .-backgroundColor (set! "#222222") )
+  (-> js/document .-body .-style .-color (set! "grey") )
+
   [:div.container-fluid.my-3 
-    [:img#img {:hidden true :src "/img/da/outx.png"}]
+    [:img#img {:hidden true :src "/img/da/out.png"}]
     (case (-> @gm :state :status)
       :setup (chooseteams @gid @gm)
       [hulk]

@@ -208,9 +208,8 @@
 ; MAIN
 
 (defn bbmain [ ]
-  (-> ((js* "$") "body") 
-      (.css "background-image" "url(/img/bb/images/bbpitch.png")
-      (.css "background-size" "100%"))
+  (-> js/document .-body .-style .-backgroundImage (set! "url(/img/bb/images/bbpitch.png)"))
+  (-> js/document .-body .-style .-backgroundSize (set! "100%"))
   (let [state (:state @gm)]
     [:div.container-fluid.my-2 {:class (if (-> @bb-app :matchupcommit? some?) "select" ) :on-click #(swap! bb-app dissoc :matchupcommit?)}
       
