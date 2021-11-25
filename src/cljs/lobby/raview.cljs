@@ -41,9 +41,6 @@
   (comms/ra-send! {:action action :card (:uid card)}))
 
 (defn- card-click-handler [ card ]
-  (swap! ra-app assoc :showbigview? true))
-
-(defn- card-link-handler [ card ]
   (swap! ra-app assoc :bigview card)
   (swap! ra-app assoc :showbigview? true))
 
@@ -60,7 +57,7 @@
           (for [m grp]
             (if (re-matches match-patt m)
                 (let [c (->> all-cards (filter #(re-matches (re-pattern (str "(?i)" m)) (:name %))) first)]
-                  [:span.card-link {:key (gensym) :href m :on-click #(card-link-handler c)} m]) 
+                  [:span.card-link {:key (gensym) :href m :on-click #(card-click-handler c)} m]) 
                 [:span {:key (gensym)} m]))]
         [:span msg])))
 
@@ -148,7 +145,8 @@
             }
           :src (imgsrc card)
           :class (cond selected? "active" (:target? card) "target" (:disabled? card) "disabled" :else nil)
-          :on-click #(card-click-handler card)
+          :on-touch-start #(card-click-handler card)
+          :on-click       #(card-click-handler card)
           :on-mouse-move (fn [e] (.stopPropagation e) (swap! ra-app assoc :bigview card))
           ;:on-mouse-out #(swap! ra-app dissoc :bigview)
           }]]))
@@ -195,7 +193,7 @@
                                  (assoc % :disabled? true) 
                                 (if selectmagicitem? 
                                     (assoc % :target? true) 
-                                    %)))) :sm false)])])
+                                    %)))) :sm true)])])
 
 (defn- opponentdisplay [ gs uname ]
   (let [magicitems (:magicitems gs)]

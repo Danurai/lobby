@@ -141,7 +141,12 @@ table tr.selected {
   background-color: white;
 }
 
-.active-player {
+.focus {
   background-color: rgba(255,255,255,0.5);
-  color: darkblue
+  color: darkblue;
+  border: 1.5px solid darkblue;
+}
+
+.bigviewcontent {
+  height: 90%;
 }
