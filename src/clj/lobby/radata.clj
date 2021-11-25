@@ -27,8 +27,8 @@
   ]
   :magicitems [
     {:id 0 :name "Alchemy"        :type "magicitem" :action []}
-    {:id 1 :name "Calm | Elan"    :type "magicitem" :collect [{:calm 1}{:elan 1}]}
-    {:id 2 :name "Death | Life"   :type "magicitem" :collect [{:death 1}{:life 1}]}
+    {:id 1 :name "Calm Elan"      :type "magicitem" :collect [{:calm 1}{:elan 1}]}
+    {:id 2 :name "Death Life"     :type "magicitem" :collect [{:death 1}{:life 1}]}
     {:id 3 :name "Divination"     :type "magicitem" :action []}
     {:id 4 :name "Protection"     :type "magicitem" :action []}
     {:id 5 :name "Reanimate"      :type "magicitem" :action []}
