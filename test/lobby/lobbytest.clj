@@ -1,7 +1,8 @@
 (ns lobby.lobbytest
   (:require 
     [expectations :refer :all]
-    [lobby.model :as model]))
+    [lobby.model :as model]
+    [lobby.ramodel :as ramodel]))
     
 (defn newgamegid 
   ([ game ]
