@@ -19,8 +19,6 @@
         :active true
         :tip "Do you have dragons, creatures, or ways to make gold? This may suggest Places of Power that will work well for you or if you can buy several monuments."}}})))
 
-(def ra-preview (r/atom nil))
-
 ;;;;; FUNCTIONS ;;;;;
 
 (def resource-clr {
@@ -37,10 +35,29 @@
     (str "/img/ra/" (:type card) "-" (if back? "back" (:id card)) ".jpg"))
   ([ card ] (imgsrc card false)))
 
+(defn- resource-icon [ type n ]
+  (let [color (case type (:elan :death) "white" "black")
+        scale 1]
+    [:div.text-center.mx-1.mt-1 {
+        :key (gensym)
+        :style {
+          :background-image (str "url(img/ra/res-" (name type) ".png")
+          :background-size "contain"
+          :background-repeat "no-repeat"
+          :background-position-y "0%"
+          :color color
+          :width     (str (* scale 1.1) "em")
+        }
+      }
+      n]))
+
 (defn- select-btn-handler [ action card ]
   (comms/ra-send! {:action action :card (:uid card)}))
 
 (defn- card-click-handler [ card ]
+  (swap! ra-app assoc :showbigview? true))
+
+(defn- card-link-handler [ card ]
   (swap! ra-app assoc :bigview card)
   (swap! ra-app assoc :showbigview? true))
 
@@ -57,26 +74,26 @@
           (for [m grp]
             (if (re-matches match-patt m)
                 (let [c (->> all-cards (filter #(re-matches (re-pattern (str "(?i)" m)) (:name %))) first)]
-                  [:span.card-link {:key (gensym) :href m :on-click #(card-click-handler c)} m]) 
+                  [:span.card-link {:key (gensym) :href m :on-click #(card-link-handler c)} m]) 
                 [:span {:key (gensym)} m]))]
         [:span msg])))
 
 (defn- chat [ ]
   (let [gs (:state @gm)]
-    [:div.chat2 
-      [:div.chatbox.p-1
+    [:div.ra-chat.border.rounded.p-1
+      [:div.chatbox.p-1.mb-1
         (for [msg (-> @gm :state :chat) :let [{:keys [msg uname timestamp]} msg]]
           [:div {:key (gensym) :style {:word-wrap "break-word"} :class (if (nil? uname) "bg-secondary text-light")}
             ;[:span.mr-1 (model/timeformat timestamp)]
             [:b.text-primary.me-1 uname]
             [:span (parse-msg msg (:allcards gs))]])]
-    [:form {:on-submit (fn [e] (.preventDefault e) (comms/sendmsg! (:msg @ra-app) @gid ) (swap! ra-app assoc :msg ""))}
-      [:div.input-group
-        [:input.form-control.form-control-sm.bg-light {
-          :type "text" :placeholder "Type to chat"
-          :value (:msg @ra-app)
-          :on-change #(swap! ra-app assoc :msg (-> % .-target .-value))}]
-        [:span.input-group-append [:button.btn.btn-sm.btn-outline-secondary.bg-light {:type "btn"} [:i.fas.fa-arrow-right]]]]]]))
+      [:form {:on-submit (fn [e] (.preventDefault e) (comms/sendmsg! (:msg @ra-app) @gid ) (swap! ra-app assoc :msg ""))}
+        [:div.input-group
+          [:input.form-control.form-control-sm.bg-light {
+            :type "text" :placeholder "Type to chat"
+            :value (:msg @ra-app)
+            :on-change #(swap! ra-app assoc :msg (-> % .-target .-value))}]
+          [:button.btn.btn-sm.btn-secondary {:type "btn"} [:i.fas.fa-arrow-right]]]]]))
 
 
 (defn- getmagicitem [ items uname ]
@@ -84,39 +101,18 @@
         (filter #(-> % :owner (= uname))) 
         first))
 
-(defn- hovercard []
-  (if-let [bigview (-> @ra-app :bigview)]
-    [:div.row
-      [:img.img-fluid {:src (imgsrc bigview)}]]))
-
-(defn resource-icon [ type n ]
-  (let [color (case type (:elan :death) "white" "black")
-        scale 1]
-    [:div.text-center.mx-1 {
-        :key (gensym)
-        :style {
-          :background-image (str "url(img/ra/res-" (name type) ".png")
-          :background-size "contain"
-          :background-repeat "no-repeat"
-          :background-position-y "50%"
-          :color color
-          :font-size (str scale "em")
-          :width     (str (* scale 1.1) "em")
-        }
-      }
-      n]))
-
 (defn- render-card-simple 
   ([ card size back? ]
     (let [scale (case size :lg 1.3 :sm 0.7 1)]
-      [:img.card.clickable.me-1 {
+      [:img.card.clickable.mx-1 {
         :key (gensym)
         :title (if back? (:type card) (str card))
         :width  (* (-> @ra-app :settings :cardsize :w) scale) 
         :class (if (:disabled? card) "disabled")
         :src (imgsrc card back?)
-        :on-click #(card-click-handler card)
-        :on-mouse-move (fn [e] (.stopPropagation e) (swap! ra-app assoc :bigview card))
+        :on-click       (fn [e] (.stopPropagation e) (card-click-handler card))
+        :on-touch-start  (fn [e] (.stopPropagation e) (card-click-handler card))
+        :on-mouse-move  (fn [e] (.stopPropagation e) (swap! ra-app assoc :bigview card))
       }])
     )
   ([ card size ]  (render-card-simple card size false))
@@ -132,9 +128,10 @@
               :position "absolute" 
               :top (str (-> @ra-app :settings :cardsize :h (* scale) (/ 2)) "px")
               :z-index "50"}}
-            (for [res (:collect-resource card)]
-              [:button.btn.btn-light {:key (gensym) :on-click #(comms/ra-send! {:action :collect-resource :resources res :card card})} 
-                (str res)])
+            [:div.btn-grp-xs
+              (for [res (:collect-resource card)]
+                [:button.btn.btn-light {:key (gensym) :on-click #(comms/ra-send! {:action :collect-resource :resources res :card card})} 
+                  (str res)])]
           ]
         [:img.img-fluid.card.mx-1.mb-1 {
           :title (str card)
@@ -145,9 +142,9 @@
             }
           :src (imgsrc card)
           :class (cond selected? "active" (:target? card) "target" (:disabled? card) "disabled" :else nil)
-          :on-touch-start #(card-click-handler card)
-          :on-click       #(card-click-handler card)
-          :on-mouse-move (fn [e] (.stopPropagation e) (swap! ra-app assoc :bigview card))
+          :on-click       (fn [e] (.stopPropagation e) (card-click-handler card))
+          :on-touch-start  (fn [e] (.stopPropagation e) (card-click-handler card))
+          :on-mouse-move  (fn [e] (.stopPropagation e) (swap! ra-app assoc :bigview card))
           ;:on-mouse-out #(swap! ra-app dissoc :bigview)
           }]]))
   ([ card ]
@@ -155,7 +152,7 @@
 
 (defn- render-cards 
   ([ cards size simple?]
-    [:div.d-flex.justify-content-center {:class (if (-> cards first :type (= "magicitem")) "flex-wrap")}
+    [:div.d-flex.justify-content-center ;;{:class (if (-> cards first :type (= "magicitem")) "flex-wrap")}
       (doall (for [ c cards ] (if simple? (render-card-simple c size) (render-card c size))))])
   ([ cards size ] (render-cards cards size false))
   ([ cards ] (render-cards cards nil false)))
@@ -173,35 +170,34 @@
             ])])]])
 
 (defn- pop-mon-mi-row [ selectmagicitem? ] 
-  [:div.row
-    [:div.col-6
-      [:div.text-center [:b "Places of Power"]] 
+  [:div.d-flex.justify-content-center
+    [:div.p-1
+      [:div.text-center.cardset "Places of Power"]       
       (-> @gm :state :pops (render-cards :lg))]
-    [:div.col-3 
-      [:div.text-center [:b "Monuments"]] 
-      ;(render-cards (->> @gm :state :monuments :public (apply conj [{:type "monument" :id "back"}])))
-      (-> @gm :state :monuments :public (render-cards :lg))
-      ]
+    [:div.p-1
+      [:div.text-center.cardset "Monuments"] 
+      (-> @gm :state :monuments :public (render-cards :lg))]
     (when (not= :setup (-> @gm :state :status) )
-      [:div.col-3
-        [:div.text-center [:b "Magic Items"]]
+      [:div.p-1
+        [:div.text-center.cardset "Magic Items"]
         (render-cards (->> @gm 
                           :state 
                           :magicitems 
+                          (remove :owner)
                           (map 
                             #(if (-> % :owner some?) 
                                  (assoc % :disabled? true) 
                                 (if selectmagicitem? 
                                     (assoc % :target? true) 
-                                    %)))) :sm true)])])
+                                    %)))) :md true)])])
 
 (defn- opponentdisplay [ gs uname ]
   (let [magicitems (:magicitems gs)]
     [:div.d-flex
-      (doall (for [k (:display-to gs) 
+      (doall (for [k (->> gs :display-to (remove #(= % uname))) 
                     :let [ v       (get (:players gs) k) 
                            passed? (= :pass (:action v))
-                           active? (contains? #{:selectmagicitem :play} (:action v))
+                           active? (and (not= :collect (:phase gs)) (contains? #{:selectmagicitem :play} (:action v)))
                            focus?  (= k (:focus @ra-app))]]
         [:div.border.border-dark.rounded.m-1 {
             :key (gensym) 
@@ -209,17 +205,19 @@
             :class (if active? "focus")
             :on-click #(if (= k (:focus @ra-app)) (swap! ra-app dissoc :focus) (swap! ra-app assoc :focus k))
           }
-          [:div.d-flex.justify-content-around.mx-1
-            [:div.text-center (str k (if-let [mage (-> v :public :mage :name)] (str " - " mage)))]
-            (if (not= k uname) 
-                (if (= :collect (:phase gs))
-                    [:div.ms-auto [:i.fas {:class (if (:collected? v) "fa-check text-success" "fa-times text-danger")}]]))
+          [:div.d-flex.mx-1.p-1 ;.justify-content-between
+            [:h5.me-3 (str k (if-let [mage (-> v :public :mage :name)] (str " - " mage)))]
+            [:div [:div.d-flex.justify-content-center.resource-bar (for [ [r n] (-> v :public :resources)] (resource-icon r n) )]]
+            ;(if (= :collect (:phase gs))
+            ;    [:div [:i.fas {:class (if (:collected? v) "fa-check text-success" "fa-times text-danger")}]]
+            ;    [:div])
+            [:div]
             ]
           [:div.d-flex.mb-1.ms-1
             (if (-> v :public :mage map?) (-> v :public :mage (render-card-simple :sm)))
             (if-let [item (getmagicitem magicitems k)] (render-card-simple item :sm passed?))
             ]
-          (if (not= k uname) [:div.d-flex.justify-content-center (for [ [r n] (-> v :public :resources)] (resource-icon r n) )])
+         
         ]))
     ]))
 
@@ -266,21 +264,19 @@
     [opponentdisplay (->> state :players (remove #(-> % key (= uname))))]
     [:div.row
       [:div.col-2
-        [:div.text-center "Mage"]
         [:div.d-flex.justify-content-center
           [:img.img-fluid {:src (if-let [mgid (-> pdata :public :mage)]
                                   (->> pdata :private :mages (filter #(= (:uid %) mgid)) first imgsrc)
                                   "/img/ra/mage-back.jpg")}]]]
-      [:div.col-8
+      [:div.col-10
         (case (-> pdata :action)
           :selectmage 
-            [:div.row.focus [:h3.text-center "Select Mage"] [render-cards (-> pdata :private :mages)]]
+            [:div.focus [:h3.text-center "Select Mage"] [render-cards (-> pdata :private :mages) :lg]]
           :selectstartitem
-            [:div.row.focus [:h3.text-center "Select Starting Magic Item"] [render-cards (map #(assoc % :target? true) (->> @gm :state :magicitems (remove #(-> % :owner some?) )))]]
+            [:div.focus [:h3.text-center "Select Starting Magic Item"] [render-cards (->> @gm :state :magicitems (remove #(-> % :owner some?)) (map #(assoc % :target? true))) :lg]]
           [:div.h4.text-center "Waiting for other players to make choices"])
         [:div.h4.text-center "Artifact Deck"]
         [render-cards (-> pdata :private :artifacts)]]
-      [:div.col-2 [hovercard]]
     ]
     (pop-mon-mi-row false)])
 
@@ -294,6 +290,7 @@
 ;;;;; MAIN ;;;;;
 
 (defn ramain [ ]
+  (-> js/document .-body (.removeAttribute "style"))
   (-> js/document .-body .-style .-backgroundImage (set! "url(/img/ra/ra-bg.png)"))
   (-> js/document .-body .-style .-backgroundSize (set! "100%"))
   ;(-> ((js* "$") "#navbar") (.attr "hidden" true))
@@ -303,9 +300,22 @@
       (bigview pdata)
       [chat]
       [:div.d-flex.justify-content-between.ra-main.m-1
-        [:div ]
         [:h2.mt-auto.mb-0 "Res Arcana - " (if (= (:status gs) :setup) "Setup" (-> gs :phase name clojure.string/capitalize (str " phase")))]
-        [:button.btn.btn-sm.btn-danger {:on-click #(if (js/confirm "Are you sure you want to Quit?") (comms/leavegame @gid))} [:i.fas.fa-lg.fa-times-circle]]]
+        [:div.d-flex
+          (for [p (:display-to gs) 
+                  :let [plyr (-> gs :players (get p))  
+                        ready?  (= :ready (:action plyr))
+                        active? (contains? #{:selectstartitem :play} (:action plyr))
+                        passed? (-> plyr :action (= :pass))
+                        ]] 
+            [:h5.text-center.plyr-status.mb-0.mx-1.p-1 {
+                :key (gensym) 
+                :class (cond ready? "ready" active? "active" passed? "pass" :else "")
+              } 
+              (-> plyr :public :mage :name) 
+              [:small " - " p ]
+              ])]
+        [:div [:button.btn.btn-sm.btn-danger {:on-click #(if (js/confirm "Are you sure you want to Quit?") (comms/leavegame @gid))} [:i.fas.fa-times-circle]]]]
       (case (-> @gm :state :status)
         :setup [setup gs @uname pdata]
         [gamestate gs @uname pdata])
