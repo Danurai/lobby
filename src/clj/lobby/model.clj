@@ -67,10 +67,12 @@
               (-> @appstate :gamelist (get (:game data))))))))
 
 (defn joingame! [ uname gid ]
-  (let [gm (-> @appstate :games gid)]
+  (let [gm    (-> @appstate :games gid)
+        pname (if (= uname "AI") (-> "AI" gensym str) uname)]
+    (prn uname gid gm pname)
     (when (> (:maxp gm) (-> gm :plyrs count))
-      (addchat! nil uname (str "joined " (:title :gm)) :gamestate)
-      (swap! appstate update-in [:games gid :plyrs] conj (if (= uname "AI") (-> "AI" gensym str) uname)))))
+      (addchat! nil pname (str "joined " (:title gm)) :gamestate)
+      (swap! appstate update-in [:games gid :plyrs] conj pname))))
 
 (defn leavegame! [ uname gid ]
   (let [gm (-> @appstate :games gid)]

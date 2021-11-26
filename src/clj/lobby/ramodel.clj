@@ -344,6 +344,16 @@
           ))) {} (:players gs)))
       collect-phase))
           
+;(defn- reveal-all-mages [ gs ]
+;  (assoc gs :players
+;    (reduce-kv
+;      (fn [m k v]
+;        (let [mageuid  (-> v :public :mage)
+;              magecard (->> v :private :mages #(filter (= (:uid %) mageuid)) first)]
+;          (-> m 
+;              (assoc-in [:public :mage] magecard)
+;              (assoc :action :waiting)))) (:players gs) (:players gs))))
+
 (defn- check-start [ gs ]
   (let [nplayers (-> gs :players keys count)
         nmages   (->> gs :players (reduce-kv (fn [m k v] (if (-> v :public :mage some?) (inc m) m)) 0))
@@ -352,7 +362,7 @@
     (if (= nplayers nitems)
         (start-game gs)
         (if (= nplayers nmages)
-            (let [cp (choosing-player gs)]
+            (let [cp (choosing-player gs)] ; reveal mages
               (if (some? (re-matches #"AI\d+" cp))
                   (-> gs 
                       (ai-choose-magicitem cp)
@@ -360,12 +370,12 @@
                   (assoc-in gs [:players cp :action] :selectstartitem)))
             gs))))
             
-(defn- set-selected-mage [ v cardid ]
-  (if (contains? (->> v :private :mages (map :uid) set) cardid)
+(defn- set-selected-mage [ v carduid ]
+  (if (contains? (->> v :private :mages (map :uid) set) carduid)
     (-> v 
-      (assoc-in [:public :mage] cardid)
-      (assoc-in [:private :mages] (->> v :private :mages (map #(dissoc % :target?))))
-      (assoc :action :waiting))
+      (assoc-in [:public :mage] carduid)  ;(->> v :private :mages (filter #(= (:uid %) carduid)) first))
+      ;(assoc-in  :private dissoc :mages) ;] (->> v :private :mages (map #(dissoc % :target?))))
+      (assoc :action :ready))
     v))
     
 (defn- ai-choose-mage [ players ]
