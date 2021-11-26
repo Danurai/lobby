@@ -1,6 +1,7 @@
+/* loader for lobby */
 .loader {
-  border: 16px solid #f3f3f3; /* Light grey */
-  border-top: 16px solid #444444; /* Blue */
+  border: 16px solid #f3f3f3;
+  border-top: 16px solid #444444;
   border-radius: 50%;
   width: 100px;
   height: 100px;
@@ -16,12 +17,11 @@
   font-style: italic;
 }
 
-
+/* Default Chat */
 .chat {
   display: flex;
   flex-flow: column;
   height: 100%;
-  max-height: 200px;
 }
 
 .chatbox {
@@ -32,6 +32,10 @@
   flex-direction: column-reverse;
 }
 
-.chat div {
-  background: white;
+/* Re-instate xs buttons */
+.btn-group-xs > .btn, .btn-xs {
+  padding: .25rem .4rem;
+  font-size: .875rem;
+  line-height: .5;
+  border-radius: .2rem;
 }
