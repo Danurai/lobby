@@ -80,8 +80,8 @@
     {:id 22 :type "artifact" :name "Hawk"                 :cost {:life 1 :calm 1}:subtype "Creature" }
     {:id 23 :type "artifact" :name "Horn of Plenty"       :cost {:gold 2}}
     {:id 24 :type "artifact" :name "Hypnotic Basin"       :cost {} }  
-    {:id 25 :type "artifact" :name "Magical Shard"        :cost {} } 
-    {:id 26 :type "artifact" :name "Jeweled Statuette"    :cost {} } 
+    {:id 25 :type "artifact" :name "Jeweled Statuette"    :cost {} } 
+    {:id 26 :type "artifact" :name "Magical Shard"        :cost {} } 
     {:id 27 :type "artifact" :name "Mermaid"              :cost {} :subtype "Creature"}
     {:id 28 :type "artifact" :name "Nightingale"          :cost {} :subtype "Creature"}
     {:id 29 :type "artifact" :name "Philosopher's Stone"  :cost {} :vp 1}
