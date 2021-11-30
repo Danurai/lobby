@@ -85,7 +85,12 @@
         (update-in [:players uname :private :artifacts] conj (first artdeck))
         (assoc-in [:players uname :secret :artifacts] (rest artdeck))
         (update-in [:chat] conj (message-map "drew 1 card." uname)))))
-                
+ 
+(defn get-active-player [ gamestate ]
+  (reduce-kv 
+    (fn [m k v] 
+      (if (contains? #{:play :selectmagicitem} (:action v)) k m)) nil (:players gamestate)))
+
 ;;;;; RESOURCES ;;;;; 
 
 (defn amendresource [ gamestate {:keys [resources card] :as ?data} uname ] 
@@ -185,15 +190,17 @@
 (defn discardcard [ gs ?data uname ]
   (if verbose? (println uname "discard" (-> ?data :card :name) "resources" (:resources ?data)))
   (let [{:keys [resources card]} ?data]
-    (-> gs 
-        (update-in [:players uname :public :discard] conj card)
-        (assoc-in [:players uname :private :artifacts] (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :private :artifacts)))
-        (amendresource ?data uname)
-        (add-chat (str "Discard " (:name card)) uname)
-        (add-chat (str "Gained " (clojure.string/join "," (map #(str (val %) " " (-> % key name clojure.string/capitalize)) resources))) uname)
-        )))
+    (if (= uname (get-active-player gs))
+        (-> gs 
+            (update-in [:players uname :public :discard] conj card)
+            (assoc-in [:players uname :private :artifacts] (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :private :artifacts)))
+            (amendresource ?data uname)
+            (add-chat (str "Discard " (:name card)) uname)
+            (add-chat (str "Gained " (clojure.string/join "," (map #(str (val %) " " (-> % key name clojure.string/capitalize)) resources))) uname)
+            )
+        gs)))
 
-
+;;;;; PHASE TRANSITION ;;;;;
 
 (defn- collect-phase [ gamestate ]
   (if verbose? "Collect phase")
@@ -202,6 +209,7 @@
       generate-resources
       ai-collect-resources))
 
+(defn- determine-winner [] nil)
 
 ;;;;; ASSIGN MAGIC ITEMS ;;;;;       
 
@@ -287,11 +295,6 @@
     (amendresource {:resources (reduce-kv (fn [m k v] (assoc m k (* -1 v))) {} resources)} uname)
   ; next player
     ))
-    
-(defn get-active-player [ gamestate ]
-  (reduce-kv 
-    (fn [m k v] 
-      (if (contains? #{:play :selectmagicitem} (:action v)) k m)) nil (:players gamestate)))
 
 (defn ai-action [ gamestate ]
   ; TODO - Add some AI logic here
