@@ -27,7 +27,9 @@
   ([ gid uname txt event ]
     (let [msg {:msg txt :uname uname :timestamp (new java.util.Date)}]
       (if gid
-          (swap! appstate update-in [:games gid :state :chat] conj msg)
+          (case (-> @appstate :games gid :game)
+                "Res Arcana" (swap! appstate assoc-in [:games gid :state :chat] (ramodel/add-chat (-> @appstate :games gid :state) txt uname))
+                (swap! appstate update-in [:games gid :state :chat] conj msg))
           (swap! appstate update-in [:chat] conj msg))))
   ([ gid uname txt ]
     (addchat! gid uname txt :usermsg)))
