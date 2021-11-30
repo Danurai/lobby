@@ -41,7 +41,7 @@
 }
 
 
-.bigview {
+.modal {
   position: fixed;
   top: 0px;
   left: 0px;
@@ -52,8 +52,8 @@
   z-index: 99;
   display: flex;
 }
-.bigviewcontent {
+.modalcontent {
   height: 90%;
-  max-width: 60%;
+  max-width: 70%;
   margin: auto;
 }

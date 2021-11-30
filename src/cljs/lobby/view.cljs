@@ -120,7 +120,7 @@
 
 (defn- gamelobby [] 
   [:div.container.my-2 
-    [:div.row [:div [:small (str (dissoc @model/app :chat))]] [:button.btn.btn-sm.btn-danger {:on-click #(comms/reset)} "Reset"]]
+    ;[:div.row [:div [:small (str (dissoc @model/app :chat))]] [:button.btn.btn-sm.btn-danger {:on-click #(comms/reset)} "Reset"]]
     [:div.row
       (if @gm
         (lobby @gid @gm @uname)

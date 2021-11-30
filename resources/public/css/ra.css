@@ -71,15 +71,15 @@
   bottom: 0px;
   left: 40px;
   width: 40%;
-  overflow-y: hidden;
+  /*overflow-y: hidden;*/
 }
 .hand .card {
   bottom: -80% !important;
-  transition: bottom 0.5s !important;
+  transition: bottom 0.3s !important;
 }
 .hand .card:hover {
-  bottom: -5px !important;
-  transition: bottom 0.5s !important;
+  bottom: -30% !important;
+  transition: bottom 0.3s !important;
 }
 
 .hand.canplay .card {

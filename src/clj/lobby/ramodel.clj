@@ -5,6 +5,7 @@
 (defonce verbose? false)
 
 (def gs {
+  :round 1
   :status :setup
   :pops []
   :monuments []
@@ -207,6 +208,8 @@
   (-> gamestate
       (assoc :phase :collect)
       generate-resources
+      (add-chat (str "Round " (:round gamestate)))
+      (add-chat (str "Collect Phase"))
       ai-collect-resources))
 
 (defn- determine-winner [] nil)
@@ -240,7 +243,7 @@
 ;;;;; NEXT TURN / ROUND ;;;;;
 
 (defn- new-round-check [ gamestate ]
-  (if verbose? (println "new round check" (-> gamestate :plyr-to empty?)))
+  (if verbose? (println "new round check" (-> gamestate :plyr-to empty?) (-> gamestate str)))
   (if (-> gamestate :plyr-to empty?)
       (-> gamestate
           (assoc :plyr-to (:pass-to gamestate))
@@ -251,8 +254,9 @@
               (fn [m k v] 
                 (assoc m k (assoc v :action :waiting))) {} (:players gamestate)))
           (set-player-action (-> gamestate :pass-to first) :play)
+          (update :round inc)
           collect-phase)
-      gamestate))
+      (add-chat gamestate "Start turn" (get-active-player gamestate))))
 
 (defn end-action [ gamestate uname ]
   (let [nextplyrs (if (-> gamestate :players (get uname) :action (= :pass))
@@ -263,8 +267,7 @@
     (-> gamestate
         (set-player-action uname (if (-> gamestate :plyr-to set (contains? uname)) :waiting :pass))
         (set-player-action nextp :play)
-        (update-in [:chat] conj (message-map "end of turn." uname))
-        (update-in [:chat] conj (message-map "start turn." nextp))
+        (add-chat "End of turn" uname)
         new-round-check
         )))
 
@@ -507,7 +510,7 @@
     ; PLACE
     ; CLAIM
       :place            (-> gamestate 
-                            (placecard ?data uname)
+                            (playcard ?data uname)
                             (end-action uname)
                             ai-action)
     ; DISCARD

@@ -690,7 +690,7 @@
     (-> gs :plyr-to)))
 ; AI Pass and Player Pass and select MI. New Round with AI first :collect phase
 (expect [ [] ["AI123" "P1"] :collect]
-  (let [gs (-> {:status :play :plyr-to ["AI123" "P1"] :pass-to #{} :players {"AI123" {:action :play} "P1" {:action :waiting}} :magicitems [{:uid :mi01 :owner "AI123"} {:uid :mi02 :owner "P1"} {:uid :mi03 :owner nil}]}
+  (let [gs (-> {:status :play :round 1 :plyr-to ["AI123" "P1"] :pass-to #{} :players {"AI123" {:action :play} "P1" {:action :waiting}} :magicitems [{:uid :mi01 :owner "AI123"} {:uid :mi02 :owner "P1"} {:uid :mi03 :owner nil}]}
                 ramodel/ai-action
                 (ramodel/parseaction {:action :pass} "P1")
                 (ramodel/parseaction {:action :selectmagicitem :card :mi01} "P1"))]
@@ -698,7 +698,7 @@
 
 ; Player Pass and select MI and AI Pass. New Round.
 (expect [[] ["P1" "AI123"] :collect]
-  (let [gs (-> {:status :play :phase :action :plyr-to ["P1" "AI123"] :pass-to #{} :players {"AI123" {:action :waiting} "P1" {:action :play}} :magicitems [{:uid :mi01 :owner "AI123"} {:uid :mi02 :owner "P1"} {:uid :mi03 :owner nil}]}
+  (let [gs (-> {:status :play :phase :action :round 1 :plyr-to ["P1" "AI123"] :pass-to #{} :players {"AI123" {:action :waiting} "P1" {:action :play}} :magicitems [{:uid :mi01 :owner "AI123"} {:uid :mi02 :owner "P1"} {:uid :mi03 :owner nil}]}
                 (ramodel/parseaction {:action :pass} "P1")
                 (ramodel/parseaction {:action :selectmagicitem :card :mi03} "P1"))]
     [(:pass-to gs) (:plyr-to gs) (:phase gs) ] ))
@@ -751,8 +751,19 @@
         (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p1")
         :players (get "p1") :private :artifacts count)))
 
+; Card Target Tests
+; Set by raview based on player status
+; Block actions when it's not the active player's turn 
+; PLACE Card
+;
+(expect 1
+  (let [s2pgc (started2pgm-collected)
+        a1    (-> s2pgc :players (get "p2") :private :artifacts first)]
+    (-> s2pgc
+        (ramodel/parseaction {:action :place :resources {:elan 1 :death 1} :card a1} "p1")
+        :players (get "p1") :public :artifacts count)))
 
-; Play card from hand
+; Play card from hand (OLD SCRIPT)
 (expect [1 2 {:life 1 :death 1 :elan 1 :calm 1 :gold 0}]
   (let [gsetup  (ramodel/setup ["p1"])
         m1      (-> gsetup :players (get "p1") :private :mages first)
@@ -767,11 +778,6 @@
     [ (-> afterplay :players (get "p1") :public  :artifacts count)
       (-> afterplay :players (get "p1") :private :artifacts count)
       (-> afterplay :players (get "p1") :public  :resources) ]))
-
-; Card Target Tests
-; Set by raview based on player status
-; Block actions when it's not the active player's turn 
-; PLACE Card
 
 ; CLAIM Card
 
