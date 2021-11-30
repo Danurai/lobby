@@ -15,7 +15,7 @@
   (let [setup  (assoc (ramodel/setup ["p1" "p2"]) :plyr-to ["p1" "p2"])]
     (-> setup
         (ramodel/parseaction {:action :selectmage :card (-> setup :players (get "p1") :private :mages first :uid)} "p1")
-        (ramodel/parseaction {:action :selectmage :card (-> setup :players (get "p2") :private :mages first :uid)} "p1")
+        (ramodel/parseaction {:action :selectmage :card (-> setup :players (get "p2") :private :mages first :uid)} "p2")
         (ramodel/parseaction {:action :selectstartitem :card (-> setup :magicitems first :uid)} "p2")
         (ramodel/parseaction {:action :selectstartitem :card (-> setup :magicitems last :uid)} "p1")
         )))    
@@ -34,7 +34,8 @@
       (-> gs :plyr-to)
       (-> gs :players (get "p1") :action)
       (-> gs :players (get "p2") :action)
-    ]))
+    ]
+    ))
 ; is always the same turn order
 (expect 10
   (let [states (repeatedly 10 #(started2pgm))]
@@ -119,14 +120,13 @@
           
 ; AI and P1 have selected a mage
 (expect 2
-  (let [aip (-> "AI" gensym str)
-        gs (ramodel/setup ["p1" aip])
+  (let [gs (assoc (ramodel/setup ["p1" "AI123"]) :plyr-to ["p1" "AI123"])
         m1 (-> gs :players (get "p1") :private :mages first)]
     (->> (ramodel/parseaction gs {:action :selectmage :card (:uid m1)} "p1")
          :players
          (reduce-kv #(if (-> %3 :public :mage some?) (inc %1) %1) 0))))
                   
-                  
+       
 ;; Select Magic Item
 ; reverse turn order
 (expect :selectstartitem 
@@ -151,6 +151,26 @@
         (ramodel/parseaction {:action :selectmage :card (:uid m1)} "p1")
         (ramodel/parseaction {:action :selectmage :card (:uid m2)} "p2")
         :players)))))
+; When all mages have been selected, make the Mage public
+(expect #(some? (:name %))
+  (let [gs (ramodel/setup ["p1" "p2"])
+        m1 (-> gs :players (get "p1") :private :mages first)
+        m2 (-> gs :players (get "p2") :private :mages first)
+        mi1 (-> gs :magicitems first)]
+    (-> gs
+      (ramodel/parseaction {:action :selectmage :card (:uid m1)} "p1")
+      (ramodel/parseaction {:action :selectmage :card (:uid m2)} "p2")
+      :players (get "p1") :public :mage)))
+; ... and turn off target?
+(expect #(nil? (:target? %))
+  (let [gs (ramodel/setup ["p1" "p2"])
+        m1 (-> gs :players (get "p1") :private :mages first)
+        m2 (-> gs :players (get "p2") :private :mages first)
+        mi1 (-> gs :magicitems first)]
+    (-> gs
+      (ramodel/parseaction {:action :selectmage :card (:uid m1)} "p1")
+      (ramodel/parseaction {:action :selectmage :card (:uid m2)} "p2")
+      :players (get "p1") :public :mage)))
 ; Select Item    
 (expect 1
   (let [gs (ramodel/setup ["p1" "p2"])
@@ -187,7 +207,7 @@
       (ramodel/parseaction {:action :selectmage :card (:uid m2)} "p2")
       (ramodel/parseaction {:action :selectstartitem :card (:uid mi1)} (-> gs :plyr-to last))
       :players (get (-> gs :plyr-to last)) :action)))
-      
+
 ;; 1player INVALID Mage ID
 (expect nil
   (let [gs (ramodel/setup ["p1"])
@@ -284,18 +304,17 @@
 (expect 2
   (let [gs (started2pgm)]
     (-> gs 
-        (ramodel/collect-resource {:resources {:death 1} :card (-> gs :players (get "p1") :public :mage)} "p1")
+        (ramodel/parseaction {:action :collect-resource :resources {:death 1} :card (-> gs :players (get "p1") :public :mage)} "p1")
         :players (get "p1") :public :resources :death)))
 
 (expect nil
   (let [gs (started2pgm)]
     (-> gs 
-        (ramodel/collect-resource {:resources {:death 1} :card (-> gs :players (get "p1") :public :mage)} "p1")
+        (ramodel/parseaction {:action :collect-resource :resources {:death 1} :card (-> gs :players (get "p1") :public :mage)} "p1")
         :players (get "p1") :public :mage :collectresource)))    
     
     
 ; Resource Change
-
 (expect {:life 1 :death 1 :elan 1 :calm 1 :gold 1}
   (-> (ramodel/setup ["p1"]) :players (get "p1") :public :resources))
       
@@ -522,7 +541,7 @@
       :players 
       (get "p1")
       :secret
-      :discard))
+      :artifacts))
 
 (expect 0
   (-> (ramodel/setup ["p1" "p2"])
@@ -530,7 +549,7 @@
       :players 
       (get "p2")
       :secret
-      :discard))
+      :artifacts))
 
 ; ai collect generated resources test state
 (def rstate {
@@ -718,3 +737,34 @@
   (-> {:status :play :phase :collect :players {"P1" {:action :play} "P2" {:action :waiting}}}
       (ramodel/parseaction {:action :pass} "P1")
       :players (get "P1") :action))
+
+;; DISCARD ACTION
+; data? {:action :discard :resources {k v k v} :card {<card>} }
+; Gain the resources
+(expect {:elan 2 :death 2}
+  (let [s2pgc (started2pgm-collected)
+        a1    (-> s2pgc :players (get "p1") :private :artifacts first)]
+    (-> s2pgc
+        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p1")
+        :players (get "p1") :public :resources (select-keys [:elan :death]) )))
+; 2 of the same resource
+(expect {:elan 3}
+  (let [s2pgc (started2pgm-collected)
+        a1    (-> s2pgc :players (get "p1") :private :artifacts first)]
+    (-> s2pgc
+        (ramodel/parseaction {:action :discard :resources {:elan 2} :card a1} "p1")
+        :players (get "p1") :public :resources (select-keys [:elan]) )))
+; discard the card
+(expect 1
+  (let [s2pgc (started2pgm-collected)
+        a1    (-> s2pgc :players (get "p1") :private :artifacts first)]
+    (-> s2pgc
+        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p1")
+        :players (get "p1") :public :discard count)))
+; and remove from hand
+(expect 2
+  (let [s2pgc (started2pgm-collected)
+        a1    (-> s2pgc :players (get "p1") :private :artifacts first)]
+    (-> s2pgc
+        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p1")
+        :players (get "p1") :private :artifacts count)))
