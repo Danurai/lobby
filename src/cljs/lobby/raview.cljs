@@ -297,12 +297,13 @@
           [:button.btn.btn-sm.btn-outline-secondary {:title "Pass" :on-click #(comms/ra-send! {:action :pass})} [:i.fas.fa-sign-out-alt.text-primary]]
           [:button.btn.btn-sm.btn-outline-secondary {:title "View Discard Pile" :on-click #(swap! ra-app assoc :modal {:show? true :discard (-> pdata :public :discard)})} [:i.fas.fa-trash-alt.text-danger]]
           ]
-        (-> pdata :public :mage render-card)
-        (-> gs :magicitems (getmagicitem uname) render-card)
+        (-> pdata :public :mage (assoc :target? true) render-card)
+        (-> gs :magicitems (getmagicitem uname) (assoc :target? true) render-card)
+        (for [c (-> pdata :public :artifacts)] (render-card (assoc c :target? true)))
       ]
       [:div.d-flex.justify-content-between {:style {:position "relative"}}
         [:div "Hand"]
-        [:div.d-flex.justify-content-center (for [ [r n] (-> pdata :public :resources)] (resource-icon r n) )]
+        [:div.d-flex.justify-content-center (doall (for [ [r n] (-> pdata :public :resources)] (resource-icon r n) ))]
         [:div ]
       
         [:div.d-flex.hand 

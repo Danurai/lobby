@@ -68,18 +68,19 @@
 
 .hand {
   position: absolute;
-  bottom: 0px;
+  bottom: 0%;
   left: 40px;
   width: 40%;
+  height: 2em;
   /*overflow-y: hidden;*/
 }
 .hand .card {
-  bottom: -80% !important;
-  transition: bottom 0.3s !important;
+  top: 0 !important;
+  transition: top 0.3s !important;
 }
 .hand .card:hover {
-  bottom: -30% !important;
-  transition: bottom 0.3s !important;
+  top: -150% !important;
+  transition: top 0.3s !important;
 }
 
 .hand.canplay .card {

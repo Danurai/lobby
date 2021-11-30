@@ -293,7 +293,7 @@
 (defn playcard [ gamestate {:keys [card resources]} uname ]
   (-> gamestate 
     (assoc-in [:players uname :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> gamestate :players (get uname) :private :artifacts)))
-    (assoc-in [:players uname :public :artifacts] (apply conj (-> gamestate :players (get uname) :public :artifacts) [card]))
+    (assoc-in [:players uname :public :artifacts] (conj (-> gamestate :players (get uname) :public :artifacts) card))
     (update-in [:chat] conj (message-map (str "Played Artifact " (:name card)) uname))
     (amendresource {:resources (reduce-kv (fn [m k v] (assoc m k (* -1 v))) {} resources)} uname)
   ; next player

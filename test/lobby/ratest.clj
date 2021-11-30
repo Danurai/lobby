@@ -758,9 +758,19 @@
 ;
 (expect 1
   (let [s2pgc (started2pgm-collected)
-        a1    (-> s2pgc :players (get "p2") :private :artifacts first)]
+        a1    (-> s2pgc :players (get "p1") :private :artifacts first)
+        a2    (-> s2pgc :players (get "p1") :private :artifacts second)]
     (-> s2pgc
         (ramodel/parseaction {:action :place :resources {:elan 1 :death 1} :card a1} "p1")
+        :players (get "p1") :public :artifacts count)))
+;place 2 cards
+(expect 2
+  (let [s2pgc (started2pgm-collected)
+        a1    (-> s2pgc :players (get "p1") :private :artifacts first)
+        a2    (-> s2pgc :players (get "p1") :private :artifacts second)]
+    (-> s2pgc
+        (ramodel/parseaction {:action :place :resources {:elan 1 :death 1} :card a1} "p1")
+        (ramodel/parseaction {:action :place :resources {:gold 1} :card a2} "p1")
         :players (get "p1") :public :artifacts count)))
 
 ; Play card from hand (OLD SCRIPT)
