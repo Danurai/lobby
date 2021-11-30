@@ -53,6 +53,8 @@
       :phase))
 ; RA
 
+;;;;; NEW GAME ;;;;;
+
 ;; New game has public list of all cards Name, Type, Id
 (expect 78
   (->> (ramodel/setup ["p1" "p2"]) :allcards count))
@@ -171,6 +173,7 @@
       (ramodel/parseaction {:action :selectmage :card (:uid m1)} "p1")
       (ramodel/parseaction {:action :selectmage :card (:uid m2)} "p2")
       :players (get "p1") :public :mage)))
+
 ; Select Item    
 (expect 1
   (let [gs (ramodel/setup ["p1" "p2"])
@@ -184,6 +187,30 @@
           (ramodel/parseaction {:action :selectstartitem :card (:uid mi1)} (-> gs :plyr-to last))
           :magicitems
           )))))
+; one at a time
+(expect 1
+  (let [gs (ramodel/setup ["p1" "p2"])
+        m1 (-> gs :players (get "p1") :private :mages first)
+        m2 (-> gs :players (get "p2") :private :mages first)
+        mi1 (-> gs :magicitems first)]
+    (count (filter 
+      (fn [[k v]] (= (:action v) :selectstartitem))
+      (-> gs
+        (ramodel/parseaction {:action :selectmage :card (:uid m1)} "p1")
+        (ramodel/parseaction {:action :selectmage :card (:uid m2)} "p2")
+        (ramodel/parseaction {:action :selectstartitem :card (:uid mi1)} (-> gs :plyr-to last))
+        :players)))))
+;; in reverse player order
+(expect :selectstartitem 
+  (let [gs (ramodel/setup ["p1" "p2"])
+        m1 (-> gs :players (get "p1") :private :mages first)
+        m2 (-> gs :players (get "p2") :private :mages first)
+        mi1 (-> gs :magicitems first)]
+    (-> gs
+        (ramodel/parseaction {:action :selectmage :card (:uid m1)} "p1")
+        (ramodel/parseaction {:action :selectmage :card (:uid m2)} "p2")
+        (ramodel/parseaction {:action :selectstartitem :card (:uid mi1)} (-> gs :plyr-to last))
+        :players  (get (-> gs :plyr-to first)) :action)))
 ; prevent selecting an item already taken
 (expect "p1"
   (let [gs (ramodel/setup ["p1" "p2"])
@@ -224,39 +251,11 @@
         (model/obfuscate-gm "p1")
         :players (get "p1") :action)))
         
-;; select mage - set public 
-        
-      
-; one at a time
-(expect 1
-  (let [gs (ramodel/setup ["p1" "p2"])
-        m1 (-> gs :players (get "p1") :private :mages first)
-        m2 (-> gs :players (get "p2") :private :mages first)
-        mi1 (-> gs :magicitems first)]
-    (count (filter 
-      (fn [[k v]] (= (:action v) :selectstartitem))
-      (-> gs
-        (ramodel/parseaction {:action :selectmage :card (:uid m1)} "p1")
-        (ramodel/parseaction {:action :selectmage :card (:uid m2)} "p2")
-        (ramodel/parseaction {:action :selectstartitem :card (:uid mi1)} (-> gs :plyr-to last))
-        :players)))))
-;; in reverse player order
-(expect :selectstartitem 
-  (let [gs (ramodel/setup ["p1" "p2"])
-        m1 (-> gs :players (get "p1") :private :mages first)
-        m2 (-> gs :players (get "p2") :private :mages first)
-        mi1 (-> gs :magicitems first)]
-    (-> gs
-        (ramodel/parseaction {:action :selectmage :card (:uid m1)} "p1")
-        (ramodel/parseaction {:action :selectmage :card (:uid m2)} "p2")
-        (ramodel/parseaction {:action :selectstartitem :card (:uid mi1)} (-> gs :plyr-to last))
-        :players  (get (-> gs :plyr-to first)) :action)))
         
 ; All players selected a mage (including AI setup), and a Magic Item game on!
 (expect :play
   (-> (started2pgm) :status))
-  
-;; With AI
+; With AI
 (expect :play
   (let [aip "AI123"
         gs (ramodel/setup ["p1" aip])
@@ -306,7 +305,6 @@
     (-> gs 
         (ramodel/parseaction {:action :collect-resource :resources {:death 1} :card (-> gs :players (get "p1") :public :mage)} "p1")
         :players (get "p1") :public :resources :death)))
-
 (expect nil
   (let [gs (started2pgm)]
     (-> gs 
@@ -327,22 +325,6 @@
       (ramodel/amendresource {:resources {:life -1 :elan 1 :calm 2 :gold 3} :action :amendresource} "p1")
       :players (get "p1") :public :resources))
       
-
-; Play card from hand
-(expect [1 2 {:life 1 :death 1 :elan 1 :calm 1 :gold 0}]
-  (let [gsetup  (ramodel/setup ["p1"])
-        m1      (-> gsetup :players (get "p1") :private :mages first)
-        mi1     (-> gsetup :magicitems first)
-        gs      (-> gsetup 
-                    (ramodel/parseaction {:action :selectmage :card (:uid m1)} "p1")
-                    (ramodel/parseaction {:action :selectstartitem :card (:uid mi1)} "p1"))
-        art1    (-> gs :players (get "p1") :private :artifacts first)
-        art2    (-> gs :players (get "p1") :private :artifacts last)
-        afterplay (ramodel/playcard gs {:card art1 :resources {:gold 1}} "p1")
-        ]
-    [ (-> afterplay :players (get "p1") :public  :artifacts count)
-      (-> afterplay :players (get "p1") :private :artifacts count)
-      (-> afterplay :players (get "p1") :public  :resources) ]))
 
        
 ; Done
@@ -768,3 +750,48 @@
     (-> s2pgc
         (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p1")
         :players (get "p1") :private :artifacts count)))
+
+
+; Play card from hand
+(expect [1 2 {:life 1 :death 1 :elan 1 :calm 1 :gold 0}]
+  (let [gsetup  (ramodel/setup ["p1"])
+        m1      (-> gsetup :players (get "p1") :private :mages first)
+        mi1     (-> gsetup :magicitems first)
+        gs      (-> gsetup 
+                    (ramodel/parseaction {:action :selectmage :card (:uid m1)} "p1")
+                    (ramodel/parseaction {:action :selectstartitem :card (:uid mi1)} "p1"))
+        art1    (-> gs :players (get "p1") :private :artifacts first)
+        art2    (-> gs :players (get "p1") :private :artifacts last)
+        afterplay (ramodel/playcard gs {:card art1 :resources {:gold 1}} "p1")
+        ]
+    [ (-> afterplay :players (get "p1") :public  :artifacts count)
+      (-> afterplay :players (get "p1") :private :artifacts count)
+      (-> afterplay :players (get "p1") :public  :resources) ]))
+
+; Card Target Tests
+; Set by raview based on player status
+; Block actions when it's not the active player's turn 
+; PLACE Card
+
+; CLAIM Card
+
+; DISCARD Card
+; should be p1's action
+(expect 0
+  (let [s2pgc (started2pgm-collected)
+        a1    (-> s2pgc :players (get "p2") :private :artifacts first)]
+    (-> s2pgc
+        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p2")
+        :players (get "p2") :public :discard count)))
+(expect 3
+  (let [s2pgc (started2pgm-collected)
+        a1    (-> s2pgc :players (get "p2") :private :artifacts first)]
+    (-> s2pgc
+        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p2")
+        :players (get "p2") :private :artifacts count)))
+(expect {:elan 1 :death 1}
+  (let [s2pgc (started2pgm-collected)
+        a1    (-> s2pgc :players (get "p2") :private :artifacts first)]
+    (-> s2pgc
+        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p2")
+        :players (get "p2") :public :resources (select-keys [:elan :death]) )))
