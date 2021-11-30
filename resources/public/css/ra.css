@@ -70,16 +70,16 @@
   position: absolute;
   bottom: 0px;
   left: 40px;
-  width: 30%;
+  width: 40%;
   overflow-y: hidden;
 }
 .hand .card {
-  bottom: -80%;
-  transition: bottom 0.5s;
+  bottom: -80% !important;
+  transition: bottom 0.5s !important;
 }
 .hand .card:hover {
-  bottom: -5px;
-  transition: bottom 0.5s;
+  bottom: -5px !important;
+  transition: bottom 0.5s !important;
 }
 
 .hand.canplay .card {
@@ -139,6 +139,12 @@
   background-color: rgba(0,0,0,0.15);
   border-radius: 0.25rem;
   font-size: 0.9em;
+}
+
+.resource-background {
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position-y: 0%;
 }
 
 .card-link {

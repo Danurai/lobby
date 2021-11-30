@@ -39,3 +39,21 @@
   line-height: .5;
   border-radius: .2rem;
 }
+
+
+.bigview {
+  position: fixed;
+  top: 0px;
+  left: 0px;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(100,100,100,0.5);
+  padding: 0;
+  z-index: 99;
+  display: flex;
+}
+.bigviewcontent {
+  height: 90%;
+  max-width: 60%;
+  margin: auto;
+}
