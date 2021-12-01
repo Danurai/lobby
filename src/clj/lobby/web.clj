@@ -48,6 +48,8 @@
 		;pages/lobby)
 		(friend/wrap-authorize pages/lobby #{::users/user}))
   (GET "/appdata" [] (json/write-str @model/appstate))
+;; TESTING
+  (GET "/test"    [] pages/testpage)
   (friend/logout 
 		(ANY "/logout" [] (redirect "/play")))
   (resources "/"))
