@@ -1,7 +1,11 @@
 .ra-main {
   font-family: "Pirata One", cursive ;
   font-size: 14pt;
-  user-select: none;
+  /*user-select: none;*/
+}
+
+.clickable {
+  cursor: pointer;
 }
 
 .plyr-status {
@@ -41,8 +45,13 @@
   cursor: pointer;
 }
 
+.card.collect {
+  border: 2px solid darkgreen;
+  box-shadow: 0 0 10px 0 greenyellow;
+}
+
 .card.target {
-  border: 2px solid yellow;
+  border: 2px solid goldenrod;
 }
 .card.target:hover {
   -webkit-box-shadow: 0px 0px 39px 0px rgba(218,165,32,0.75);
@@ -51,8 +60,9 @@
 }
 
 .cardset {
-  border-bottom: 1px solid black;
+  border-bottom: 2px solid #888;
   font-weight: bold;
+  margin-bottom: .25rem;
 }
 
 .card.active {
@@ -124,6 +134,10 @@
   width: 20rem;
   transition: height 0.2s;
   background-color: rgba(255,255,255,0.8);
+}
+.ra-chat .chatbox {
+  flex-direction: column !important;
+  justify-content: flex-end !important;
 }
 
 .ra-chat:hover {
