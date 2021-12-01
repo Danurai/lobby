@@ -1,5 +1,6 @@
 (ns lobby.pages
   (:require 
+    [lobby.radata :as radata]
     [hiccup.page :as h]
     [cemerick.friend :as friend]
     [ring.middleware.anti-forgery :refer [*anti-forgery-token*]]
@@ -79,4 +80,27 @@
     (h/include-js "/js/compiled/lobby.js")))
     
 		
-		
+(defn testpage [ req ]
+  (let [q (-> req :query-string)
+        artifacts (-> @radata/data :artifacts)]
+    (h/html5
+      header
+      [:body
+        (navbar req)
+        ;; Res Arcana Card Reference
+        [:div.container
+          [:div.d-flex.mb-2
+            [:div.btn-group 
+              (for [ k ["cost" "subtype" "collect" "action"]]
+                [:a {:href (str "test?" k) :role "button" :class (str "btn btn-outline-secondary" (if (= q k) " active" ""))} k]) ]]
+          [:div.row
+            (for [a artifacts] ;(sort-by :fg artifacts)]
+              [:div.col-2 
+                [:div.d-flex.justify-content-between 
+                  [:b  (:id a) " " (:name a)]
+                  [:b (:fg a)]]
+                [:img.img-fluid {:src (str "/img/ra/" (:type a) "-" (:id a) ".jpg")}]
+                (if q 
+                    [:small q " " (str (get a (keyword q))) ]
+                    (for [k (select-keys a [:cost :subtype :collect :action])]
+                          (if (some? k) [:small (str k)])))])]]])))

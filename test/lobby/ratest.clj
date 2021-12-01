@@ -751,29 +751,8 @@
         (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p1")
         :players (get "p1") :private :artifacts count)))
 
-; Card Target Tests
-; Set by raview based on player status
-; Block actions when it's not the active player's turn 
-; PLACE Card
-;
-(expect 1
-  (let [s2pgc (started2pgm-collected)
-        a1    (-> s2pgc :players (get "p1") :private :artifacts first)
-        a2    (-> s2pgc :players (get "p1") :private :artifacts second)]
-    (-> s2pgc
-        (ramodel/parseaction {:action :place :resources {:elan 1 :death 1} :card a1} "p1")
-        :players (get "p1") :public :artifacts count)))
-;place 2 cards
-(expect 2
-  (let [s2pgc (started2pgm-collected)
-        a1    (-> s2pgc :players (get "p1") :private :artifacts first)
-        a2    (-> s2pgc :players (get "p1") :private :artifacts second)]
-    (-> s2pgc
-        (ramodel/parseaction {:action :place :resources {:elan 1 :death 1} :card a1} "p1")
-        (ramodel/parseaction {:action :place :resources {:gold 1} :card a2} "p1")
-        :players (get "p1") :public :artifacts count)))
 
-; Play card from hand (OLD SCRIPT)
+; Play card from hand
 (expect [1 2 {:life 1 :death 1 :elan 1 :calm 1 :gold 0}]
   (let [gsetup  (ramodel/setup ["p1"])
         m1      (-> gsetup :players (get "p1") :private :mages first)
@@ -789,7 +768,16 @@
       (-> afterplay :players (get "p1") :private :artifacts count)
       (-> afterplay :players (get "p1") :public  :resources) ]))
 
+;; PLACE and CLAIM actions
+
+
+; Card Target Tests
+; Set by raview based on player status
+; Block actions when it's not the active player's turn 
+; PLACE Card
 ; CLAIM Card
+
+
 
 ; DISCARD Card
 ; should be p1's action
@@ -811,3 +799,15 @@
     (-> s2pgc
         (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p2")
         :players (get "p2") :public :resources (select-keys [:elan :death]) )))
+
+;;;;; TESTING Games ;;;;;;
+(def g1 (ramodel/parseaction {} {:action :swapgame} "p1"))
+;2 players
+
+(expect 2 (-> g1 :plyr-to count))
+(expect "Duelist" (-> g1 :players (get "dan") :public :mage :name))
+(expect 3 (-> g1 :players (get "dan") :private :artifacts count))
+(expect 5 (-> g1 :players (get "dan") :secret :artifacts count))
+(expect 5 (-> g1 :pops count))
+(expect 2 (-> g1 :monuments :public count))
+(expect 8 (-> g1 :monuments :secret count))

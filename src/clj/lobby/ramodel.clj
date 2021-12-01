@@ -1,37 +1,10 @@
 (ns lobby.ramodel
   (:require 
-    [lobby.radata :refer [data]]))
+    [lobby.radata :refer [data]]
+    [lobby.ragames :refer [gs playerdata] :as ragames]))
 
 (defonce verbose? false)
 
-(def gs {
-  :round 1
-  :status :setup
-  :pops []
-  :monuments []
-  :magicitems (:magicitems @data)
-  :players {}
-  :plyr-to []
-  :pass-to []})
-  
-(def playerdata {
-  :public {
-    :discard []
-    :artifacts []
-    :resources {
-      :gold 1
-      :calm 1
-      :elan 1
-      :life 1
-      :death 1
-    }
-    :vp 0
-  }
-  :private { ; player knows
-  }
-  :secret { ; no-one knows
-    :artifacts []
-  }})
 
 ;;;;; FUNCTIONS ;;;;;
 
@@ -126,7 +99,7 @@
           (fn [m k v] 
             (-> m
                 (assoc-in [k :public :mage :collect-resource] (-> v :public :mage :collect)) ; mage
-                                                                                            ; artifact / monument / pop
+                (assoc-in [k :public :artifacts] (mapv #(assoc % :collect-resource (:collect %)) (-> v :public :artifacts)))                                       ; artifact / monument / pop
             )
           ) (:players gamestate) (:players gamestate))))) 
 
@@ -293,8 +266,8 @@
 (defn playcard [ gamestate {:keys [card resources]} uname ]
   (-> gamestate 
     (assoc-in [:players uname :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> gamestate :players (get uname) :private :artifacts)))
-    (assoc-in [:players uname :public :artifacts] (conj (-> gamestate :players (get uname) :public :artifacts) card))
-    (update-in [:chat] conj (message-map (str "Played Artifact " (:name card)) uname))
+    (update-in [:players uname :public :artifacts] conj card)
+    (add-chat (str "Played Artifact " (:name card)) uname)
     (amendresource {:resources (reduce-kv (fn [m k v] (assoc m k (* -1 v))) {} resources)} uname)
   ; next player
     ))
@@ -351,20 +324,17 @@
       
 (defn- start-game [ gs ]
   (-> gs
-      (assoc :status :play)    ; Start State
-      (assoc :phase  :collect)
+      (assoc :status :play)                                                               ; Start State
+      (assoc :phase  :collect)                                                            ; Collect phase
       (assoc :players
         (reduce-kv 
           (fn [m k v]
-            (let [artifacts (-> v :private :artifacts)]
+            (let [artifacts (-> v :private :artifacts shuffle)]
               (-> m
-                  (assoc k v)
-                  (assoc-in [k :action] (if (= k (-> gs :plyr-to first)) :play :waiting))
-                  ;(assoc-in [k :public :mage] (->> v :private :mages (filter #(= (:uid %) (-> v :public :mage))) first)) ; Switch Selected Mage to Public
-                  ;(update-in [k :private] dissoc :mages)                                                                 ; Remove Mages
-                  (assoc-in [k :private :artifacts] (take 3 artifacts))                                                  ; Draw 3 artifacts
-                  (assoc-in [k :secret :artifacts] (nthrest artifacts 3))                                                ; Artifact deck
-          ))) {} (:players gs)))
+                  (assoc-in [k :action] (if (= k (-> gs :plyr-to first)) :play :waiting))  ; first player
+                  (assoc-in [k :private :artifacts] (take 3 artifacts))                    ; Draw 3 artifacts
+                  (assoc-in [k :secret :artifacts] (nthrest artifacts 3))                  ; Artifact deck
+          ))) (:players gs) (:players gs)))
       collect-phase))
           
 (defn- reveal-all-mages [ gs ]
@@ -524,6 +494,8 @@
       :pass             (pass             gamestate uname)
     ; Done - Only used for Testing
       :done             (end-action       gamestate uname)
+    ; TESTING ONLY
+      :swapgame         ragames/game1
       gamestate)))
 
 ;; Player States :action
