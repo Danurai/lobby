@@ -12,24 +12,25 @@
   (-> @model/app :user-hash (get p) nil?))
        
 (defn lobby [ gid gm uname ]
-  [:div.col-7
-    [:div.border.rounded.p-2.bg-light
-      [:div.d-flex.mb-2
-        [:h4 
+  (let [owner? (= uname (:owner gm))]
+    [:div.col-7
+      [:div.border.rounded.p-2.bg-light
+        [:h4.d-flex.mb-3
           [:span.badge.bg-secondary.me-2 (:game gm)]
-          [:span (:title gm)]
-          (if (:private? gm) [:i.fas.fa-lock.text-secondary.ms-3])]]
-      [:div.d-flex.mb-3
-        (for [p (:plyrs gm)]
-          [:div.me-2 {:key p}
-            [:div.d-flex [:i.fas.fa-user.fa-lg.mx-auto {:class (if (= (:owner gm) p) "text-primary")}]]
-            [:div p]])
-        (if (-> (->> @model/app :plyrs (map #(isAI? %)) frequencies) (get true) nil?) 
-          [:button.btn.btn-sm.btn-success.ms-auto {:disabled (= (-> gm :plyrs count) (-> gm :maxp)) :on-click #(comms/addai gid)} [:i.fas.fa-plus.me-1] "Add AI"])]
-      [:div.d-flex
-        [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]
-        (if (= uname (:owner gm))
-            [:button.btn.btn-primary.ms-auto {:disabled (< (-> gm :plyrs count) (-> gm :minp)) :on-click #(comms/startgame gid)} "Start"])]]])
+          [:div.mt-auto (:title gm)]
+          (if (:private? gm) [:i.fas.fa-lock.text-secondary.ms-3])]
+        [:div.d-flex.justify-content-between
+          [:div.d-flex.mb-3.mx-auto
+            (doall (for [p (:plyrs gm)]
+              [:div.mx-2 {:key p :class (if (and owner? (isAI? p)) "clickable") :on-click #(if (and owner? (isAI? p)) (comms/removeai gid p))}
+                [:div.text-center 
+                  [:i.fas.fa-user.fa-lg.mx-auto {:class (cond  (= (:owner gm) p) "text-primary" (isAI? p) "text-warning")}]]
+                [:div p]]))]
+          (if (and owner? (-> (->> @model/app :plyrs (map #(isAI? %)) frequencies) (get true) nil?))
+            [:div [:button.btn.btn-success {:disabled (= (-> gm :plyrs count) (-> gm :maxp)) :on-click #(comms/addai gid)} [:i.fas.fa-plus.me-1] "Add AI"]])]
+        [:div.d-flex
+          [:button.btn.btn-sm.btn-danger {:on-click #(comms/leavegame gid)} "Leave"]
+          (if owner? [:button.btn.btn-primary.ms-auto {:disabled (< (-> gm :plyrs count) (-> gm :minp)) :on-click #(comms/startgame gid)} "Start"])]]]))
    
 
 (defn- createform []

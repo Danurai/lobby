@@ -23,6 +23,8 @@
   (chsk-send! [:lobby/join gid] 5000 nil))
 (defn addai [ gid ]
   (chsk-send! [:lobby/addai gid] 5000 nil))
+(defn removeai [ gid uname ]
+  (chsk-send! [:lobby/removeai {:gid gid :pname uname}] 5000 nil))
 (defn leavegame [ gid ]
   (chsk-send! [:lobby/leave gid] 5000 nil))
 (defn startgame [ gid ]

@@ -89,7 +89,7 @@
   transition: top 0.3s !important;
 }
 .hand .card:hover {
-  top: -150% !important;
+  /*top: -150% !important;*/
   transition: top 0.3s !important;
 }
 

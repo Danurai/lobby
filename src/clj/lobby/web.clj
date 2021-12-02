@@ -114,6 +114,9 @@
 (defmethod event :lobby/addai [{:keys [?data ring-req]}]
   (model/joingame! "AI" ?data)
   (broadcast))
+(defmethod event :lobby/removeai [{:keys [?data]}]
+  (model/leavegame! (:pname ?data) (:gid ?data))
+  (broadcast))
     
 (defmethod event :lobby/start [{:keys [?data ring-req]}]
   (when-let [user (-> ring-req friend/identity :current)]

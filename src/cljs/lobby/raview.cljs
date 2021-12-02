@@ -420,7 +420,7 @@
           (for [p (:display-to gs) 
                   :let [plyr (-> gs :players (get p))  
                         ready?  (or (:collected? plyr) (= :ready (:action plyr)))
-                        active? (contains? #{:selectstartitem :play} (:action plyr))
+                        active? (and (= :action (:phase gs)) (contains? #{:selectstartitem :play} (:action plyr)))
                         passed? (-> plyr :action (= :pass))
                         ]] 
             [:h5.text-center.plyr-status.mb-0.mx-1.p-1 {
