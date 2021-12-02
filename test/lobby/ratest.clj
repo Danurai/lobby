@@ -3,7 +3,7 @@
     [expectations :refer :all]
     [lobby.model :as model]
     [lobby.ramodel :as ramodel]
-    [lobby.lobbytest :refer :all]))
+    [lobby.lobbytest :as lobbytest]))
 
 
 (defn- start-test [ gs txt ]
@@ -413,6 +413,7 @@
      (-> gs :players (get "p1") :action)
      (-> gs :players (get "p2") :action)]))
 
+;; PLACEHOLDER
       
 ; Toggle card exhausted
 ;; Magic Item
@@ -805,9 +806,60 @@
 ;2 players
 
 (expect 2 (-> g1 :plyr-to count))
-(expect "Duelist" (-> g1 :players (get "dan") :public :mage :name))
+(expect "Duelist" (let [p1 (-> g1 :plyr-to first)] (-> g1 :players (get p1) :public :mage :name)))
 (expect 3 (-> g1 :players (get "dan") :private :artifacts count))
 (expect 5 (-> g1 :players (get "dan") :secret :artifacts count))
 (expect 5 (-> g1 :pops count))
 (expect 2 (-> g1 :monuments :public count))
 (expect 8 (-> g1 :monuments :secret count))
+(expect 78 (-> g1 :allcards count))
+
+
+(expect 3
+  (let [artifacts (-> g1 :players (get "dan") :private :artifacts)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card (first artifacts)  :resources (-> artifacts first :cost)} "dan")
+        (ramodel/parseaction {:action :place :card (second artifacts) :resources (-> artifacts second :cost)} "dan")
+        (ramodel/parseaction {:action :place :card (last artifacts)   :resources (-> artifacts last :cost)} "dan")
+        (ramodel/parseaction {:action :pass} "dan")
+        (ramodel/parseaction {:action :selectmagicitem :card (-> g1 :magicitems last)} "dan")
+        (ramodel/parseaction {:action :collected} "dan")
+        :players (get "dan") :public :artifacts count
+        )))
+
+;prevent placing same card twice
+(expect 1
+  (let [artifacts (-> g1 :players (get "dan") :private :artifacts)]
+    (-> g1 
+        (ramodel/parseaction {:action :place :card (first artifacts) :resources (-> artifacts first :cost)} "dan")
+        (ramodel/parseaction {:action :place :card (first artifacts) :resources (-> artifacts first :cost)} "dan")
+        :players (get "dan") :public :artifacts count)))
+;error code 2 - artifact not in hand
+(expect 2
+  (let [artifacts (-> g1 :players (get "dan") :private :artifacts)]
+    (-> g1 
+        (ramodel/parseaction {:action :place :card (first artifacts) :resources (-> artifacts first :cost)} "dan")
+        (ramodel/parseaction {:action :place :card (first artifacts) :resources (-> artifacts first :cost)} "dan")
+        :players (get "dan") :err)))
+
+
+
+;;;;; Chat Commands ;;;;;
+;; Route chat commands through model.clj
+(expect "This is a test message"
+  (let [gid (lobbytest/newgamegid)]
+    (-> (model/addchat! gid "p1" "This is a test message") :games gid :state :chat first :msg)))
+
+(expect "This is a test message"
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "This is a test message" p1) :chat second :msg)))
+  
+(expect "help: /resource <resource name> <new value>"
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/resource" p1) :chat last :msg)))
+
+;; Set Resource
+(expect "/resource gold 200"
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/resource gold 200" p1) :chat second :msg)))
+(expect 200
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/resource gold 200" p1) :players (get p1) :public :resources :gold)))
+
+;; Exhaust / ready (card name)
