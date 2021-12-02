@@ -27,7 +27,7 @@
   border-color: rgb(128,0,0);
   color: rgb(80,80,80);
 }
-.plyr-status.pass {
+.plyr-status.pass, .playerdisplay.pass {
   background-color: rgba(0,0,0, 0.2);
   border-color: rgb(0,128,0);
   color: rgb(80,80,80);

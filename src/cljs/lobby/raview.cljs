@@ -35,7 +35,7 @@
 (defn- imgsrc 
   ([ card back? ]
     (str "/img/ra/" (:type card) "-" (if back? "back" (:id card)) ".jpg"))
-  ([ card ] (imgsrc card false)))
+  ([ card ] (imgsrc card (and (:passed? card) (= "magicitem" (:type card))))))
 
 (defn- resource-icon [ type n ]
   (let [color (case type (:elan :death) "white" "black")
@@ -235,8 +235,8 @@
                 } "Discard"]]])))))
 
 (defn- modal-collect-resource [ card uname ]
-  [:div
-    [:h5.text-center "Collect Resources"] 
+  [:div.ps-1 {:style {:min-width "200px"}}
+    [:h4 "Collect Resources"] 
     [:div.btn-group-vertical.w-100
       (for [res (:collect-resource card)]
         [:button.btn.btn-outline-secondary {:key (gensym) :on-click #((hidemodal) (comms/ra-send! {:action :collect-resource :card card :resources res}))} 
@@ -248,10 +248,11 @@
 
 (defn- modal-target [ card pdata ]
   (if (-> pdata :action (= :play))
-    [:div.ps-2
+    [:div.ps-1 {:style {:min-width "200px"}}
       [modal-place-card card pdata]
       [modal-discard-card]]
-    [:div.ps-2
+    [:div.ps-1 {:style {:min-width "200px"}}
+      [:h5 (str "Select " (:name card))]
       [:div [:button.btn.btn-outline-secondary.mb-1.w-100 {:on-click #((select-btn-handler (:action pdata) card) (hidemodal))} "Select"]]
       [:div [:button.btn.btn-outline-secondary.mb-1.w-100 {:on-click #(hidemodal)} "Cancel"]]]))
 
@@ -291,7 +292,7 @@
         [:div.text-center.cardset "Monuments"] 
         (-> @gm :state :monuments :public (set-tags :target? target?) (render-cards :lg))]
       (when (not= :setup (-> @gm :state :status) )
-        [:div.p-1
+        [:div.p-1 {:class (if (= :selectmagicitem action) "focus")}
           [:div.text-center.cardset "Magic Items"]
           (render-cards (->> @gm 
                             :state 
@@ -312,32 +313,30 @@
                            passed? (= :pass (:action v))
                            active? (and (not= :collect (:phase gs)) (contains? #{:selectmagicitem :play} (:action v)))
                            focus?  (= k (:focus @ra-app))]]
-        [:div.border.border-dark.rounded.m-1 {
+        [:div.border.border-dark.rounded.m-1.playerdisplay {
             :key (gensym) 
             :style {:flex-grow (cond (= uname k) 0 focus? 99 :else 1)} 
-            :class (if active? "focus")
+            :class (cond active? "focus" passed? "pass")
             :on-click #(if (= k (:focus @ra-app)) (swap! ra-app dissoc :focus) (swap! ra-app assoc :focus k))
           }
           [:div.d-flex.mx-1.p-1 ;.justify-content-between
             [:h5.me-3 (str k (if-let [mage (-> v :public :mage :name)] (str " - " mage)))]
             [:div [:div.d-flex.justify-content-center.resource-bar (for [ [r n] (-> v :public :resources)] (resource-icon r n) )]]
-            ;(if (= :collect (:phase gs))
-            ;    [:div [:i.fas {:class (if (:collected? v) "fa-check text-success" "fa-times text-danger")}]]
-            ;    [:div])
             [:div]
             ]
           [:div.d-flex.mb-1.ms-1
-            (if (-> v :public :mage map?) (-> v :public :mage (render-card :sm)))
-            (if-let [item (getmagicitem magicitems k)] (render-card item :sm))
+            ;(if (-> v :public :mage map?) (-> v :public :mage (render-card :sm)))
+            ;(if-let [item (getmagicitem magicitems k)] (render-card item :sm))
+            (-> gs (player-public-cards uname) (set-tags :collect-resource nil) (set-tags :passed? passed?) render-cards) 
             ]
          
         ]))
     ]))
 
 (defn- playerdisplay [ gs uname pdata ]
-  (let [play? (= :play (:action pdata))]
+  (let [play? (= :play (:action pdata)) passed? (= :pass (:action pdata))]
     [:div.d-flex
-      [:div.border.border-dark.rounded.m-1.px-2 {:style {:flex-grow 1 } :class (case (:action pdata) :pass "passed" :play "focus" "")}
+      [:div.border.border-dark.rounded.m-1.px-2.playerdisplay {:style {:flex-grow 1 } :class (case (:action pdata) :pass "pass" :play "focus" "")}
         [:div.d-flex
           [:h3.me-3 (str uname (if-let [mage (-> pdata :public :mage :name)] (str " - " mage)))]
           (cond
@@ -361,7 +360,7 @@
           [:div.btn-group-vertical
             [:button.btn.btn-sm.btn-outline-secondary {:title "Pass" :on-click #(comms/ra-send! {:action :pass})} [:i.fas.fa-sign-out-alt.text-primary]]
             [:button.btn.btn-sm.btn-outline-secondary {:title "View Discard Pile" :on-click #(swap! ra-app assoc :modal {:show? true :discard (-> pdata :public :discard)})} [:i.fas.fa-trash-alt.text-danger]]]
-          (-> gs (player-public-cards uname) (set-tags :target? play?) (set-tags :can-use? play?) render-cards)
+          (-> gs (player-public-cards uname) (set-tags :passed? passed?) (set-tags :target? play?) (set-tags :can-use? play?) render-cards)
         ]
         [:div.d-flex.justify-content-between {:style {:position "relative"}}
           [:div "Hand"]
@@ -369,7 +368,7 @@
           [:div ]
           [:div.d-flex.hand (-> pdata :private :artifacts (set-tags :target? play?) render-cards)]
           ]
-        [:div (-> pdata :public :artifacts str)]; (.stringify js/JSON (clj->js pdata))]
+        ;[:div (-> pdata :public :artifacts str)]; (.stringify js/JSON (clj->js pdata))]
       ]
     ]))
 
@@ -420,7 +419,7 @@
         [:div.d-flex
           (for [p (:display-to gs) 
                   :let [plyr (-> gs :players (get p))  
-                        ready?  (= :ready (:action plyr))
+                        ready?  (or (:collected? plyr) (= :ready (:action plyr)))
                         active? (contains? #{:selectstartitem :play} (:action plyr))
                         passed? (-> plyr :action (= :pass))
                         ]] 
