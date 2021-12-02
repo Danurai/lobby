@@ -31,6 +31,14 @@
 	:secret { ; no-one knows
 		:artifacts []}})
 
+
+(def get-all-cards 
+	(->>  (select-keys @data [:placesofpower :mages :magicitems :artifacts :monuments])
+				vals
+				(reduce concat)
+				(map #(select-keys % [:id :type :name]))
+				(sort-by #(-> % :name count) #(> %1 %2))))
+
 (defn- setplayerdata [ n ]
 	(-> playerdata
 			(assoc-in [:public :mage] (->> @data :mages (filter #(= n (:fg %))) first))
@@ -49,4 +57,6 @@
 		:display-to ["dan" "AI123"] 
 		:players (hash-map "dan" (setplayerdata 1) "AI123" (setplayerdata 2))
 		:magicitems (map #(assoc (case (:id %) 1 (assoc % :owner "dan") 2 (assoc % :owner "AI123") %) :uid (gensym "mi")) (:magicitems @data) )
+		:chat [{:uname "dan" :msg "Swap to predefined Game1" :timestamp (new java.util.Date)}]
+		:allcards get-all-cards
 		))
