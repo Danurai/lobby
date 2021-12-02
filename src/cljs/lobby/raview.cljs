@@ -77,8 +77,11 @@
 (defn- set-tags [ cards tag bool? ]
   (map 
     (fn [ c ]
-      (if bool? (assoc c tag true) c))
+      (if bool? (assoc c tag true) (dissoc c tag)))
     cards ))
+
+
+;; Chat
 
 (defn- parse-msg [ msg all-cards ]
   (if (empty? msg)
@@ -96,28 +99,33 @@
                     [:span {:key (gensym)} m]))]
             [:span msg]))))
 
-(defn- chat [ ]
-  (let [gs (:state @gm)]
-    [:div.ra-chat.border.rounded.p-1
-      [:div.chatbox.p-1.mb-1
-        (for [msg (-> @gm :state :chat) :let [{:keys [msg uname timestamp]} msg]]
-          [:div {:key (gensym) :style {:word-wrap "break-word"} :class (if (nil? uname) "bg-secondary text-light")}
-            ;[:span.mr-1 (model/timeformat timestamp)]
-            [:b.text-primary.me-1 uname]
-            [:span (parse-msg msg (:allcards gs))]])]
-      [:form {:on-submit (fn [e] (.preventDefault e) (comms/sendmsg! (:msg @ra-app) @gid ) (swap! ra-app assoc :msg ""))}
-        [:div.input-group
-          [:input.form-control.form-control-sm.bg-light {
-            :type "text" :placeholder "Type to chat"
-            :value (:msg @ra-app)
-            :on-change #(swap! ra-app assoc :msg (-> % .-target .-value))}]
-          [:button.btn.btn-sm.btn-secondary {:type "btn"} [:i.fas.fa-arrow-right]]]]]))
+(defn- chat [ gs ]
+  [:div.ra-chat.border.rounded.p-1
+    [:div.chatbox.p-1.mb-1
+      (for [msg (-> @gm :state :chat) :let [{:keys [msg uname timestamp]} msg]]
+        [:div {:key (gensym) :style {:word-wrap "break-word"} :class (if (nil? uname) "bg-secondary text-light")}
+          ;[:span.mr-1 (model/timeformat timestamp)]
+          [:b.text-primary.me-1 uname]
+          [:span (parse-msg msg (:allcards gs))]])]
+    [:form {:on-submit (fn [e] (.preventDefault e) (comms/sendmsg! (:msg @ra-app) @gid ) (swap! ra-app assoc :msg ""))}
+      [:div.input-group
+        [:input.form-control.form-control-sm.bg-light {
+          :type "text" :placeholder "Type to chat"
+          :value (:msg @ra-app)
+          :on-change #(swap! ra-app assoc :msg (-> % .-target .-value))}]
+        [:button.btn.btn-sm.btn-secondary {:type "btn"} [:i.fas.fa-arrow-right]]]]])
 
+;; Render Cards
 
 (defn render-card
   ([ card size ]
     (let [scale (case size :lg 1.3 :sm 0.7  1)]
-      [:div.clickable {:style {:position "relative"} :key (gensym)}
+      [:div.clickable {
+          :key (gensym)
+          :style {:position "relative"} 
+          :on-click       (fn [e] (.stopPropagation e) (card-click-handler card))
+          :on-touch-start  (fn [e] (.stopPropagation e) (card-click-handler card))
+        }
         [:div.d-flex.w-100.justify-content-around {
             :style {
               :position "absolute" 
@@ -136,8 +144,6 @@
             }
           :src (imgsrc card)
           :class (cond (-> card :collect-resource some?) "collect" (:target? card) "target" (:disabled? card) "disabled" :else nil)
-          :on-click       (fn [e] (.stopPropagation e) (card-click-handler card))
-          :on-touch-start  (fn [e] (.stopPropagation e) (card-click-handler card))
           }]]))
   ([ card ]
     (render-card card nil)))
@@ -149,8 +155,8 @@
   ([ cards size ] (render-cards cards size false))
   ([ cards ] (render-cards cards nil false)))
 
-;; modal 
-
+;; Modal 
+;;; Functions
 (defn update-options! [ options ele ]
   (let [opt1 (-> js/document (.getElementById "res1") .-value keyword)
         opt2 (-> js/document (.getElementById "res2") .-value keyword)]
@@ -182,6 +188,7 @@
             (dissoc m k)
             (assoc m k minpayment)))) cost cost))
 
+;;; Modules
 (defn- modal-place-card [ card pdata ]
   (let [resources (r/atom (default-payment (:cost card) (-> pdata :public :resources)))]
     (fn []
@@ -193,8 +200,8 @@
           [:div.h5.d-flex.justify-content-center (for [[k v] (:cost card)] (resource-icon k v))]
           [:div.d-flex.justify-content-around.mb-2.border.rounded.bg-secondary
             [:div
-              [:div "Add >>"]
-              [:div "Remove >>"]]
+              [:div "Remaining >>"]
+              [:div "Committed >>"]]
             (doall (for [[k v] (-> pdata :public :resources)]
                 [:div {:key (gensym)}
                   [:div.clickable {:on-click #(if (> (- v (k @resources 0)) 0) (if (nil? (k @resources)) (swap! resources assoc k 1) (swap! resources update k inc))) } 
@@ -216,10 +223,10 @@
             [:h4.text-center (str "Discard " (:name card))] 
             [:small.muted (str "Discard " (:name card) " to gain one Gold or two other resources.")]
             [:div.d-flex {:on-change #(update-options! options %)}
-              [:select#res1.form-control.me-2 {:value (first @options)} 
-                (for [r resource-list] [:option {:key (gensym) :value r } (-> r name clojure.string/capitalize)])]
-              [:select#res2.form-control.me-2 {:value (last @options) :disabled (= :gold (first @options))} 
-                (for [r resource-list] [:option {:key (gensym) :value (if (= :gold r) "na" r)} (if (= r :gold) "-" (-> r name clojure.string/capitalize))])]
+              [:select#res1.form-control.me-2 {:value (first @options) :on-click #()} 
+                (for [r resource-list] [:option {:key (gensym) :value r :on-click #()} (-> r name clojure.string/capitalize)])]
+              [:select#res2.form-control.me-2 {:value (last @options) :on-click #() :disabled (= :gold (first @options))} 
+                (for [r resource-list] [:option {:key (gensym) :value (if (= :gold r) "na" r) :on-click #()} (if (= r :gold) "-" (-> r name clojure.string/capitalize))])]
               [:button.btn.ms-auto.btn-primary {
                   :disabled (and (not= :gold (first @options)) (= :na (last @options)))
                   :on-click #(let [?data (hash-map :action :discard :card card :resources (-> @options frequencies (dissoc :na)))] 
@@ -239,7 +246,16 @@
   [:div
     [:h5.text-center (str "Use " (:name card))]])
 
+(defn- modal-target [ card pdata ]
+  (if (-> pdata :action (= :play))
+    [:div.ps-2
+      [modal-place-card card pdata]
+      [modal-discard-card]]
+    [:div.ps-2
+      [:div [:button.btn.btn-outline-secondary.mb-1.w-100 {:on-click #((select-btn-handler (:action pdata) card) (hidemodal))} "Select"]]
+      [:div [:button.btn.btn-outline-secondary.mb-1.w-100 {:on-click #(hidemodal)} "Cancel"]]]))
 
+;;; Main
 (defn- modal [ pdata uname ] ; Content also driven via @ra-app
   (let [modal (:modal @ra-app)]
     [:div.modal.ra-main {:hidden (-> modal :show? nil?) :on-click #(hidemodal)}
@@ -247,19 +263,13 @@
         [:div.modalcontent.p-2.rounded.bg-light.d-flex {:on-click #(.stopPropagation %)}
           [:div.h-100.text-center
             [:img.h-100 {:src (imgsrc card) }]]
-          [:div.mx-1 {:style {:min-width "200px"}}
-            [:div.d-flex [:button.btn-sm.btn-close.ms-auto {:on-click #(hidemodal)}]]
+          [:div
+            [:button.btn-sm.btn-close.ms-auto.bg-light {:on-click #(hidemodal) :style {:position "absolute" :right "5px" :top "5px"}}]
         ;; options based on card and game state
             (cond 
               (-> card :collect-resource some?) (modal-collect-resource card uname)
               (:can-use? card)                  (modal-use card uname)
-              (:target? card) (if (-> pdata :action (= :play))
-                                  [:div.ps-2
-                                    [modal-place-card card pdata]
-                                    [modal-discard-card]]
-                                  [:div.ps-2
-                                    [:div [:button.btn.btn-outline-secondary.mb-1.w-100 {:on-click #((select-btn-handler (:action pdata) card) (hidemodal))} "Select"]]
-                                    [:div [:button.btn.btn-outline-secondary.mb-1.w-100 {:on-click #(hidemodal)} "Cancel"]]]))]]
+              (:target? card)                   (modal-target card pdata))]]
         
         (if-let [discard (:discard modal)]
           [:div.modalcontent.p-2.rounded.bg-light.d-flex.flex-wrap.w-100.justify-content-center
@@ -268,6 +278,8 @@
                 [:img.img-fluid { :src (imgsrc c)}]]
               )]))]))
 
+;; Main View
+;;; Modules
 (defn- pop-mon-mi-row [ status phase action ] 
   (let [target? (= [:play :play] [status action])]
   ; Toogle :target? based on (:phase gs) (:action pdata)
@@ -322,7 +334,6 @@
         ]))
     ]))
 
-
 (defn- playerdisplay [ gs uname pdata ]
   (let [play? (= :play (:action pdata))]
     [:div.d-flex
@@ -330,17 +341,21 @@
         [:div.d-flex
           [:h3.me-3 (str uname (if-let [mage (-> pdata :public :mage :name)] (str " - " mage)))]
           (cond
-            (= :collect (:phase gs))  (let [collected? (:collected? pdata) collect-remaining (filter :collect-resource (-> gs (player-public-cards uname)))]
-                                        [:div
-                                          [:span.me-1 "Collect Resources"]
-                                          [:button.btn.mt-1 {
-                                              :class   (if collected? "btn-success active" (if (empty? collect-remaining) "btn-primary" "btn-warning")) 
-                                              :on-click #(comms/ra-send! {:action :collected})} 
-                                            [:span.me-1 "Ready?"] ]
-                                          ])
-            play?                     [:div.my-auto "PLACE or DISCARD an artifact, CLAIM a Place of Power or Monument, USE a card, or PASS."]
-            (= :selectmagicitem (:action pdata)) [:h3 "Select a new Magic Item"]
-            :else [:div ]
+            (= :collect (:phase gs))  
+                (let [collected? (:collected? pdata) collect-remaining (filter :collect-resource (-> gs (player-public-cards uname)))]
+                  [:div
+                    [:span.me-1 "Collect Resources"]
+                    [:button.btn.mt-1 {
+                        :class   (if collected? "btn-success active" (if (empty? collect-remaining) "btn-primary" "btn-warning")) 
+                        :on-click #(comms/ra-send! {:action :collected})} 
+                      [:span.me-1 "Ready?"] ]
+                    ])
+            play?
+                [:div.my-auto "PLACE or DISCARD an artifact, CLAIM a Place of Power or Monument, USE a card, or PASS."]
+            (= :selectmagicitem (:action pdata)) 
+                [:h3 "Pass: Select a new Magic Item."]
+            :else
+                [:div ]
           )]
         [:div.d-flex
           [:div.btn-group-vertical
@@ -352,13 +367,13 @@
           [:div "Hand"]
           [:div.d-flex.justify-content-center.resource-bar (doall (for [ [r n] (-> pdata :public :resources)] (resource-icon r n) ))]
           [:div ]
-          [:div.d-flex.hand (-> pdata :private :artifacts (set-tags :target? play?) render-cards)]]
-        [:div (str pdata)]
+          [:div.d-flex.hand (-> pdata :private :artifacts (set-tags :target? play?) render-cards)]
+          ]
+        [:div (-> pdata :public :artifacts str)]; (.stringify js/JSON (clj->js pdata))]
       ]
     ]))
 
-
-;;;;; STATES Setup / Play ;;;;;;
+;;; STATES Setup / Play ;;;;;;
 
 (defn- setup [ state uname pdata ]
   [:div.col-12.ra-main
@@ -388,8 +403,7 @@
     (playerdisplay gs uname pdata)
   ])
 
-;;;;; MAIN ;;;;;
-
+;;; MAIN ;;;
 (defn ramain [ ]
   (-> js/document .-body (.removeAttribute "style"))
   (-> js/document .-body .-style .-backgroundImage (set! "url(/img/ra/ra-bg.png)"))
@@ -399,9 +413,10 @@
         pdata (-> gs :players (get @uname))]
     [:div.container-fluid
       (modal pdata @uname)
-      [chat]
+      [chat gs]
       [:div.d-flex.justify-content-between.ra-main.m-1
         [:h2.mt-auto.mb-0 "Res Arcana - " (if (= (:status gs) :setup) "Setup" (-> gs :phase name clojure.string/capitalize (str " phase")))]
+        ;[:div#debug (-> gs :chat str)]
         [:div.d-flex
           (for [p (:display-to gs) 
                   :let [plyr (-> gs :players (get p))  
