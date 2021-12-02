@@ -29,7 +29,7 @@
     :uname uname 
     :timestamp (new java.util.Date)))
 
-(defn add-chat
+(defn- add-chat
   ([ gs msg uname ]
     (update-in gs [:chat] 
       conj (message-map msg uname)))
@@ -58,7 +58,7 @@
     (-> gamestate
         (update-in [:players uname :private :artifacts] conj (first artdeck))
         (assoc-in [:players uname :secret :artifacts] (rest artdeck))
-        (update-in [:chat] conj (message-map "drew 1 card." uname)))))
+        (add-chat "Draw 1 card." uname))))
  
 (defn get-active-player [ gamestate ]
   (reduce-kv 
@@ -91,15 +91,16 @@
 
 (defn- generate-resources [ gamestate ]
   ; copy from :collect to :collect-resource
+  (if verbose? (println "Generate Resources"))
     (-> gamestate
       (assoc :magicitems
         (map #(if (-> % :owner some?) (assoc % :collect-resource (:collect %)) %) (:magicitems gamestate)))
       (assoc :players
         (reduce-kv 
-          (fn [m k v] 
+          (fn [m k v]
             (-> m
                 (assoc-in [k :public :mage :collect-resource] (-> v :public :mage :collect)) ; mage
-                (assoc-in [k :public :artifacts] (mapv #(assoc % :collect-resource (:collect %)) (-> v :public :artifacts)))                                       ; artifact / monument / pop
+                (assoc-in [k :public :artifacts] (mapv #(assoc % :collect-resource (:collect %)) (-> v :public :artifacts)))   ; artifact / monument / pop
             )
           ) (:players gamestate) (:players gamestate))))) 
 
@@ -152,6 +153,7 @@
   ; Take first available resource
   ; mage, magic item, artifact / monument / pop
   (let [ai-players (select-keys (:players gamestate) (filter is-ai? (-> gamestate :players keys)))]
+    (if verbose? (println "AI-Collect-Resources: ai-players" (keys ai-players)))
     (-> gamestate
       (ai-collect-resources-mage ai-players)
       (ai-collect-resources-magicitem ai-players)
@@ -190,7 +192,7 @@
 ;;;;; ASSIGN MAGIC ITEMS ;;;;;       
 
 (defn assignmagicitem [ gamestate ?data uname ]
-  (if verbose? (println "assignmagicitem" ?data uname))
+  (if verbose? (println "assignmagicitem:" ?data uname))
     (-> gamestate
         (set-player-action uname :pass)
         (assoc :magicitems (mapv #(if (= (:owner %) uname)
@@ -207,7 +209,7 @@
         (drawcard uname))))
         
 (defn ai-choose-magicitem [ gs uname ]
-  (if verbose? (println "ai-choose-magicitem" uname ))
+  (if verbose? (println "ai-choose-magicitem:" uname ))
   (assignmagicitem
     gs 
     {:card (->> gs :magicitems (filter #(-> % :owner nil?)) first :uid)}
@@ -216,7 +218,7 @@
 ;;;;; NEXT TURN / ROUND ;;;;;
 
 (defn- new-round-check [ gamestate ]
-  (if verbose? (println "new round check" (-> gamestate :plyr-to empty?) (-> gamestate str)))
+  (if verbose? (println "new round check:" (-> gamestate :plyr-to empty?)))
   (if (-> gamestate :plyr-to empty?)
       (-> gamestate
           (assoc :plyr-to (:pass-to gamestate))
@@ -236,7 +238,7 @@
                       (:plyr-to gamestate)    
                       (->> gamestate :plyr-to (drop-while #(not= % uname)) rest))
         nextp     (if (empty? nextplyrs) (-> gamestate :plyr-to first) (first nextplyrs))]
-    (if verbose? (println "End Action:" uname nextplyrs nextp ))
+    (if verbose? (println "End Action:" uname "nextplayer" nextp ))
     (-> gamestate
         (set-player-action uname (if (-> gamestate :plyr-to set (contains? uname)) :waiting :pass))
         (set-player-action nextp :play)
@@ -250,7 +252,7 @@
         newto     (if (-> gamestate :pass-to empty?) 
                       (->> nextplyrs (take (-> gamestate :players keys count)) vec) 
                       (:pass-to gamestate))]
-    (if verbose? (println "Pass" uname (-> gamestate :players (get uname) :action) "phase" (:phase gamestate) "can-pass?"  can-pass?))
+    (if verbose? (println "Pass:" uname "status/phase" (:status gamestate) (:phase gamestate) "can-pass?"  can-pass?))
     (if can-pass? 
         (-> gamestate                                     
           (set-player-action uname :selectmagicitem)
@@ -276,9 +278,9 @@
   ; TODO - Add some AI logic here
   (let [all-ai?    (= (-> gamestate :players keys count) (->> gamestate :players keys (map is-ai?) (remove false?) count))
         activeplyr (get-active-player gamestate)]
-    (if verbose? (println "ai-action" (-> gamestate :players keys) "all-ai?" all-ai? activeplyr))
-    (if (or (nil? activeplyr) all-ai? (-> gamestate :phase (= :collect)))
-        gamestate ; prevent infinite loops during develoment
+    (if verbose? (println "ai-action-check: all-ai?" all-ai? "activeplayer" activeplyr))
+    (if (or (nil? activeplyr) all-ai? (-> gamestate :phase (= :collect))) ; prevent infinite loops during develoment
+        gamestate 
         (if (is-ai? activeplyr)
             (-> gamestate (pass activeplyr) (ai-choose-magicitem activeplyr) (end-action activeplyr) ai-action )
             gamestate))))
@@ -299,7 +301,7 @@
                   (-> m 
                       (update-in [k] dissoc :collected?) 
                       (update-in [k :public :mage] dissoc :collect-resource)
-                      (assoc-in [k :public :artifacts] (map #(dissoc % :collect-resource) (:artifacts v)))
+                      (assoc-in  [k :public :artifacts] (map #(dissoc % :collect-resource) (-> v :public :artifacts)))
                       )) (:players gamestate) (:players gamestate)))
             (assoc :magicitems (map #(dissoc % :collect-resource) (:magicitems gamestate)))
             (add-chat "Action Phase")
@@ -369,8 +371,7 @@
 (defn- set-selected-mage [ v carduid ]
   (if (contains? (->> v :private :mages (map :uid) set) carduid)
     (-> v 
-      (assoc-in [:public :mage] carduid)  ;(->> v :private :mages (filter #(= (:uid %) carduid)) first))
-      ;(assoc-in  :private dissoc :mages) ;] (->> v :private :mages (map #(dissoc % :target?))))
+      (assoc-in [:public :mage] carduid)
       (assoc :action :ready))
     v))
     
@@ -419,13 +420,6 @@
 (defn- add-uid [ coll t ]
   (map #(assoc % :uid (-> t gensym keyword)) coll))
       
-(def get-all-cards 
-  (->>  (select-keys @data [:placesofpower :mages :magicitems :artifacts :monuments])
-        vals
-        (reduce concat)
-        (map #(select-keys % [:id :type :name]))
-        (sort-by #(-> % :name count) #(> %1 %2))))
-
 (defn setup [ plyrs ]
   (let [mages     (-> @data :mages         (add-uid "mag") shuffle)
         artifacts (-> @data :artifacts     (add-uid "art") shuffle)
@@ -436,7 +430,7 @@
     (-> gs 
       (assoc  :status :setup
               :pops       (map (fn [base] (rand-nth (filter #(= (:base %) base) pops))) (->> pops (map :base) frequencies keys))
-              :allcards   get-all-cards
+              :allcards   ragames/get-all-cards
               :monuments {
                 :public (take 2 monuments)
                 :secret (nthrest monuments 2)}
@@ -454,10 +448,23 @@
 
 ;;;;;;;;;; ACTION HANDLER ;;;;;;;;;;
 
-(defn placecard [ gs ?data uname ]
-  (let [{:keys [card resources]} ?data]
-    (println uname "place" (:name card) "for" resources)
-    gs))
+;;;;; Parse Action Error Handlers ;;;;;
+(defn- can-place-card [ gs {:keys [card]} uname]
+; Conditions / Codes
+; - 1  player action is play
+; - 2  Artifact card is in hand
+; - 4  Place of Power card is in pops
+; - 8  Monument is in Monument pool
+; - 16 Not an Artifact, Pop, or Monument
+  (let [pdata (-> gs :players (get uname))]
+    (apply + [
+      (if (= :play (:action pdata)) 0 1)
+      (case (:type card)
+            "artifact" (if (contains? (->> pdata :private :artifacts (map :uid) set) (:uid card)) 0 2)
+            "monument" (if (contains? (->> gs :monuments :public (map :uid) set) (:uid card))     0 4) 
+            "pop"      (if (contains? (->> gs :pops (map :uid) set) (:uid card))                  0 8)
+            16) 
+    ])))
 
 ; PLACE an artifact
 ; CLAIM a place of power or Monument
@@ -465,6 +472,8 @@
 ; USE a power
 ; PASS - exchange magic items and draw 1 - first to pass becomes 1st player.
 
+
+;; TODO Add tests for actions before triggering the thread.
 (defn parseaction [ gamestate ?data fromname ]
   (let [uname (:uname ?data fromname)]
     (if verbose? (println "ACTION:" ?data uname))
@@ -479,10 +488,13 @@
       :collected        (collected        gamestate uname)
     ; PLACE
     ; CLAIM
-      :place            (-> gamestate 
-                            (playcard ?data uname)
-                            (end-action uname)
-                            ai-action)
+      :place            (let [err (can-place-card gamestate ?data uname)]
+                          (if (= err 0)
+                              (-> gamestate 
+                                  (playcard ?data uname)
+                                  (end-action uname)
+                                  ai-action)
+                              (assoc-in gamestate [:players uname :err] err)))
     ; DISCARD
       :discard          (-> gamestate 
                             (discardcard ?data uname)
@@ -498,6 +510,26 @@
       :swapgame         ragames/game1
       gamestate)))
 
+(defn- res-match-handler [ gs uname func & args ]
+  (println "Chat Handler" func args)
+  (-> gs 
+      (assoc-in [:players uname :public :resources (-> args first clojure.string/lower-case keyword)] (-> args second read-string))
+      (add-chat (str "Set " (first args) " to " (second args)) uname)
+      ))
+
+(def chat-fn-help {
+  "resource" "/resource <resource name> <new value>"
+})
+
+(defn chat-handler [ gs msg uname ]
+  (let [gs-w-cmd (add-chat gs msg uname)
+        res-fn-hint (re-find #"(?i)\/(\w+)" msg)
+        res-match (re-matches #"(?i)\/(\w+)\s(gold|elan|calm|life|death)\s(\d+)" msg)]
+    (prn "Chat Handler" msg res-match)
+    (cond
+      res-match (apply res-match-handler gs-w-cmd uname (rest res-match))
+      res-fn-hint (add-chat gs-w-cmd (str "help: " (-> res-fn-hint last clojure.string/lower-case chat-fn-help)) uname)
+      :default gs-w-cmd)))
 ;; Player States :action
 ; :waiting
 ; :play

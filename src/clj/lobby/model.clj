@@ -5,6 +5,8 @@
     [lobby.bbmodel :as bbmodel]
   ))
 
+(defonce verbose? true)
+
 (defonce gamelist {
   "Res Arcana" {
     :minp 1 :maxp 4 :has-ai true
@@ -25,9 +27,12 @@
 
 (defn addchat! 
   ([ gid uname txt event ]
+    (if verbose? (println "AddChat:" gid uname txt))
     (let [msg {:msg txt :uname uname :timestamp (new java.util.Date)}]
       (if gid
-          (swap! appstate update-in [:games gid :state :chat] conj msg)
+          (case (-> @appstate :games gid :name)
+            "Res Arcana" (ramodel/chat-handler txt uname)
+            (swap! appstate update-in [:games gid :state :chat] conj msg))
           (swap! appstate update-in [:chat] conj msg))))
   ([ gid uname txt ]
     (addchat! gid uname txt :usermsg)))
@@ -69,7 +74,6 @@
 (defn joingame! [ uname gid ]
   (let [gm    (-> @appstate :games gid)
         pname (if (= uname "AI") (-> "AI" gensym str) uname)]
-    (prn uname gid gm pname)
     (when (> (:maxp gm) (-> gm :plyrs count))
       (addchat! nil pname (str "joined " (:title gm)) :gamestate)
       (swap! appstate update-in [:games gid :plyrs] conj pname))))
@@ -95,6 +99,7 @@
       (swap! appstate assoc-in [:games gid :state] (gamesetup (:game gm) (:plyrs gm))))))
            
 (defn updategame! [ ?data uname ]
+  (if verbose? (println "Request:" ?data uname))
   (when-let [gid (:gid ?data)]
     (let [game (-> @appstate :games gid)]
       (swap! appstate assoc-in [:games gid :state]
