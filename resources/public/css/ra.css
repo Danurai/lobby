@@ -118,7 +118,7 @@
   color: darkblue;
 }
 
-.resource-sm {
+.essence-sm {
   width: 1rem;
 }  
 
@@ -150,13 +150,13 @@
   transition: height 0.4s
 }
 
-.resource-bar {
+.essence-bar {
   background-color: rgba(0,0,0,0.15);
   border-radius: 0.25rem;
   font-size: 0.9em;
 }
 
-.resource-background {
+.essence-background {
   background-size: contain;
   background-repeat: no-repeat;
   background-position-y: 0%;
@@ -173,4 +173,8 @@
     background-color: rgba(255,255,255,0.5);
     border-radius: 5px;
     color: darkblue;
+}
+
+.bg-essence {
+  background-color: #c5b197;
 }
