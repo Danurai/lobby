@@ -65,54 +65,54 @@
     (fn [m k v] 
       (if (contains? #{:play :selectmagicitem} (:action v)) k m)) nil (:players gamestate)))
 
-;;;;; RESOURCES ;;;;; 
+;;;;; Essences ;;;;; 
 
-(defn amendresource [ gamestate {:keys [resources card] :as ?data} uname ] 
+(defn update-player-essences [ gamestate {:keys [essences] :as ?data} uname ] 
   (reduce-kv 
     (fn [m k v] 
-      (update-in m [:players uname :public :resources k] + v)) 
+      (update-in m [:players uname :public :essences k] + v)) 
     gamestate 
-    resources))
+    essences))
 
-(defn- remove-collect-resources [ gs card uname ]
+(defn- remove-collect-essences [ gs card uname ]
   (case (:type card)
-    "mage"      (update-in gs [:players uname :public :mage] dissoc :collect-resource)
-    "magicitem" (assoc gs :magicitems (map #(if (= (:uid %) (:uid card)) (dissoc % :collect-resource) %) (:magicitems gs)))
-    "artifact"  (assoc-in gs [:players uname :public :artifacts] (map #(if (= (:uid %) (:uid card)) (dissoc % :collect-resource) %) (-> gs :players (get uname) :public :artifacts)))
+    "mage"      (update-in gs [:players uname :public :mage] dissoc :collect-essences)
+    "magicitem" (assoc gs :magicitems (map #(if (= (:uid %) (:uid card)) (dissoc % :collect-essences) %) (:magicitems gs)))
+    "artifact"  (assoc-in gs [:players uname :public :artifacts] (map #(if (= (:uid %) (:uid card)) (dissoc % :collect-essences) %) (-> gs :players (get uname) :public :artifacts)))
     gs))
 
-(defn- collect-resource [ gamestate {:keys [resources card] :as ?data} uname ]
+(defn- collect-essences [ gamestate {:keys [essences card] :as ?data} uname ]
   (-> gamestate
-      (amendresource ?data uname)
-      (remove-collect-resources card uname)
+      (update-player-essences ?data uname)
+      (remove-collect-essences card uname)
       (add-chat 
-        (str "collected " (clojure.string/join ", " (map #(str (val %) " " (-> % key name)) resources)) " from " (:name card))
+        (str "collected " (clojure.string/join ", " (map #(str (val %) " " (-> % key name)) essences)) " from " (:name card))
         uname)))
 
-(defn- generate-resources [ gamestate ]
-  ; copy from :collect to :collect-resource
-  (if verbose? (println "Generate Resources"))
+(defn- generate-essences [ gamestate ]
+  ; copy from :collect to :collect-essences
+  (if verbose? (println "Generate essences"))
     (-> gamestate
       (assoc :magicitems
-        (map #(if (-> % :owner some?) (assoc % :collect-resource (:collect %)) %) (:magicitems gamestate)))
+        (map #(if (-> % :owner some?) (assoc % :collect-essences (:collect %)) %) (:magicitems gamestate)))
       (assoc :players
         (reduce-kv 
           (fn [m k v]
             (-> m
-                (assoc-in [k :public :mage :collect-resource] (-> v :public :mage :collect)) ; mage
-                (assoc-in [k :public :artifacts] (mapv #(assoc % :collect-resource (:collect %)) (-> v :public :artifacts)))   ; artifact / monument / pop
+                (assoc-in [k :public :mage :collect-essences] (-> v :public :mage :collect)) ; mage
+                (assoc-in [k :public :artifacts] (mapv #(assoc % :collect-essences (:collect %)) (-> v :public :artifacts)))   ; artifact / monument / pop
             )
           ) (:players gamestate) (:players gamestate))))) 
 
 ; AI Collect  
 
-(defn- ai-collect-resources-artifacts [ gamestate ai-players ]
+(defn- ai-collect-essences-artifacts [ gamestate ai-players ]
   (reduce-kv
     (fn [gs uname pdata]
       (reduce 
         (fn [gs artifact]
-          (if-let [resources (:collect-resource artifact)]
-            (collect-resource gs {:resources (first resources) :card artifact} uname)
+          (if-let [essences (:collect-essences artifact)]
+            (collect-essences gs {:essences (first essences) :card artifact} uname)
             gs))
         gs
         (-> pdata :public :artifacts))
@@ -120,59 +120,59 @@
     gamestate
     ai-players))
 
-(defn- ai-collect-resources-mage [ gamestate ai-players ]
+(defn- ai-collect-essences-mage [ gamestate ai-players ]
   (reduce-kv
     (fn [gs uname pdata]
       (let [mage (-> gs :players (get uname) :public :mage)]
-        (if-let [resources (:collect-resource mage)]
-          (collect-resource gs {:resources (first resources) :card mage} uname)
+        (if-let [essences (:collect-essences mage)]
+          (collect-essences gs {:essences (first essences) :card mage} uname)
           gs)
     ))
     gamestate
     ai-players))
 
-(defn- ai-collect-resources-magicitem [ gamestate ai-players ]
+(defn- ai-collect-essences-magicitem [ gamestate ai-players ]
   (reduce-kv
     (fn [gs uname pdata]
       (let [magicitem (->> gs :magicitems (filter #(= (:owner %) uname)) first)]
-        (if-let [resources (:collect-resource magicitem)]
-          (collect-resource gs {:resources (first resources) :card magicitem} uname)
+        (if-let [essences (:collect-essences magicitem)]
+          (collect-essences gs {:essences (first essences) :card magicitem} uname)
           gs)
     ))
     gamestate
     ai-players))
 
-(defn- ai-collect-resources-done [ gamestate ai-players ]
+(defn- ai-collect-essences-done [ gamestate ai-players ]
   (reduce-kv
     (fn [m k v]
       (assoc-in m [:players k :collected?] true))
     gamestate
     ai-players))
 
-(defn ai-collect-resources [ gamestate ]
-  ; Take first available resource
+(defn ai-collect-essences [ gamestate ]
+  ; Take first available essences
   ; mage, magic item, artifact / monument / pop
   (let [ai-players (select-keys (:players gamestate) (filter is-ai? (-> gamestate :players keys)))]
-    (if verbose? (println "AI-Collect-Resources: ai-players" (keys ai-players)))
+    (if verbose? (println "AI-Collect-essences: ai-players" (keys ai-players)))
     (-> gamestate
-      (ai-collect-resources-mage ai-players)
-      (ai-collect-resources-magicitem ai-players)
-      (ai-collect-resources-artifacts ai-players)
-      (ai-collect-resources-done ai-players))
+      (ai-collect-essences-mage ai-players)
+      (ai-collect-essences-magicitem ai-players)
+      (ai-collect-essences-artifacts ai-players)
+      (ai-collect-essences-done ai-players))
   ))
   
 ;;;;; DISCARD ;;;;;
 
 (defn discardcard [ gs ?data uname ]
-  (if verbose? (println uname "discard" (-> ?data :card :name) "resources" (:resources ?data)))
-  (let [{:keys [resources card]} ?data]
+  (if verbose? (println uname "discard" (-> ?data :card :name) "essences" (:essences ?data)))
+  (let [{:keys [essences card]} ?data]
     (if (= uname (get-active-player gs))
         (-> gs 
             (update-in [:players uname :public :discard] conj card)
             (assoc-in [:players uname :private :artifacts] (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :private :artifacts)))
-            (amendresource ?data uname)
+            (update-player-essences ?data uname)
             (add-chat (str "Discard " (:name card)) uname)
-            (add-chat (str "Gained " (clojure.string/join "," (map #(str (val %) " " (-> % key name clojure.string/capitalize)) resources))) uname)
+            (add-chat (str "Gained " (clojure.string/join "," (map #(str (val %) " " (-> % key name clojure.string/capitalize)) essences))) uname)
             )
         gs)))
 
@@ -182,10 +182,10 @@
   (if verbose? "Collect phase")
   (-> gamestate
       (assoc :phase :collect)
-      generate-resources
+      generate-essences
       (add-chat (str "Round " (:round gamestate)))
       (add-chat (str "Collect Phase"))
-      ai-collect-resources))
+      ai-collect-essences))
 
 (defn- determine-winner [] nil)
 
@@ -263,14 +263,14 @@
 
 ;;;;; ACTIONS ;;;;;
 ;;; PLAY A CARD ;;
-; Depends on amendresource
+; Depends on update-player-essences
 ; depends on next player/round TODO
-(defn playcard [ gamestate {:keys [card resources]} uname ]
+(defn playcard [ gamestate {:keys [card essences]} uname ]
   (-> gamestate 
     (assoc-in [:players uname :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> gamestate :players (get uname) :private :artifacts)))
     (update-in [:players uname :public :artifacts] conj card)
     (add-chat (str "Played Artifact " (:name card)) uname)
-    (amendresource {:resources (reduce-kv (fn [m k v] (assoc m k (* -1 v))) {} resources)} uname)
+    (update-player-essences {:essences (reduce-kv (fn [m k v] (assoc m k (* -1 v))) {} essences)} uname)
   ; next player
     ))
 
@@ -300,10 +300,10 @@
                 (fn [ m k v ] 
                   (-> m 
                       (update-in [k] dissoc :collected?) 
-                      (update-in [k :public :mage] dissoc :collect-resource)
-                      (assoc-in  [k :public :artifacts] (map #(dissoc % :collect-resource) (-> v :public :artifacts)))
+                      (update-in [k :public :mage] dissoc :collect-essences)
+                      (assoc-in  [k :public :artifacts] (map #(dissoc % :collect-essences) (-> v :public :artifacts)))
                       )) (:players gamestate) (:players gamestate)))
-            (assoc :magicitems (map #(dissoc % :collect-resource) (:magicitems gamestate)))
+            (assoc :magicitems (map #(dissoc % :collect-essences) (:magicitems gamestate)))
             (add-chat "Action Phase")
             ai-action)
         gamestate)))
@@ -315,6 +315,35 @@
       (-> gamestate
           (update-in [:players uname] #(if newstate? (assoc % :collected? true) (dissoc % :collected?)))
           collect-to-action-phase)))
+
+(defn- place-essences [ gamestate card essences uname ]
+  ;; will only be a mage or in the players :public artifacts
+  (case (:type card)
+    "mage" (reduce-kv 
+              (fn [m k v]
+                (println "PLACE ESSENCES" uname essences k v )
+                (if (-> m :players (get uname) :public :mage :placed-essences k)
+                    (update-in m [:players uname :public :mage :placed-essences k] + v)
+                    (assoc-in  m [:players uname :public :mage :placed-essences k]   v))
+                    )
+              gamestate essences) ; regardless of card id
+    gamestate))
+
+(defn- exhaust-card [ gamestate card exhaust? uname]
+  (case (:type card)
+    "mage" (update-in gamestate [:players uname :public :mage] #(if exhaust? (assoc % :exhausted? true) (dissoc % :exhausted))) ; regardless of card id
+    gamestate))
+;;; USE A CARD ;;;
+;; Request: {:action :usecard, :cardaction {:exhaust true, :cost {}, :gain {:death 2}, :rivals {:death 1}}, :gid :gm93866} dan
+(defn- use-card [ gamestate {:keys [card cardaction]} uname] 
+  (-> gamestate
+      (add-chat (str "Used card " (:name card)) uname)
+      (update-player-essences {:essences (:cost cardaction)} uname)
+      (update-player-essences {:essences (:gain cardaction)} uname)
+      ;(assoc :players (reduce-kv #() (:players gamestate) (:players gamestate)) ;; rivals gain
+      (place-essences card (:place cardaction) uname)
+      (exhaust-card card (:exhaust cardaction) uname)
+      ))
 
 ;;;;;;;;;; SETUP/START GAME ;;;;;;;;;;
 
@@ -345,7 +374,7 @@
       (fn [m k v]
         (if (-> v :private :mages some?)  ; called when all players have chosen a Mage and eaxh time a Magic Item is selected
             (-> m 
-                (assoc-in  [k :public :mage]  (dissoc (->> v :private :mages (filter #(= (:uid %) (-> v :public :mage))) first) :target?))
+                (assoc-in  [k :public :mage]  (-> (->> v :private :mages (filter #(= (:uid %) (-> v :public :mage))) first) (dissoc :target?) ))
                 (update-in [k :private] dissoc :mages)
                 (assoc-in  [k :action] :waiting))
             m)) 
@@ -463,15 +492,13 @@
             "artifact" (if (contains? (->> pdata :private :artifacts (map :uid) set) (:uid card)) 0 2)
             "monument" (if (contains? (->> gs :monuments :public (map :uid) set) (:uid card))     0 4) 
             "pop"      (if (contains? (->> gs :pops (map :uid) set) (:uid card))                  0 8)
-            16) 
-    ])))
+            16) ])))
 
 ; PLACE an artifact
 ; CLAIM a place of power or Monument
 ; DISCARD a card for 1g or 2other
 ; USE a power
 ; PASS - exchange magic items and draw 1 - first to pass becomes 1st player.
-
 
 ;; TODO Add tests for actions before triggering the thread.
 (defn parseaction [ gamestate ?data fromname ]
@@ -484,7 +511,7 @@
                             (selectmagicitem ?data uname)
                             (end-action uname)
                             ai-action)
-      :collect-resource (collect-resource gamestate ?data uname)
+      :collect-essences (collect-essences gamestate ?data uname)
       :collected        (collected        gamestate uname)
     ; PLACE
     ; CLAIM
@@ -501,7 +528,13 @@
                             (end-action uname)
                             ai-action)
     ; USE
-    ;  :exhausttoggle    (exhausttoggle    gamestate ?data uname)
+      :usecard          (let [err 0]     ;error handler
+                          (if (= err 0)
+                              (-> gamestate 
+                                  (use-card ?data uname)
+                                  (end-action uname)
+                                  ai-action)
+                              (assoc-in gamestate [:players uname :err] err)))
     ; PASS
       :pass             (pass             gamestate uname)
     ; Done - Only used for Testing
@@ -513,12 +546,12 @@
 (defn- res-match-handler [ gs uname func & args ]
   (println "Chat Handler" func args)
   (-> gs 
-      (assoc-in [:players uname :public :resources (-> args first clojure.string/lower-case keyword)] (-> args second read-string))
+      (assoc-in [:players uname :public :essences (-> args first clojure.string/lower-case keyword)] (-> args second read-string))
       (add-chat (str "Set " (first args) " to " (second args)) uname)
       ))
 
 (def chat-fn-help {
-  "resource" "/resource <resource name> <new value>"
+  "essences" "/essences <essences name> <new value>"
 })
 
 (defn chat-handler [ gs msg uname ]

@@ -293,37 +293,37 @@
     (-> (ramodel/setup [aip]) :players (get aip) :action)))
 
     
-; New round places resources on cards
+; New round places essences on cards
 (expect true
   (let [gs  (started2pgm)]
     (=  (-> gs :players (get "p1") :public :mage :collect)
-        (-> gs :players (get "p1") :public :mage :collect-resource))))
+        (-> gs :players (get "p1") :public :mage :collect-essences))))
     
-; Take Resource from card
+; Take essences from card
 (expect 2
   (let [gs (started2pgm)]
     (-> gs 
-        (ramodel/parseaction {:action :collect-resource :resources {:death 1} :card (-> gs :players (get "p1") :public :mage)} "p1")
-        :players (get "p1") :public :resources :death)))
+        (ramodel/parseaction {:action :collect-essences :essences {:death 1} :card (-> gs :players (get "p1") :public :mage)} "p1")
+        :players (get "p1") :public :essences :death)))
 (expect nil
   (let [gs (started2pgm)]
     (-> gs 
-        (ramodel/parseaction {:action :collect-resource :resources {:death 1} :card (-> gs :players (get "p1") :public :mage)} "p1")
-        :players (get "p1") :public :mage :collectresource)))    
+        (ramodel/parseaction {:action :collect-essences :essences {:death 1} :card (-> gs :players (get "p1") :public :mage)} "p1")
+        :players (get "p1") :public :mage :collectessences)))    
     
     
-; Resource Change
+; essences Change
 (expect {:life 1 :death 1 :elan 1 :calm 1 :gold 1}
-  (-> (ramodel/setup ["p1"]) :players (get "p1") :public :resources))
+  (-> (ramodel/setup ["p1"]) :players (get "p1") :public :essences))
       
 (expect {:life 1 :death 1 :elan 1 :calm 1 :gold 1}
   (-> (ramodel/setup ["p1"]) 
-      (ramodel/amendresource {:resources {}} "p1") :players (get "p1") :public :resources))
+      (ramodel/update-player-essences {:essences {}} "p1") :players (get "p1") :public :essences))
       
 (expect {:life 0 :death 1 :elan 2 :calm 3 :gold 4}
   (-> (ramodel/setup ["p1"]) 
-      (ramodel/amendresource {:resources {:life -1 :elan 1 :calm 2 :gold 3} :action :amendresource} "p1")
-      :players (get "p1") :public :resources))
+      (ramodel/update-player-essences {:essences {:life -1 :elan 1 :calm 2 :gold 3} :action :update-player-essences} "p1")
+      :players (get "p1") :public :essences))
       
 
        
@@ -534,7 +534,7 @@
       :secret
       :artifacts))
 
-; ai collect generated resources test state
+; ai collect generated essences test state
 (def rstate {
   :chat []
   :status :play
@@ -542,15 +542,15 @@
   :plyr-to ["AI1" "P1"]
   :pass-to #{}
   :magicitems [
-    {:name "TESTMAGICITEM" :type "magicitem" :collect-resource [{:elan 1} {:gold 1}] :owner "AI1"}
-    {:name "TESTMAGICITEM" :type "magicitem" :collect-resource [{:elan 1} {:gold 1}] :owner "P1"}
+    {:name "TESTMAGICITEM" :type "magicitem" :collect-essences [{:elan 1} {:gold 1}] :owner "AI1"}
+    {:name "TESTMAGICITEM" :type "magicitem" :collect-essences [{:elan 1} {:gold 1}] :owner "P1"}
   ]
   :players {
     "AI1" {
       :action :play
       :public {
-        :mage {:type "mage" :name "TESTMAGE" :collect-resource [{:gold 1} {:death 1}]}
-        :resources {
+        :mage {:type "mage" :name "TESTMAGE" :collect-essences [{:gold 1} {:death 1}]}
+        :essences {
           :gold 1
           :calm 1
           :life 1
@@ -558,55 +558,55 @@
           :death 1
         }
         :artifacts [
-          {:id 4  :type "artifact" :name "Chalice of Life"  :cost {:gold 1 :elan 1} :collect [{:calm 1 :life 1}] :collect-resource [{:calm 1 :life 1}]}
+          {:id 4  :type "artifact" :name "Chalice of Life"  :cost {:gold 1 :elan 1} :collect [{:calm 1 :life 1}] :collect-essences [{:calm 1 :life 1}]}
         ]
       }
     }
     "P1" {
       :action :waiting
       :public {
-        :resources {
+        :essences {
           :calm 1
           :life 1
         }
-        :mage {:type "mage" :name "TESTMAGE" :collect-resource [{:gold 1} {:death 1}]}
+        :mage {:type "mage" :name "TESTMAGE" :collect-essences [{:gold 1} {:death 1}]}
         :artifacts [
-          {:id 4  :type "artifact" :name "Chalice of Life"  :cost {:gold 1 :elan 1} :collect [{:calm 1 :life 1}] :collect-resource [{:calm 1 :life 1}]}
+          {:id 4  :type "artifact" :name "Chalice of Life"  :cost {:gold 1 :elan 1} :collect [{:calm 1 :life 1}] :collect-essences [{:calm 1 :life 1}]}
         ]
       }
     }
   }
 })
 
-; Check ramodel/amendresource
+; Check ramodel/update-player-essences
 (expect {:gold 2 :life 2}
-  (-> {:chat [] :players {"AI1" {:public {:resources {:gold 1 :life 1}}}}}
-    (ramodel/amendresource {:resources {:gold 1 :life 1} :card {:name "TESTCARD"}} "AI1")
+  (-> {:chat [] :players {"AI1" {:public {:essences {:gold 1 :life 1}}}}}
+    (ramodel/update-player-essences {:essences {:gold 1 :life 1} :card {:name "TESTCARD"}} "AI1")
     :players 
     (get "AI1")
     :public
-    :resources))
+    :essences))
 
-; Check ramodel/ai-collect-resources works
+; Check ramodel/ai-collect-essences works
 (expect {:calm 2 :life 2 :gold 2 :elan 2 :death 1}
-  (-> rstate ramodel/ai-collect-resources :players (get "AI1") :public :resources))
-; Check ramodel/ai-collect-resources works
+  (-> rstate ramodel/ai-collect-essences :players (get "AI1") :public :essences))
+; Check ramodel/ai-collect-essences works
 (expect true
-  (-> rstate ramodel/ai-collect-resources :players (get "AI1") :collected?))
+  (-> rstate ramodel/ai-collect-essences :players (get "AI1") :collected?))
 
 ; remove from mage
 (expect nil
-  (-> rstate ramodel/ai-collect-resources :players (get "AI1") :public :mage :collect-resource))
+  (-> rstate ramodel/ai-collect-essences :players (get "AI1") :public :mage :collect-essences))
 ; remove from magicitem
 (expect nil
-  (-> rstate ramodel/ai-collect-resources :magicitems first :collect-resource))
+  (-> rstate ramodel/ai-collect-essences :magicitems first :collect-essences))
 ; remove from artifact
 (expect nil
-  (-> rstate ramodel/ai-collect-resources :players (get "AI1") :public :artifacts first :collect-resource))
+  (-> rstate ramodel/ai-collect-essences :players (get "AI1") :public :artifacts first :collect-essences))
 
 ; but not for non-ai (#"AI/d+")
 (expect 1
-  (-> rstate ramodel/ai-collect-resources :players (get "P1") :public :resources :calm))
+  (-> rstate ramodel/ai-collect-essences :players (get "P1") :public :essences :calm))
 
 ; collect action
 (expect true 
@@ -644,22 +644,22 @@
       (ramodel/parseaction {:action :collected} "P1")
       :phase))
 
-; Collect-to-Action remove all :collect-resource from Mage, MagicItems and Artifacts
+; Collect-to-Action remove all :collect-essences from Mage, MagicItems and Artifacts
 (expect nil
   (-> rstate
       (assoc-in [:players "AI1" :collected?] true)
       (ramodel/parseaction {:action :collected} "P1")
-      :players (get "P1") :public :mage :collect-resource ))
+      :players (get "P1") :public :mage :collect-essences ))
 (expect nil
   (-> rstate
       (assoc-in [:players "AI1" :collected?] true)
       (ramodel/parseaction {:action :collected} "P1")
-      :players (get "P1") :public :artifacts first :collect-resource ))
+      :players (get "P1") :public :artifacts first :collect-essences ))
 (expect nil
   (-> rstate
       (assoc-in [:players "AI1" :collected?] true)
       (ramodel/parseaction {:action :collected} "P1")
-      :magicitems first :collect-resource ))
+      :magicitems first :collect-essences ))
 
 ; AI Action = Pass (Re-factor with AI Logic)
 ;; No automation for all ai players (Infinite loop)
@@ -722,34 +722,34 @@
       :players (get "P1") :action))
 
 ;; DISCARD ACTION
-; data? {:action :discard :resources {k v k v} :card {<card>} }
-; Gain the resources
+; data? {:action :discard :essences {k v k v} :card {<card>} }
+; Gain the essences
 (expect {:elan 2 :death 2}
   (let [s2pgc (started2pgm-collected)
         a1    (-> s2pgc :players (get "p1") :private :artifacts first)]
     (-> s2pgc
-        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p1")
-        :players (get "p1") :public :resources (select-keys [:elan :death]) )))
-; 2 of the same resource
+        (ramodel/parseaction {:action :discard :essences {:elan 1 :death 1} :card a1} "p1")
+        :players (get "p1") :public :essences (select-keys [:elan :death]) )))
+; 2 of the same essences
 (expect {:elan 3}
   (let [s2pgc (started2pgm-collected)
         a1    (-> s2pgc :players (get "p1") :private :artifacts first)]
     (-> s2pgc
-        (ramodel/parseaction {:action :discard :resources {:elan 2} :card a1} "p1")
-        :players (get "p1") :public :resources (select-keys [:elan]) )))
+        (ramodel/parseaction {:action :discard :essences {:elan 2} :card a1} "p1")
+        :players (get "p1") :public :essences (select-keys [:elan]) )))
 ; discard the card
 (expect 1
   (let [s2pgc (started2pgm-collected)
         a1    (-> s2pgc :players (get "p1") :private :artifacts first)]
     (-> s2pgc
-        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p1")
+        (ramodel/parseaction {:action :discard :essences {:elan 1 :death 1} :card a1} "p1")
         :players (get "p1") :public :discard count)))
 ; and remove from hand
 (expect 2
   (let [s2pgc (started2pgm-collected)
         a1    (-> s2pgc :players (get "p1") :private :artifacts first)]
     (-> s2pgc
-        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p1")
+        (ramodel/parseaction {:action :discard :essences {:elan 1 :death 1} :card a1} "p1")
         :players (get "p1") :private :artifacts count)))
 
 
@@ -763,11 +763,11 @@
                     (ramodel/parseaction {:action :selectstartitem :card (:uid mi1)} "p1"))
         art1    (-> gs :players (get "p1") :private :artifacts first)
         art2    (-> gs :players (get "p1") :private :artifacts last)
-        afterplay (ramodel/playcard gs {:card art1 :resources {:gold 1}} "p1")
+        afterplay (ramodel/playcard gs {:card art1 :essences {:gold 1}} "p1")
         ]
     [ (-> afterplay :players (get "p1") :public  :artifacts count)
       (-> afterplay :players (get "p1") :private :artifacts count)
-      (-> afterplay :players (get "p1") :public  :resources) ]))
+      (-> afterplay :players (get "p1") :public  :essences) ]))
 
 ;; PLACE and CLAIM actions
 
@@ -786,20 +786,20 @@
   (let [s2pgc (started2pgm-collected)
         a1    (-> s2pgc :players (get "p2") :private :artifacts first)]
     (-> s2pgc
-        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p2")
+        (ramodel/parseaction {:action :discard :essences {:elan 1 :death 1} :card a1} "p2")
         :players (get "p2") :public :discard count)))
 (expect 3
   (let [s2pgc (started2pgm-collected)
         a1    (-> s2pgc :players (get "p2") :private :artifacts first)]
     (-> s2pgc
-        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p2")
+        (ramodel/parseaction {:action :discard :essences {:elan 1 :death 1} :card a1} "p2")
         :players (get "p2") :private :artifacts count)))
 (expect {:elan 1 :death 1}
   (let [s2pgc (started2pgm-collected)
         a1    (-> s2pgc :players (get "p2") :private :artifacts first)]
     (-> s2pgc
-        (ramodel/parseaction {:action :discard :resources {:elan 1 :death 1} :card a1} "p2")
-        :players (get "p2") :public :resources (select-keys [:elan :death]) )))
+        (ramodel/parseaction {:action :discard :essences {:elan 1 :death 1} :card a1} "p2")
+        :players (get "p2") :public :essences (select-keys [:elan :death]) )))
 
 ;;;;; TESTING Games ;;;;;;
 (def g1 (ramodel/parseaction {} {:action :swapgame} "p1"))
@@ -814,13 +814,13 @@
 (expect 8 (-> g1 :monuments :secret count))
 (expect 78 (-> g1 :allcards count))
 
-
+;; PLACE a card  ;;
 (expect 3
   (let [artifacts (-> g1 :players (get "dan") :private :artifacts)]
     (-> g1
-        (ramodel/parseaction {:action :place :card (first artifacts)  :resources (-> artifacts first :cost)} "dan")
-        (ramodel/parseaction {:action :place :card (second artifacts) :resources (-> artifacts second :cost)} "dan")
-        (ramodel/parseaction {:action :place :card (last artifacts)   :resources (-> artifacts last :cost)} "dan")
+        (ramodel/parseaction {:action :place :card (first artifacts)  :essences (-> artifacts first :cost)} "dan")
+        (ramodel/parseaction {:action :place :card (second artifacts) :essences (-> artifacts second :cost)} "dan")
+        (ramodel/parseaction {:action :place :card (last artifacts)   :essences (-> artifacts last :cost)} "dan")
         (ramodel/parseaction {:action :pass} "dan")
         (ramodel/parseaction {:action :selectmagicitem :card (-> g1 :magicitems last)} "dan")
         (ramodel/parseaction {:action :collected} "dan")
@@ -831,15 +831,15 @@
 (expect 1
   (let [artifacts (-> g1 :players (get "dan") :private :artifacts)]
     (-> g1 
-        (ramodel/parseaction {:action :place :card (first artifacts) :resources (-> artifacts first :cost)} "dan")
-        (ramodel/parseaction {:action :place :card (first artifacts) :resources (-> artifacts first :cost)} "dan")
+        (ramodel/parseaction {:action :place :card (first artifacts) :essences (-> artifacts first :cost)} "dan")
+        (ramodel/parseaction {:action :place :card (first artifacts) :essences (-> artifacts first :cost)} "dan")
         :players (get "dan") :public :artifacts count)))
 ;error code 2 - artifact not in hand
 (expect 2
   (let [artifacts (-> g1 :players (get "dan") :private :artifacts)]
     (-> g1 
-        (ramodel/parseaction {:action :place :card (first artifacts) :resources (-> artifacts first :cost)} "dan")
-        (ramodel/parseaction {:action :place :card (first artifacts) :resources (-> artifacts first :cost)} "dan")
+        (ramodel/parseaction {:action :place :card (first artifacts) :essences (-> artifacts first :cost)} "dan")
+        (ramodel/parseaction {:action :place :card (first artifacts) :essences (-> artifacts first :cost)} "dan")
         :players (get "dan") :err)))
 
 
@@ -853,13 +853,33 @@
 (expect "This is a test message"
   (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "This is a test message" p1) :chat second :msg)))
   
-(expect "help: /resource <resource name> <new value>"
-  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/resource" p1) :chat last :msg)))
+(expect "help: /essences <essences name> <new value>"
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essences" p1) :chat last :msg)))
 
-;; Set Resource
-(expect "/resource gold 200"
-  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/resource gold 200" p1) :chat second :msg)))
+;; Set essences
+(expect "/essences gold 200"
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essences gold 200" p1) :chat second :msg)))
 (expect 200
-  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/resource gold 200" p1) :players (get p1) :public :resources :gold)))
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essences gold 200" p1) :players (get p1) :public :essences :gold)))
 
-;; Exhaust / ready (card name)
+
+;; USE a card
+;; TODO - fix when we implement error handling
+(expect 100
+  (let [p1 (-> g1 :plyr-to first)] 
+    (-> g1 
+        (ramodel/parseaction {:action :usecard :cardaction {:exhaust true :cost {:death -1} :gain {:death 2}}} p1)
+        :players (get p1) :public :essences :death)))
+      
+(expect 1
+  (let [p1 (-> g1 :plyr-to first)  
+        mage (-> g1 :players (get p1) :public :mage)] 
+    (-> g1 
+        (ramodel/parseaction {:action :usecard :cardaction {:exhaust true, :cost {:death -1}, :place {:gold 1}} :card mage} p1)
+        :players (get p1) :public :mage :placed-essences :gold)))
+(expect true
+  (let [p1 (-> g1 :plyr-to first)  
+        mage (-> g1 :players (get p1) :public :mage)] 
+    (-> g1 
+        (ramodel/parseaction {:action :usecard :cardaction {:exhaust true, :cost {:death -1}, :place {:gold 1}} :card mage} p1)
+        :players (get p1) :public :mage :exhausted?)))

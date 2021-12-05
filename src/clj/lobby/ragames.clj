@@ -17,7 +17,7 @@
 	:public {
 		:discard []
 		:artifacts []
-		:resources {
+		:essences {
 			:gold 1
 			:calm 1
 			:elan 1
@@ -44,7 +44,7 @@
 			(assoc-in [:public :mage] (->> @data :mages (filter #(= n (:fg %))) first))
 			(assoc-in [:private :artifacts] (->> @data :artifacts (filter #(= n (:fg %))) (map #(assoc % :uid (gensym "art"))) ))
 			(assoc-in [:secret :artifacts] (take 5 (nthrest (->> @data :artifacts (remove :fg)) (* n 5) )))
-			(assoc-in [:public :resources] {:gold 99 :calm 99 :elan 99 :life 99 :death 99})
+			(assoc-in [:public :essences] {:gold 99 :calm 99 :elan 99 :life 99 :death 99})
 			(assoc :action (if (= n 1 ) :play :waiting))
 		))
 (def game1 

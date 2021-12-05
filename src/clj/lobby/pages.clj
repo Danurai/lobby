@@ -31,6 +31,8 @@
     [:link {:href "https://fonts.googleapis.com/css2?family=Orbitron&family=Pirata+One&display=swap" :rel "stylesheet"}]
     (h/include-css "/css/ra.css")
     (h/include-css "/css/bb.css")
+    (h/include-css "/css/lobby.css")
+    (h/include-css "/css/lobbyicon.css")
   ])
 			
 (defn loginform []
@@ -76,9 +78,11 @@
       [:div#app 
         [:div.d-flex.my-3
           [:div.loader.mx-auto]]]]
-    (h/include-css "/css/lobby.css?v=0.1")
     (h/include-js "/js/compiled/lobby.js")))
     
+(def symbols
+  [:h4.d-flex.justify-content-around.p-2
+    (for [icon [:gold :calm :elan :life :death]] [:span {:class (str "icon-" (name icon))}])])
 		
 (defn testpage [ req ]
   (let [q (-> req :query-string)
@@ -87,6 +91,7 @@
       header
       [:body
         (navbar req)
+        symbols
         ;; Res Arcana Card Reference
         [:div.container
           [:div.d-flex.mb-2
