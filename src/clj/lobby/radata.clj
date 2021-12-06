@@ -3,7 +3,7 @@
 (def data (atom {
   :mages [
     {:id 0 :name "Necromancer" :type "mage" :collect [{:death 1}]}
-    {:id 1 :name "Duelist"     :type "mage" :fg 1 :collect [{:elan 1}] :action [{:exhaust true :cost {:death -1} :place {:gold 1}}] }
+    {:id 1 :name "Duelist"     :type "mage" :fg 1 :collect [{:elan 1}] :action [{:exhaust true :cost {:death 1} :place {:gold 1}}] }
     {:id 2 :name "Transmuter"  :type "mage" :fg 4 :collect nil}
     {:id 3 :name "Druid"       :type "mage" :collect [{:life 1}]}
     {:id 4 :name "Artificer"   :type "mage" :collect nil}
@@ -20,7 +20,7 @@
     {:id 3 :name "Divination"     :type "magicitem" :action []}
     {:id 4 :name "Protection"     :type "magicitem" :action []}
     {:id 5 :name "Reanimate"      :type "magicitem" :action []}
-    {:id 6 :name "Research"       :type "magicitem" :action []}
+    {:id 6 :name "Research"       :type "magicitem" :action [{:exhaust true :cost {:any 1} :draw 1}]}
     {:id 7 :name "Transmutation"  :type "magicitem" :action []}
   ]
   :monuments [
@@ -65,10 +65,10 @@
     {:id 9  :type "artifact" :name "Dragon Bridle"        :cost {:elan 1 :life 1 :calm 1 :death 1} :action [] :react []}
                 
     {:id 10 :type "artifact" :name "Dragon Egg"           :cost {:gold 1} :vp 1}
-    {:id 11 :type "artifact" :name "Dragon Teeth"   :fg 1 :cost {:elan 1 :death 1} :action [{:exhaust false :cost {:elan -2} :place {:elan 3}} {:exhaust true :cost {:elan -3} :place {:subtype "Dragon" :cost {}}}]}
+    {:id 11 :type "artifact" :name "Dragon Teeth"   :fg 1 :cost {:elan 1 :death 1} :action [{:exhaust false :cost {:elan 2} :place {:elan 3}} {:exhaust true :cost {:elan 3} :place {:subtype "Dragon" :cost {}}}]}
     {:id 12 :type "artifact" :name "Dwarven Pickaxe"      :cost {:elan 1}}
     {:id 13 :type "artifact" :name "Earth Dragon"         :cost {:elan 4 :life 3} :subtype "Dragon" :vp 1}
-    {:id 14 :type "artifact" :name "Elemental Spring" :fg 1 :cost {:elan 2 :life 1 :calm 1} :collect [{:calm 1 :life 1 :elan 1}] :action [{:react true :value :any :cost {:calm -1}}]}
+    {:id 14 :type "artifact" :name "Elemental Spring" :fg 1 :cost {:elan 2 :life 1 :calm 1} :collect [{:calm 1 :life 1 :elan 1}] :action [{:react true :value :any :cost {:calm 1}}]}
     {:id 15 :type "artifact" :name "Elvish Bow"           :cost {:elan 2 :life 1}}
     {:id 16 :type "artifact" :name "Fiery Whip"           :cost {:elan 2 :death 2}}
     {:id 17 :type "artifact" :name "Fire Dragon"          :cost {:elan 6} :subtype "Dragon" :vp 1}

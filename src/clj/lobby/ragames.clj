@@ -17,7 +17,7 @@
 	:public {
 		:discard []
 		:artifacts []
-		:essences {
+		:essence {
 			:gold 1
 			:calm 1
 			:elan 1
@@ -44,7 +44,7 @@
 			(assoc-in [:public :mage] (->> @data :mages (filter #(= n (:fg %))) first))
 			(assoc-in [:private :artifacts] (->> @data :artifacts (filter #(= n (:fg %))) (map #(assoc % :uid (gensym "art"))) ))
 			(assoc-in [:secret :artifacts] (take 5 (nthrest (->> @data :artifacts (remove :fg)) (* n 5) )))
-			(assoc-in [:public :essences] {:gold 99 :calm 99 :elan 99 :life 99 :death 99})
+			(assoc-in [:public :essence] {:gold 99 :calm 99 :elan 99 :life 99 :death 99})
 			(assoc :action (if (= n 1 ) :play :waiting))
 		))
 (def game1 
@@ -60,3 +60,14 @@
 		:chat [{:uname "dan" :msg "Swap to predefined Game1" :timestamp (new java.util.Date)}]
 		:allcards get-all-cards
 		))
+
+(def game2 
+	(-> game1
+			(assoc :magicitems 
+				(map 
+					(fn [mi] 
+						(cond (= (:owner mi) "dan")			(dissoc mi :owner)
+									(= (:name mi) "Research") (assoc mi :owner "dan")
+									:default 									mi))
+					(:magicitems game1)))
+			(assoc-in [:chat 0 :msg] "Swap to predefined Game2")))
