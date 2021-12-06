@@ -4,6 +4,9 @@
   /*user-select: none;*/
 }
 
+.p1token {
+  height: 100px;
+}
 .clickable {
   cursor: pointer;
 }
