@@ -41,22 +41,21 @@
 (defn- essence-icon [ type n ]
   (let [color (case type (:elan :death) "white" "black")
         scale 1]
-    [:div.text-center.mx-1.mt-1 {
-        :key (gensym)
-        :style {
-          :position "relative"
-          :background-image (str "url(img/ra/res-" (name type) ".png")
-          :background-size "contain"
-          :background-repeat "no-repeat"
-          :background-position-y "0%"
-          :color (if (< -2 n 2) "rgba(0,0,0,0)" color)
-          :width     (str (* scale 1.1) "em")
-        }
-      }
-      (if (< n 0) [:div {:style {:color color :position "absolute" :left "-4px" :bottom "-6px" :font-size "1em"}} "x"])
-      (Math.abs n)
-      ;(if (= n 1) " " n)
-      ]))
+    (if (some? n)
+        [:div.text-center.mx-1.mt-1 {
+            :key (gensym)
+            :style {
+              :position "relative"
+              :background-image (str "url(img/ra/res-" (name type) ".png")
+              :background-size "contain"
+              :background-repeat "no-repeat"
+              :background-position-y "0%"
+              :color (if (< -2 n 2) "rgba(0,0,0,0)" color)
+              :width     (str (* scale 1.1) "em")
+            }
+          }
+          (if (< n 0) [:div {:style {:color color :position "absolute" :left "-4px" :bottom "-6px" :font-size "1em"}} "x"])
+          (Math.abs n)])))
 
 (defn- select-btn-handler [ action card ]
   (comms/ra-send! {:action action :card (:uid card)}))
@@ -72,12 +71,17 @@
         (filter #(-> % :owner (= uname))) 
         first))
 
-(defn player-public-cards [ gs uname ]
+(defn- player-public-cards [ gs uname ]
   (let [pdata (-> gs :players (get uname))
         mage  (-> pdata :public :mage) 
         mi (getmagicitem (:magicitems gs) uname) 
         artifacts (-> pdata :public :artifacts)]
     (apply conj [] mage mi artifacts)))
+
+(defn- first-player-token-holder [ gs ]
+  (if-let [passp1 (-> gs :pass-to first)]
+    passp1
+    (-> gs :plyr-to first)))
 
 (defn- set-tags [ cards tag bool? ]
   (map 
@@ -142,7 +146,7 @@
                   (for [[k v] res] (essence-icon k v))])]]
         [:img.img-fluid.card.mx-1.mb-1 {
           :title (str card)
-          :width  (* (-> @ra-app :settings :cardsize :w) scale) 
+          :width  (* (-> @ra-app :settings :cardsize :w) scale)
           ;:height (* (-> @ra-app :settings :cardsize :h) scale)
           :style {
             :display "inline-block"
@@ -151,7 +155,7 @@
           :class (cond (:exhausted? card) "disabled" (-> card :collect-essence some?) "collect" (:target? card) "target" (:disabled? card) "disabled" :else nil)
           }]
         [:div {:style {:position :absolute :right "0"}}
-          (for [[k v] (-> card :placed-essences)] (essence-icon k v))
+          (for [[k v] (-> card :take-essence)] (essence-icon k v))
         ]]))
   ([ card ]
     (render-card card nil)))
@@ -198,11 +202,11 @@
 
 ;;; Modules
 (defn- modal-place-card [ card pdata ]
-  (let [essences (r/atom (default-payment (:cost card) (-> pdata :public :essences)))]
+  (let [essence (r/atom (default-payment (:cost card) (-> pdata :public :essence)))]
     (fn []
       (let [card (-> @ra-app :modal :card) 
             label (if (= "artifact" (:type card)) "Place" "Claim")] 
-        ;(reset! essences (:cost card))
+        ;(reset! essence (:cost card))
         [:div.mb-3 {:style {:border-bottom "1px solid #222222"}}
           [:h4.text-center (str label " " (:name card))]
           [:div.h5.d-flex.justify-content-center (for [[k v] (:cost card)] (essence-icon k v))]
@@ -210,17 +214,17 @@
             [:div
               [:div "Remaining >>"]
               [:div "Committed >>"]]
-            (doall (for [[k v] (:cost card) :let [pr (-> pdata :public :essences k)]]
+            (doall (for [[k v] (:cost card) :let [pr (-> pdata :public :essence k)]]
                 [:div {:key (gensym)}
-                  [:div.clickable {:on-click #(if (> (- v (k @essences 0)) 0) (if (nil? (k @essences)) (swap! essences assoc k 1) (swap! essences update k inc))) } 
-                    (essence-icon k (- pr (k @essences 0)))]
-                  [:div.clickable {:on-click #(if (= 1 (k @essences)) (swap! essences dissoc k) (swap! essences update k dec) ) } 
-                    (essence-icon k (k @essences))]
+                  [:div.clickable {:on-click #(if (> (- v (k @essence 0)) 0) (if (nil? (k @essence)) (swap! essence assoc k 1) (swap! essence update k inc))) } 
+                    (essence-icon k (- pr (k @essence 0)))]
+                  [:div.clickable {:on-click #(if (= 1 (k @essence)) (swap! essence dissoc k) (swap! essence update k dec) ) } 
+                    (essence-icon k (k @essence))]
                 ]))]
-          [:div (str (can-pay-cost? (:cost card) @essences) @essences)]
+          [:div (str (can-pay-cost? (:cost card) @essence) @essence)]
           [:div.d-flex.mb-2
-            [:button.btn.btn-primary.ms-auto {:disabled (not (can-pay-cost? (:cost card) @essences)) :on-click #((comms/ra-send! {:action :place :card card :essences (dissoc @essences :any)}) (hidemodal))}
-              [:div.d-flex.h5 [:div.mt-auto label] (for [[k v] @essences] (essence-icon k v))]]]]))))
+            [:button.btn.btn-primary.ms-auto {:disabled (not (can-pay-cost? (:cost card) @essence)) :on-click #((comms/ra-send! {:action :place :card card :essence (dissoc @essence :any)}) (hidemodal))}
+              [:div.d-flex.h5 [:div.mt-auto label] (for [[k v] @essence] (essence-icon k v))]]]]))))
 
 (defn- modal-discard-card [ ] ;Revisit this atom use?
   (let [options (r/atom [:gold :na])] 
@@ -229,7 +233,7 @@
         (if (= "artifact" (:type card))
           [:div
             [:h4.text-center (str "Discard " (:name card))] 
-            [:small.muted (str "Discard " (:name card) " to gain one Gold or two other essences.")]
+            [:small.muted (str "Discard " (:name card) " to gain one Gold or two other essence.")]
             [:div.d-flex {:on-change #(update-options! options %)}
               [:select#res1.form-control.me-2 {:value (first @options) :on-click #()} 
                 (for [r essence-list] [:option {:key (gensym) :value r :on-click #()} (-> r name clojure.string/capitalize)])]
@@ -237,21 +241,33 @@
                 (for [r essence-list] [:option {:key (gensym) :value (if (= :gold r) "na" r) :on-click #()} (if (= r :gold) "-" (-> r name clojure.string/capitalize))])]
               [:button.btn.ms-auto.btn-primary {
                   :disabled (and (not= :gold (first @options)) (= :na (last @options)))
-                  :on-click #(let [?data (hash-map :action :discard :card card :essences (-> @options frequencies (dissoc :na)))] 
+                  :on-click #(let [?data (hash-map :action :discard :card card :essence (-> @options frequencies (dissoc :na)))] 
                                 (comms/ra-send! ?data)
                                 (hidemodal))
                 } "Discard"]]])))))
 
-(defn- modal-collect-essence [ card uname ]
-  [:div.ps-1 {:style {:min-width "200px"}}
-    [:h4 "Collect essences"] 
-    [:div.btn-group-vertical.w-100
-      (for [res (:collect-essence card)]
-        [:button.btn.btn-outline-secondary {:key (gensym) :on-click #((hidemodal) (comms/ra-send! {:action :collect-essence :card card :essences res}))} 
-          [:div.d-flex.justify-content-center.h4 (for [[k v] res] (essence-icon k v))]])]])
+(defn- collect-essence-click-handler [ ra-app card action res ]
+  (swap! ra-app update-in [:modal :card] dissoc action)
+  (comms/ra-send! {:action action :card card :essence res})
+  (if (-> @ra-app :modal :card (select-keys [:collect-essence :take-essence]) empty?) (hidemodal)))
+
+(defn- modal-collect-essence [ {:keys [collect-essence :take-essence] :as card} uname ]
+  [:div.ps-1.pt-3 ;{:style {:min-width "200px"}}
+    (if collect-essence; (:collect-essence card)]
+      [:div.mb-2
+        [:h4 "Collect essence"] 
+        [:div.btn-group-vertical.w-100
+          (for [res collect-essence]        ;; Link to actual game state instead of ra-app
+            [:button.btn.btn-outline-secondary {:key (gensym) :on-click #(collect-essence-click-handler ra-app card :collect-essence res)} 
+              [:div.d-flex.justify-content-center.h4 (for [[k v] res] (essence-icon k v))]])]])
+    (if take-essence ; (:take-essence card)]
+      [:div
+        [:h4 "Take placed essence"]
+        [:button.btn.btn-outline-secondary.w-100 {:on-click #(collect-essence-click-handler ra-app card :take-essence nil)}
+          [:div.d-flex.justify-content-center.h4 (for [[k v] take-essence] (essence-icon k v))]]])])
 
 (defn- modal-use-action [ card a pdata ]
-  (let [req (r/atom a)]
+  (let [req (r/atom (update-in a [:cost] dissoc :any))]
     (fn []
       [:div {:style {:min-width "250px"}} 
         [:h4 "Action"] 
@@ -262,15 +278,17 @@
           (for [[k v] (:gain a)] (essence-icon k v))                                    ; Gain
           (if-let [rivals (:rivals a)]                                                  ; Rivals Gain
             [:div.d-flex [:div.me-1 "+ all rivals gain"] (for [[k v] rivals] (essence-icon k v))])
-          (if-let [place (:place a)]                                                    ; Place essences
+          (if-let [place (:place a)]                                                    ; Place essence
             [:div.d-flex (for [[k v] place] (essence-icon k v)) [:i.fas.fa-caret-square-down.fa-lg.my-auto]])]
+        [:div.d-flex.justify-content-center 
+          (for [[k v] (-> pdata :public :essence)] (essence-icon k v))]
         [:div.d-flex 
           [:button.btn.btn-primary.ms-auto {
-              :disabled (not (can-pay-cost? (:cost a) (-> pdata :public :essences))) 
-              :on-click #((comms/ra-send! {:action :usecard :cardaction @req :card card}) (hidemodal))
+              :disabled (not (can-pay-cost? (:cost a) (-> pdata :public :essence))) 
+              :on-click #((comms/ra-send! {:action :usecard :useraction @req :card card}) (hidemodal))
             } "Use Action"]]
-        [:small.muted (str a)]
-        [:div [:small.muted (-> @req  str) (-> pdata :public :essences)]]
+        [:small.muted (str @req)]
+        [:div [:small.muted (-> @req  str) (-> pdata :public :essence)]]
       ])))
 
 (defn- modal-use [ card uname ]
@@ -285,32 +303,46 @@
       [modal-place-card card pdata]
       [modal-discard-card]]
     [:div.ps-1 {:style {:min-width "200px"}}
-      [:h5 (str "Select " (:name card))]
+      [:h5.text-center (str "Select " (:name card))]
       [:div [:button.btn.btn-outline-secondary.mb-1.w-100 {:on-click #((select-btn-handler (:action pdata) card) (hidemodal))} "Select"]]
       [:div [:button.btn.btn-outline-secondary.mb-1.w-100 {:on-click #(hidemodal)} "Cancel"]]]))
 
-;;; Main
-(defn- modal [ pdata uname ] ; Content also driven via @ra-app
-  (let [modal (:modal @ra-app)]
-    [:div.modal.ra-main {:hidden (-> modal :show? nil?) :on-click #(hidemodal)}
-      (if-let [card (:card modal)]
-        [:div.modalcontent.p-2.rounded.bg-light.d-flex {:on-click #(.stopPropagation %)}
-          [:div.h-100.text-center
-            [:img.card.h-100 {:src (imgsrc card) :class (cond (:exhausted? card) "disabled")}]]
-          [:div
-            [:button.btn-sm.btn-close.ms-auto.bg-light {:on-click #(hidemodal) :style {:position "absolute" :right "5px" :top "5px"}}]
-        ;; options based on card and game state
-            (cond 
-              (-> card :collect-essence some?)  (modal-collect-essence card uname)
-              (:can-use? card)                  (modal-use card pdata)
-              (:target? card)                   (modal-target card pdata))]]
+(defn- modal-info [ pg ]
+  [:div.modalcontent.p-2.rounded.bg-light {:on-click #(.stopPropagation %)}
+    [:button.btn-sm.btn-close.ms-auto.bg-light {:on-click #(hidemodal) :style {:position "absolute" :right "5px" :top "5px" :z-index 99}}]
+    [:div#infocarousel.carousel.slide.h-100 {:data-ride "carousel"}
+      [:div.carousel-inner.h-100
+        [:div.carousel-item.h-100 {:class (if (= pg 0) "active") :key (gensym "carousel")} [:img.d-block.h-100 {:src (str "/img/ra/ref-0.jpg")}]]
+        [:div.carousel-item.h-100 {:class (if (= pg 1) "active") :key (gensym "carousel")} [:img.d-block.h-100 {:src (str "/img/ra/ref-1.jpg")}]]
+        [:div.carousel-item.h-100 {:class (if (= pg 2) "active") :key (gensym "carousel")} [:img.d-block.h-100 {:src (str "/img/ra/ref-2.jpg")}]]
+        [:div.carousel-item.h-100 {:class (if (= pg 3) "active") :key (gensym "carousel")} [:img.d-block.h-100 {:src (str "/img/ra/ref-3.jpg")}]]
+        ]
+      [:button.carousel-control-prev {:type "button" :on-click (fn [] (swap! ra-app update-in [:modal :info] #(max (dec %) 0)))} [:span.carousel-control-prev-icon]]    
+      [:button.carousel-control-next {:type "button" :on-click (fn [] (swap! ra-app update-in [:modal :info] #(min (inc %) 3)))} [:span.carousel-control-next-icon]]    
         
-        (if-let [discard (:discard modal)]
-          [:div.modalcontent.p-2.rounded.bg-light.d-flex.flex-wrap.w-100.justify-content-center
-            (for [c discard] 
-              [:div.m-1 {:key (gensym) :style {:width "20%" :height "auto"}}
-                [:img.img-fluid { :src (imgsrc c)}]]
-              )]))]))
+    ]])
+
+;;; Main
+(defn- modal [ gs pdata uname ] ; Content also driven via @ra-app
+  (let [{:keys [show? card discard info]} (:modal @ra-app)]
+    [:div.modal.ra-main {:hidden (-> show? nil?) :on-click #(hidemodal)}
+      (cond 
+        info    [modal-info info]
+        card    [:div.modalcontent.p-2.rounded.bg-light.d-flex {:on-click #(.stopPropagation %)}
+                  [:div.h-100.text-center
+                    [:img.card.h-100 {:src (imgsrc card) :class (cond (:exhausted? card) "disabled")}]]
+                  [:div
+                    [:button.btn-sm.btn-close.ms-auto.bg-light {:on-click #(hidemodal) :style {:position "absolute" :right "5px" :top "5px"}}]
+                  (cond   ;; options based on card and game state
+                    (= :collect (:phase gs))          (modal-collect-essence card uname)
+                    (:can-use? card)                  (modal-use card pdata)
+                    (:target? card)                   (modal-target card pdata))]]
+        
+        discard [:div.modalcontent.p-2.rounded.bg-light.d-flex.flex-wrap.w-100.justify-content-center
+                  (for [c discard] 
+                    [:div.m-1 {:key (gensym) :style {:width "20%" :height "auto"}}
+                      [:img.img-fluid { :src (imgsrc c)}]]
+                    )])]))
 
 ;; Main View
 ;;; Modules
@@ -338,6 +370,9 @@
                                       (assoc % :target? true) 
                                       %)))) :md true)])]))
 
+(defn- p1token [ gs pname action ]
+  (if (= pname (first-player-token-holder gs)) [:img.p1token {:src (str "/img/ra/player1" (if (= :pass action) "passed") ".png")}]))
+
 (defn- opponentdisplay [ gs uname ]
   (let [magicitems (:magicitems gs)]
     [:div.d-flex
@@ -354,13 +389,14 @@
           }
           [:div.d-flex.mx-1.p-1 ;.justify-content-between
             [:h5.me-3 (str k (if-let [mage (-> v :public :mage :name)] (str " - " mage)))]
-            [:div [:div.d-flex.justify-content-center.essence-bar (for [ [r n] (-> v :public :essences)] (essence-icon r n) )]]
+            [:div [:div.d-flex.justify-content-center.essence-bar (for [ [r n] (-> v :public :essence)] (essence-icon r n) )]]
             [:div]
             ]
           [:div.d-flex.mb-1.ms-1
             ;(if (-> v :public :mage map?) (-> v :public :mage (render-card :sm)))
             ;(if-let [item (getmagicitem magicitems k)] (render-card item :sm))
             (-> gs (player-public-cards k) (set-tags :collect-essence nil) (set-tags :passed? passed?) render-cards) 
+            (p1token gs k (:action v))
             ]
          
         ]))
@@ -369,14 +405,14 @@
 (defn- playerdisplay [ gs uname pdata ]
   (let [play? (= :play (:action pdata)) passed? (= :pass (:action pdata))]
     [:div.d-flex
-      [:div.border.border-dark.rounded.m-1.px-2.playerdisplay {:style {:flex-grow 1 } :class (case (:action pdata) :pass "pass" :play "focus" "")}
+      [:div.border.border-dark.rounded.m-1.px-2.playerdisplay {:style {:flex-grow 1} :class (case (:action pdata) :pass "pass" :play "focus" "")}
         [:div.d-flex
           [:h3.me-3 (str uname (if-let [mage (-> pdata :public :mage :name)] (str " - " mage)))]
           (cond
             (= :collect (:phase gs))  
-                (let [collected? (:collected? pdata) collect-remaining (filter :collect-essence (-> gs (player-public-cards uname)))]
+                (let [collected? (:collected? pdata) collect-remaining (filter :collect-essence (-> gs (player-public-cards uname)))] ; include take-essence also
                   [:div
-                    [:span.me-1 "Collect essences"]
+                    [:span.me-1 "Collect essence"]
                     [:button.btn.mt-1 {
                         :class   (if collected? "btn-success active" (if (empty? collect-remaining) "btn-primary" "btn-warning")) 
                         :on-click #(comms/ra-send! {:action :collected})} 
@@ -394,10 +430,11 @@
             [:button.btn.btn-sm.btn-outline-secondary {:title "Pass" :on-click #(comms/ra-send! {:action :pass})} [:i.fas.fa-sign-out-alt.text-primary]]
             [:button.btn.btn-sm.btn-outline-secondary {:title "View Discard Pile" :on-click #(swap! ra-app assoc :modal {:show? true :discard (-> pdata :public :discard)})} [:i.fas.fa-trash-alt.text-danger]]]
           (-> gs (player-public-cards uname) (set-tags :passed? passed?) (set-tags :target? play?) (set-tags :can-use? play?) render-cards)
+          (p1token gs uname (:action pdata))
         ]
         [:div.d-flex.justify-content-between {:style {:position "relative"}}
           [:div "Hand"]
-          [:div.d-flex.justify-content-center.essence-bar (doall (for [ [r n] (-> pdata :public :essences)] (essence-icon r n) ))]
+          [:div.d-flex.justify-content-center.essence-bar (doall (for [ [r n] (-> pdata :public :essence)] (essence-icon r n) ))]
           [:div ]
           [:div.d-flex.hand (-> pdata :private :artifacts (set-tags :target? play?) render-cards)]
           ]
@@ -435,22 +472,22 @@
     (playerdisplay gs uname pdata)
   ])
 
-(defn- icon-drop-down [v]
-  [:div.bg-light.border.px-2.w-100 {:style {:position "absolute" :top "1.5em" :left "0" :display (if (:hidden? @v) "none" "unset")}}
-    (for [r essence-list] [:div.my-2.text-center {:on-click (fn [e] (.stopPropagation e) (reset! v {:icon r :hidden? true})) :key (gensym) :class (str "icon-" (name r)) }] )])
-(defn- icon-select []
-  (let [v (r/atom {:icon :gold :hidden? true})]
-    (fn []
-      [:div [:div.border.bg-light.px-2.clickable {:style {:position "relative" :width "2em"} :on-click #(swap! v assoc :hidden? (-> @v :hidden? false?))}
-        [:div.text-center [:span {:class (str "icon-" (-> @v :icon name))}]]
-        [icon-drop-down v]
-        ]])))
+;(defn- icon-drop-down [v]
+;  [:div.bg-light.border.px-2.w-100 {:style {:position "absolute" :top "1.5em" :left "0" :display (if (:hidden? @v) "none" "unset")}}
+;    (for [r essence-list] [:div.my-2.text-center {:on-click (fn [e] (.stopPropagation e) (reset! v {:icon r :hidden? true})) :key (gensym) :class (str "icon-" (name r)) }] )])
+;(defn- icon-select []
+;  (let [v (r/atom {:icon :gold :hidden? true})]
+;    (fn []
+;      [:div [:div.border.bg-light.px-2.clickable {:style {:position "relative" :width "2em"} :on-click #(swap! v assoc :hidden? (-> @v :hidden? false?))}
+;        [:div.text-center [:span {:class (str "icon-" (-> @v :icon name))}]]
+;        [icon-drop-down v]
+;        ]])))
 
 (defn- page-banner [ gs ] 
   [:div.d-flex.justify-content-between.ra-main.m-1
     [:h2.mt-auto.mb-0 "Res Arcana - " (if (= (:status gs) :setup) "Setup" (-> gs :phase name clojure.string/capitalize (str " phase")))]
     ;[:div#debug (-> gs :chat str)]
-    [icon-select]
+    ;[icon-select]
     [:div.d-flex
       (for [p (:display-to gs) 
               :let [plyr (-> gs :players (get p))  
@@ -463,11 +500,13 @@
             :class (cond ready? "ready" active? "active" passed? "pass" :else "")
           } 
           (-> plyr :public :mage :name) 
-          [:small " - " p ]
+          [:small.ms-1 (str "(" p ")") ]
           ])]
     [:div 
       [:div.btn-group.btn-group-sm.me-2
-        [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame})} "G1"]]
+        [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 1})} "G1"]
+        [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 2})} "G2"]]
+      [:button.btn.btn-sm.btn-primary.ms-auto.me-2 {:on-click #(swap! ra-app assoc :modal {:show? true :info (if (= :setup (:status gs)) 0 1)})} [:i.fas.fa-info-circle]]
       [:button.btn.btn-sm.btn-danger {:on-click #(if (js/confirm "Are you sure you want to Quit?") (comms/leavegame @gid))} [:i.fas.fa-times-circle]]]])
 
 ;;; MAIN ;;;
@@ -479,7 +518,7 @@
   (let [gs    (:state @gm)
         pdata (-> gs :players (get @uname))]
     [:div.container-fluid
-      (modal pdata @uname)
+      (modal gs pdata @uname)
       [chat gs]
       [page-banner gs]
       (case (-> @gm :state :status)
@@ -494,7 +533,7 @@
 ;;;      :artifacts nil
 ;;;      :monuments nil
 ;;;      :pops nil
-;;;      :essences {
+;;;      :essence {
 ;;;        :gold 1
 ;;;        :calm 1
 ;;;        :elan 1
