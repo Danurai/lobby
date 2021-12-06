@@ -53,26 +53,26 @@
   ]
   
   :artifacts [
-    {:id 0  :type "artifact" :name "Athanor"              :cost {:gold 1 :elan 1} :action []}
+    {:id 0  :type "artifact" :name "Athanor"              :cost {:gold 1 :elan 1} :action [{:exhaust true :cost {:elan 1} :place {:elan 2}} {:exhaust true :remove {:elan 6}} ]}
     {:id 1  :type "artifact" :name "Bone Dragon"          :cost {:death 4 :life 1} :subtype "Dragon" :action [] :vp 1}
-    {:id 2  :type "artifact" :name "Celestial Horse" :fg 3 :cost {:calm 2 :elan 1} :subtype "Creature" :collect [{:any {:val 2 :excl #{:gold :death}}}]}
-    {:id 3  :type "artifact" :name "Chalice of Fire"      :cost {:gold 1 :elan 1} :collect [{:elan 2}]}
-    {:id 4  :type "artifact" :name "Chalice of Life" :fg 2 :cost {:gold 1 :life 1 :calm 1} :collect [{:calm 1 :life 1}]}
-    {:id 5  :type "artifact" :name "Corrupt Altar"        :cost {:any 3 :death 2} :collect [{:life 1 :death 1}]}
-    {:id 6  :type "artifact" :name "Crypt"                :cost {:any 3 :death 2} :action []}
-    {:id 7  :type "artifact" :name "Cursed Skull"         :cost {:death 2} :action []}
-    {:id 8  :type "artifact" :name "Dancing Sword"  :fg 4 :cost {:gold 1 :elan 1} :collect [{:death 1 :elan 1}] :action []}
-    {:id 9  :type "artifact" :name "Dragon Bridle"        :cost {:elan 1 :life 1 :calm 1 :death 1} :action [] :react []}
+    {:id 2  :type "artifact" :name "Celestial Horse" :fg 3 :cost {:calm 2 :elan 1} :subtype "Creature" :collect [{:any 2}] :collectexclude #{:gold :death}}
+    {:id 3  :type "artifact" :name "Chalice of Fire"      :cost {:gold 1 :elan 1} :collect [{:elan 2}] :action [{:exhaust true :cost {:elan 1} :refresh :any}]}
+    {:id 4  :type "artifact" :name "Chalice of Life" :fg 2 :cost {:gold 1 :life 1 :calm 1} :collect [{:calm 1 :life 1}] :action [{:cost {:calm 2} :place {:calm 2 :life 1}} {:react true :exhaust true :ignore :loselife}]}
+    {:id 5  :type "artifact" :name "Corrupt Altar"        :cost {:any 3 :death 2} :collect [{:life 1 :death 1}] :action [{:cost {:life 2} :place {:elan 3}} {:exhaust true :special 5}]}
+    {:id 6  :type "artifact" :name "Crypt"                :cost {:any 3 :death 2} :action [{:exhaust true :gain {:death 2}} {:exhaust true :cost {:death 1} :special 6}]}
+    {:id 7  :type "artifact" :name "Cursed Skull"         :cost {:death 2} :action [{:exhaust true :cost {:life 1} :place {:any 3} :placeexclude #{:gold :life}}]}
+    {:id 8  :type "artifact" :name "Dancing Sword"  :fg 4 :cost {:gold 1 :elan 1} :collect [{:death 1 :elan 1}] :action [{:react true :cost {:elan 1} :place {:death 1} :ignore :loselife}]}
+    {:id 9  :type "artifact" :name "Dragon Bridle"        :cost {:elan 1 :life 1 :calm 1 :death 1} :action [{:special 9} {:react true :exhaust true :ignore :dragonpower}] }
                 
-    {:id 10 :type "artifact" :name "Dragon Egg"           :cost {:gold 1} :vp 1}
+    {:id 10 :type "artifact" :name "Dragon Egg"           :cost {:gold 1} :vp 1 }
     {:id 11 :type "artifact" :name "Dragon Teeth"   :fg 1 :cost {:elan 1 :death 1} :action [{:exhaust false :cost {:elan 2} :place {:elan 3}} {:exhaust true :cost {:elan 3} :place {:subtype "Dragon" :cost {}}}]}
-    {:id 12 :type "artifact" :name "Dwarven Pickaxe"      :cost {:elan 1}}
-    {:id 13 :type "artifact" :name "Earth Dragon"         :cost {:elan 4 :life 3} :subtype "Dragon" :vp 1}
-    {:id 14 :type "artifact" :name "Elemental Spring" :fg 1 :cost {:elan 2 :life 1 :calm 1} :collect [{:calm 1 :life 1 :elan 1}] :action [{:react true :value :any :cost {:calm 1}}]}
-    {:id 15 :type "artifact" :name "Elvish Bow"           :cost {:elan 2 :life 1}}
-    {:id 16 :type "artifact" :name "Fiery Whip"           :cost {:elan 2 :death 2}}
+    {:id 12 :type "artifact" :name "Dwarven Pickaxe"      :cost {:elan 1} :action [{:exhaust true :cost {:elan 1} :gain {:gold 1}}]}
+    {:id 13 :type "artifact" :name "Earth Dragon"         :cost {:elan 4 :life 3} :subtype "Dragon" :vp 1 :action [{:exhaust true :rivals {:loselife 2} :ignorecost {:gold 1}}]}
+    {:id 14 :type "artifact" :name "Elemental Spring" :fg 1 :cost {:elan 2 :life 1 :calm 1} :collect [{:calm 1 :life 1 :elan 1}] :action [{:react true :cost {:calm 1} :ignore :loselife}]}
+    {:id 15 :type "artifact" :name "Elvish Bow"           :cost {:elan 2 :life 1} :action [{:exhaust true :rivals {:loselife 1}} {:exhaust true :drawcard 1}]}
+    {:id 16 :type "artifact" :name "Fiery Whip"           :cost {:elan 2 :death 2} :action [{:exhaust true :gain {:elan 3} :rivals {:elan 1} }]}
     {:id 17 :type "artifact" :name "Fire Dragon"          :cost {:elan 6} :subtype "Dragon" :vp 1}
-    {:id 18 :type "artifact" :name "Flaming Pit"    :fg 2 :cost {:elan 2} :collect [{:elan 1}]}
+    {:id 18 :type "artifact" :name "Flaming Pit"    :fg 2 :cost {:elan 2} :collect [{:elan 1}] :action [{:exhaust true :cost {:life 1} :gain {:elan 1 :death 1}}]}
     {:id 19 :type "artifact" :name "Fountain of Youth" :fg 4 :cost {:calm 1 :death 1} :collect [{:life 1}]}
       
     {:id 20 :type "artifact" :name "Guard Dog"            :cost {:elan 1}:subtype "Creature" }

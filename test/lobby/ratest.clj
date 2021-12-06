@@ -774,6 +774,17 @@
         (ramodel/parseaction {:action :place :card (first artifacts) :essence (-> artifacts first :cost)} p1)
         :players (get p1) :err)))
 
+; After cards have been placed, start new turn, cards are still in order
+(expect "Dragon Teeth"
+  (let [p1 (-> g1 :plyr-to first)
+        artifacts (-> g1 :players (get p1) :private :artifacts)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card (first artifacts)  :essence (-> artifacts first :cost)} p1)
+        (ramodel/parseaction {:action :place :card (second artifacts) :essence (-> artifacts second :cost)} p1)
+        (ramodel/parseaction {:action :place :card (last artifacts)   :essence (-> artifacts last :cost)} p1)
+        (end-turn p1)
+        :players (get p1) :public :artifacts first :name)))
+
 
 
 
@@ -906,6 +917,14 @@
           (map :exhausted?)
           frequencies
           )))
+
+;;; Use card - Draw
+(expect 4
+  (let [p1 (-> g2 :plyr-to first)
+        mi (->> g2 :magicitems (filter #(= (:owner %) p1)) first)]      ; Research 
+    (-> g2
+        (ramodel/parseaction {:action :usecard :useraction (-> mi :action first (assoc :cost {:death 1})) :card mi} p1)
+        :players (get p1) :private :artifacts count)))
         
 ;;; Take Essences - hard-coded placed essence in ramodel/parseaction calls
 ; Take essence from card (mage)

@@ -41,7 +41,7 @@
 (defn- essence-icon [ type n ]
   (let [color (case type (:elan :death) "white" "black")
         scale 1]
-    (if (some? n)
+    (if (and (> n 0) (some? n))
         [:div.text-center.mx-1.mt-1 {
             :key (gensym)
             :style {
@@ -279,16 +279,22 @@
           (if-let [rivals (:rivals a)]                                                  ; Rivals Gain
             [:div.d-flex [:div.me-1 "+ all rivals gain"] (for [[k v] rivals] (essence-icon k v))])
           (if-let [place (:place a)]                                                    ; Place essence
-            [:div.d-flex (for [[k v] place] (essence-icon k v)) [:i.fas.fa-caret-square-down.fa-lg.my-auto]])]
-        [:div.d-flex.justify-content-center 
-          (for [[k v] (-> pdata :public :essence)] (essence-icon k v))]
-        [:div.d-flex 
+            [:div.d-flex (for [[k v] place] (essence-icon k v)) [:i.fas.fa-caret-square-down.fa-lg.my-auto]])
+          (if-let [draw (:draw a)] [:div (str "draw " draw " card" )])]
+        [:div.d-flex.justify-content-around.mb-1
+          [:div.h4 "Pay:"]
+          [:div (for [[k v] (:cost @req)] [:div.clickable {:on-click #(swap! req update-in [:cost k] dec)} (essence-icon k v) ])]
           [:button.btn.btn-primary.ms-auto {
-              :disabled (not (can-pay-cost? (:cost a) (-> pdata :public :essence))) 
+              :disabled (not (can-pay-cost? (:cost a) (:cost @req))) 
               :on-click #((comms/ra-send! {:action :usecard :useraction @req :card card}) (hidemodal))
             } "Use Action"]]
+        [:div.h5 "Player Essence"]
+        [:div.d-flex.justify-content-center 
+          (for [[k v] (-> pdata :public :essence)] 
+            (if (> v 0) 
+                [:div.clickable {:on-click #(if (-> @req :cost k) (swap! req update-in [:cost k] inc) (swap! req assoc-in [:cost k] 1))} (essence-icon k (- v (-> @req :cost (k 0))))]))]
         [:small.muted (str @req)]
-        [:div [:small.muted (-> @req  str) (-> pdata :public :essence)]]
+        ;[:div [:small.muted (-> @req  str) (-> pdata :public :essence)]]
       ])))
 
 (defn- modal-use [ card uname ]
@@ -431,6 +437,7 @@
             [:button.btn.btn-sm.btn-outline-secondary {:title "View Discard Pile" :on-click #(swap! ra-app assoc :modal {:show? true :discard (-> pdata :public :discard)})} [:i.fas.fa-trash-alt.text-danger]]]
           (-> gs (player-public-cards uname) (set-tags :passed? passed?) (set-tags :target? play?) (set-tags :can-use? play?) render-cards)
           (p1token gs uname (:action pdata))
+          ;[:small (str pdata)]
         ]
         [:div.d-flex.justify-content-between {:style {:position "relative"}}
           [:div "Hand"]
@@ -502,7 +509,7 @@
           (-> plyr :public :mage :name) 
           [:small.ms-1 (str "(" p ")") ]
           ])]
-    [:div 
+    [:div
       [:div.btn-group.btn-group-sm.me-2
         [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 1})} "G1"]
         [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 2})} "G2"]]

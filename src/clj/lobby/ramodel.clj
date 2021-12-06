@@ -42,12 +42,17 @@
       gamestate
       (assoc-in gamestate [:players p :action] action)))
 
-(defn- drawcard [ gamestate uname ]
-  (let [artdeck (-> gamestate :players (get uname) :secret :artifacts)]
-    (-> gamestate
-        (update-in [:players uname :private :artifacts] conj (first artdeck))
-        (assoc-in [:players uname :secret :artifacts] (rest artdeck))
-        (add-chat "Draw 1 card." uname))))
+(defn- drawcard 
+  ([ gamestate uname n]
+    (println "drawcard:" uname n)
+    (if n 
+      (let [artdeck (-> gamestate :players (get uname) :secret :artifacts)]
+        (-> gamestate
+            (update-in [:players uname :private :artifacts] #(apply conj % (take n artdeck)))
+            (assoc-in [:players uname :secret :artifacts] (nthrest artdeck n))
+            (add-chat "Draw 1 card." uname)))
+      gamestate))
+  ([ gamestate uname ] (drawcard gamestate uname 1)))
  
 (defn get-active-player [ gamestate ]
   (reduce-kv 
@@ -83,7 +88,7 @@
 
 ; update functions above to take :collect-essence or :take-essence params)
 (defn- take-essence [ gamestate {:keys [card] :as ?data} uname]
-  (println "take-essence:" uname card)
+  (if verbose? (println "take-essence:" uname card))
   (-> gamestate 
       (update-player-essence {:essence (:take-essence card)} uname)
       (remove-card-essence card :take-essence uname)))
@@ -113,7 +118,7 @@
     "mage"
       (update-in gamestate [:players uname :public :mage] #(apply-exhaust % exhaust?)) ; regardless of card id
     "artifact"
-      (assoc-in  gamestate [:players uname :public :artifacts] (map #(apply-exhaust % exhaust?) (-> gamestate :players (get uname) :public :artifacts) )) 
+      (assoc-in  gamestate [:players uname :public :artifacts] (mapv #(if (= (:uid %) (:uid card)) (apply-exhaust % exhaust?) %) (-> gamestate :players (get uname) :public :artifacts) )) 
     "magicitem"
       (assoc     gamestate :magicitems (map #(if (= (:uid %) (:uid card)) (apply-exhaust % exhaust?) %) (:magicitems gamestate)))
     gamestate))
@@ -244,7 +249,7 @@
                 (-> m 
                     (assoc-in [k :action] :waiting)
                     (update-in [k :public :mage] dissoc :exhausted?)
-                    (assoc-in [k :public :artifacts] (->> v :public :artifacts (map #(dissoc % :exhausted?)))))) 
+                    (assoc-in [k :public :artifacts] (->> v :public :artifacts (mapv #(dissoc % :exhausted?)))))) 
               (:players gamestate) (:players gamestate)))
           (set-player-action (-> gamestate :pass-to first) :play)
           (update :round inc)
@@ -368,7 +373,8 @@
                   m)) gamestate (:players gamestate))))
         (update-player-essence {:essence (invert-essence (:cost useraction))} uname)     ; Pay cost
         (update-player-essence {:essence (:gain useraction)} uname)     ; Gain essence
-        (place-essence card (:place useraction) uname)
+        (place-essence card (:place useraction) uname)                  ; Place essence
+        (drawcard uname (:draw useraction))
         (exhaust-card card (:exhaust useraction) uname)))
 
 ;;;;;;;;;; SETUP/START GAME ;;;;;;;;;;
