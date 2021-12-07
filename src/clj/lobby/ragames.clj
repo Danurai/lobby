@@ -48,18 +48,20 @@
 			(assoc :action (if (= n 1 ) :play :waiting))
 		))
 (def game1 
-	(assoc gs
-		:status :play 
-		:phase  :action
-		:pops   (->> @data :placesofpower (filter :fg?))
-		:monuments (hash-map :public (->> @data :monuments (take 2)) :secret (-> @data :monuments (nthrest 2)))
-		:plyr-to ["dan" "AI123"] 
-		:display-to ["dan" "AI123"] 
-		:players (hash-map "dan" (setplayerdata 1) "AI123" (setplayerdata 2))
-		:magicitems (map #(assoc (case (:id %) 1 (assoc % :owner "dan") 2 (assoc % :owner "AI123") %) :uid (gensym "mi")) (:magicitems @data) )
-		:chat [{:uname "dan" :msg "Swap to predefined Game1" :timestamp (new java.util.Date)}]
-		:allcards get-all-cards
-		))
+	(let [monuments (mapv #(assoc % :uid (gensym "mon")) (:monuments @data))
+				pops			(mapv #(assoc % :uid (gensym "pop")) (:placesofpower @data))]
+		(assoc gs
+			:status :play 
+			:phase  :action
+			:pops   (filter :fg? pops)
+			:monuments (hash-map :public (take 2 monuments) :secret (nthrest monuments 2))
+			:plyr-to ["dan" "AI123"] 
+			:display-to ["dan" "AI123"] 
+			:players (hash-map "dan" (setplayerdata 1) "AI123" (setplayerdata 2))
+			:magicitems (map #(assoc (case (:id %) 1 (assoc % :owner "dan") 2 (assoc % :owner "AI123") %) :uid (gensym "mi")) (:magicitems @data) )
+			:chat [{:uname "dan" :msg "Swap to predefined Game1" :timestamp (new java.util.Date)}]
+			:allcards get-all-cards
+			)))
 
 (def game2 
 	(-> game1
