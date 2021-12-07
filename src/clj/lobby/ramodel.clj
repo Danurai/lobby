@@ -44,7 +44,7 @@
 
 (defn- drawcard 
   ([ gamestate uname n]
-    (println "drawcard:" uname n)
+    (if verbose? (println "drawcard:" uname n))
     (if n 
       (let [artdeck (-> gamestate :players (get uname) :secret :artifacts)]
         (-> gamestate
@@ -61,7 +61,23 @@
 
 (defn- invert-essence [ essence ]
   (reduce-kv (fn [m k v] (assoc m k (* -1 v))) {} essence))
-;;;;; essence ;;;;; 
+
+;;; VP Functions ;;;;
+(defn- vpfn-essence [ take-essence essence ]
+  (if take-essence
+      (essence take-essence 0)
+      0))
+(defn- vpfn [ card ]
+  (let [te (:take-essence card)]
+    (case (:name card)
+      "Sacred Grove"          (+ 2 (vpfn-essence te :life))
+      "Catacombs of the Dead" (vpfn-essence te :death)
+      "Cursed Forge"          (+ 1 (vpfn-essence te :gold))
+      "Dragon's Lair"         (vpfn-essence te :gold)
+      (:vp card) ; mostly monuments and artifacts
+    )))
+
+;;;;; ESSENCE ;;;;; 
 
 (defn update-player-essence [ gamestate {:keys [essence] :as ?data} uname ] 
   (if verbose? (println "update-player-essence:" essence uname))
@@ -108,19 +124,19 @@
             )
           ) (:players gamestate) (:players gamestate))))) 
 
-;;; Exhaust 
-(defn- apply-exhaust [ card exhaust? ]  
-  (if exhaust? (assoc card :exhausted? true) (dissoc card :exhausted)))
+;;; Turn Card
+(defn- apply-turn [ card turn? ]  
+  (if turn? (assoc card :turned? true) (dissoc card :turned)))
 
-(defn- exhaust-card [ gamestate card exhaust? uname]
-  (if verbose? (println "exhaust-card:" uname card exhaust? ))
+(defn- turn-card [ gamestate card turn? uname]
+  (if verbose? (println "turn-card:" uname card turn? ))
   (case (:type card)
     "mage"
-      (update-in gamestate [:players uname :public :mage] #(apply-exhaust % exhaust?)) ; regardless of card id
-    "artifact"
-      (assoc-in  gamestate [:players uname :public :artifacts] (mapv #(if (= (:uid %) (:uid card)) (apply-exhaust % exhaust?) %) (-> gamestate :players (get uname) :public :artifacts) )) 
+      (update-in gamestate [:players uname :public :mage] #(apply-turn % turn?)) ; regardless of card id
+    ("artifact" "pop" "monument")
+      (assoc-in  gamestate [:players uname :public :artifacts] (mapv #(if (= (:uid %) (:uid card)) (apply-turn % turn?) %) (-> gamestate :players (get uname) :public :artifacts) )) 
     "magicitem"
-      (assoc     gamestate :magicitems (map #(if (= (:uid %) (:uid card)) (apply-exhaust % exhaust?) %) (:magicitems gamestate)))
+      (assoc     gamestate :magicitems (map #(if (= (:uid %) (:uid card)) (apply-turn % turn?) %) (:magicitems gamestate)))
     gamestate))
 
 ; AI Collect  
@@ -215,7 +231,7 @@
     (-> gamestate
         (set-player-action uname :pass)
         (assoc :magicitems (mapv #(if (= (:owner %) uname)
-                                      (dissoc % :owner :exhausted?)
+                                      (dissoc % :owner :turned?)
                                       (if (and (-> % :owner nil?) (= (:uid %) (:card ?data)))
                                           (assoc % :owner uname)
                                           %) ) (:magicitems gamestate)))))
@@ -235,6 +251,23 @@
     uname))
 
 ;;;;; NEXT TURN / ROUND ;;;;;
+(defn- player-public-components [ gs uname ]
+  (let [pdata     (-> gs :players (get uname))
+        mage      (-> pdata :public :mage) 
+        mi        (->> gs :magicitems (filter #(= (:owner %) uname)) first) 
+        artifacts (-> pdata :public :artifacts)] ; includes any claimed monuments and places of power
+    (apply conj [] mage mi artifacts)))
+
+(defn- update-vp [ gs ]
+  (reduce-kv ; m = gs [k v] :players
+    (fn [m k v]
+      (assoc-in m [:players k :vp]
+        (->>  (player-public-components m k)
+              (filter :vp)
+              (map #(hash-map (:name %) (vpfn %)))
+              (apply conj)
+        )))
+    gs (:players gs)))
 
 (defn- new-round-check [ gamestate ]
   (if verbose? (println "new round check:" (-> gamestate :plyr-to empty?)))
@@ -248,8 +281,8 @@
               (fn [m k v]
                 (-> m 
                     (assoc-in [k :action] :waiting)
-                    (update-in [k :public :mage] dissoc :exhausted?)
-                    (assoc-in [k :public :artifacts] (->> v :public :artifacts (mapv #(dissoc % :exhausted?)))))) 
+                    (update-in [k :public :mage] dissoc :turned?)
+                    (assoc-in [k :public :artifacts] (->> v :public :artifacts (mapv #(dissoc % :turned?)))))) 
               (:players gamestate) (:players gamestate)))
           (set-player-action (-> gamestate :pass-to first) :play)
           (update :round inc)
@@ -267,6 +300,7 @@
         (set-player-action nextp :play)
         (add-chat "End of turn" uname)
         new-round-check
+        update-vp
         )))
 
 (defn- pass [ gamestate uname ]
@@ -288,12 +322,24 @@
 ;;; PLAY A CARD ;;
 ; Depends on update-player-essence
 ; depends on next player/round TODO
-(defn playcard [ gamestate {:keys [card essence]} uname ]
+(defn- replacemonument [ gamestate draw? ]
+  (if draw?
+      (let [mondeck (-> gamestate :monuments :secret)]
+        (-> gamestate
+            (update-in [:monuments :public] conj (first mondeck))
+            (assoc-in  [:monuments :secret] (-> mondeck rest vec))))
+      gamestate))
+    
+
+(defn- playcard [ gamestate {:keys [card essence]} uname ]
   (if verbose? (println "playcard:" uname card "paid" essence))
   (-> gamestate
-    (assoc-in [:players uname :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> gamestate :players (get uname) :private :artifacts)))
+    (assoc-in [:players uname :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> gamestate :players (get uname) :private :artifacts))) ; Artifact
+    (assoc :pops (->> gamestate :pops (remove #(= (:uid %) (:uid card)))))                                                                    ; Place of power
+    (assoc-in [:monuments :public] (->> gamestate :monuments :public (remove #(= (:uid %) (:uid card))) vec))                                 ; Monument 
+    (replacemonument (= "monument" (:type card)))
     (update-in [:players uname :public :artifacts] conj card)
-    (add-chat (str "Played Artifact " (:name card)) uname)
+    (add-chat (str (case (:type card) "artifact" "Played " "Claimed ") (:name card)) uname)
     (update-player-essence {:essence (invert-essence essence)} uname)
     ))
 
@@ -343,24 +389,28 @@
   ;; will only be a mage or in the players :public artifacts
   (if verbose? (println "place-essence:" uname card essence))
   (case (:type card)
-    "mage" (reduce-kv 
-              (fn [m k v]
-                (if (-> m :players (get uname) :public :mage :take-essence k)
-                    (update-in m [:players uname :public :mage :take-essence k] + v)
-                    (assoc-in  m [:players uname :public :mage :take-essence k]   v)))
-              gamestate essence) ; regardless of card id
-    "artifact" (assoc-in gamestate [:players uname :public :artifacts] 
-                (mapv 
-                  (fn [a]
-                    (if (= (:uid a) (:uid card))
-                        (reduce-kv (fn [m k v] (if (-> a :take-essence k)
-                                                    (update-in a [:take-essence k] + v)
-                                                    (assoc-in  a [:take-essence k]   v))) a essence)
-                        a)) (-> gamestate :players (get uname) :public :artifacts)))
+    "mage" 
+      (reduce-kv 
+        (fn [m k v]
+          (if (-> m :players (get uname) :public :mage :take-essence k)
+              (update-in m [:players uname :public :mage :take-essence k] + v)
+              (assoc-in  m [:players uname :public :mage :take-essence k]   v)))
+        gamestate essence) ; regardless of card id
+    ("artifact" "monument" "pop")
+      (assoc-in gamestate [:players uname :public :artifacts] 
+        (mapv 
+          #(if (= (:uid %) (:uid card))
+                (reduce-kv 
+                  (fn [m k v] 
+                      (if (-> % :take-essence k)
+                          (update-in % [:take-essence k] + v)
+                          (assoc-in  % [:take-essence k]   v))) 
+                  % essence)
+                %) (-> gamestate :players (get uname) :public :artifacts)))
     gamestate))
 
 ;;; USE A CARD ;;;
-;; Request: {:action :usecard, :useraction {:exhaust true, :cost {}, :gain {:death 2}, :rivals {:death 1}}, :gid :gm93866} dan
+;; Request: {:action :usecard, :useraction {:turn true, :cost {}, :gain {:death 2}, :rivals {:death 1}}, :gid :gm93866} dan
 (defn- use-card [ gamestate {:keys [card useraction]} uname] 
     (if verbose? (println "use-card:" card useraction uname))
     (-> gamestate
@@ -375,7 +425,7 @@
         (update-player-essence {:essence (:gain useraction)} uname)     ; Gain essence
         (place-essence card (:place useraction) uname)                  ; Place essence
         (drawcard uname (:draw useraction))
-        (exhaust-card card (:exhaust useraction) uname)))
+        (turn-card card (:turn useraction) uname)))
 
 ;;;;;;;;;; SETUP/START GAME ;;;;;;;;;;
 
@@ -536,7 +586,7 @@
 ; - 4  Place of Power card is in pops
 ; - 8  Monument is in Monument pool
 ; - 16 Not an Artifact, Pop, or Monument
-; - 32 Card is Exhausted
+; - 32 Card is turned
 
 ; PASS - exchange magic items and draw 1 - first to pass becomes 1st player.
 

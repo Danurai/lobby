@@ -181,3 +181,13 @@
 .bg-essence {
   background-color: #c5b197;
 }
+
+.vp {
+  width: 1.5em;
+  aspect-ratio: 1;
+  background-color: darkred;
+  color: whitesmoke;
+  border-radius: 50%;
+  text-align: center;
+  padding-top: .2em;
+}
