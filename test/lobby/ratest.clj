@@ -677,26 +677,6 @@
         (ramodel/parseaction {:action :discard :essence {:elan 1 :death 1} :card a1} "p1")
         :players (get "p1") :private :artifacts count)))
 
-
-; Play card from hand
-(expect [1 2 {:life 1 :death 1 :elan 1 :calm 1 :gold 0}]
-  (let [gsetup  (ramodel/setup ["p1"])
-        m1      (-> gsetup :players (get "p1") :private :mages first)
-        mi1     (-> gsetup :magicitems first)
-        gs      (-> gsetup 
-                    (ramodel/parseaction {:action :selectmage :card (:uid m1)} "p1")
-                    (ramodel/parseaction {:action :selectstartitem :card (:uid mi1)} "p1"))
-        art1    (-> gs :players (get "p1") :private :artifacts first)
-        art2    (-> gs :players (get "p1") :private :artifacts last)
-        afterplay (ramodel/playcard gs {:card art1 :essence {:gold 1}} "p1")
-        ]
-    [ (-> afterplay :players (get "p1") :public  :artifacts count)
-      (-> afterplay :players (get "p1") :private :artifacts count)
-      (-> afterplay :players (get "p1") :public  :essence) ]))
-
-;; PLACE and CLAIM actions
-
-
 ; Card Target Tests
 ; Set by raview based on player status
 ; Block actions when it's not the active player's turn 
@@ -729,8 +709,8 @@
 ;;;;; TESTING Games ;;;;;;
 (def g1 (ramodel/parseaction {} {:action :swapgame :game 1} "p1"))
 (def g2 (ramodel/parseaction {} {:action :swapgame :game 2} "p1"))
-;2 players
 
+; setup tests
 (expect 2 (-> g1 :plyr-to count))
 (expect "Duelist" (let [p1 (-> g1 :plyr-to first)] (-> g1 :players (get p1) :public :mage :name)))
 (expect 3 (let [p1 (-> g1 :plyr-to first)] (-> g1 :players (get p1) :private :artifacts count)))
@@ -743,8 +723,10 @@
 (defn- end-turn [ gs p1 ]
   (-> gs 
       (ramodel/parseaction {:action :pass} p1)
-      (ramodel/parseaction {:action :selectmagicitem :card (->> gs :magicitems (remove :owner) first)} p1)
+      (ramodel/parseaction {:action :selectmagicitem :card (->> gs :magicitems (remove :owner) first :uid)} p1)
       (ramodel/parseaction {:action :collected} p1)))
+
+;; PLACE and CLAIM actions
 ;; PLACE a card  ;;
 (expect 3
   (let [p1 (-> g1 :plyr-to first)
@@ -815,7 +797,7 @@
 ; use (start 98 elan, PAY 2 elan, place 2 elan)
 (expect 96
   (let [p1 (-> g1 :plyr-to first)
-        artifact (-> g1 :players (get p1) :private :artifacts first)] ; Dragon teeth {:action [{:exhaust true, :cost {:elan 2} :place {:elan 3}}]}
+        artifact (-> g1 :players (get p1) :private :artifacts first)] ; Dragon teeth {:action [{:turn true, :cost {:elan 2} :place {:elan 3}}]}
     (-> g1 
         (ramodel/parseaction {:action :place :card artifact :essence (:cost artifact)} p1)
         (ramodel/parseaction {:action :usecard :card artifact :useraction (-> artifact :action first)} p1)
@@ -865,39 +847,87 @@
         (ramodel/parseaction {:action :usecard :card artifact :useraction (-> artifact :action first)} p1)
         :players (get p1) :public :artifacts first :take-essence :elan)))
 
-; Exhaust Mage
+;; Claim Pop
+; Added to Artifacts
+(expect "Sacred Grove"
+  (let [p1 (-> g1 :plyr-to first)
+        pop1 (-> g1 :pops first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card pop1 :essence (:cost pop1)} p1)
+        :players (get p1) :public :artifacts first :name)))
+; removed from pop list
+(expect "Catacombs of the Dead"
+  (let [p1 (-> g1 :plyr-to first)
+        pop1 (-> g1 :pops first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card pop1 :essence (:cost pop1)} p1)
+        :pops first :name)))
+;; Claim Monument
+; Added to Artifacts
+(expect "Colossus"
+  (let [p1 (-> g1 :plyr-to first)
+        mon1 (-> g1 :monuments :public first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        :players (get p1) :public :artifacts first :name)))
+; removed from monument list
+(expect "Golden Statue"
+  (let [p1 (-> g1 :plyr-to first)
+        mon1 (-> g1 :monuments :public first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        :monuments :public first :name)))
+; new monument draw
+(expect 2
+  (let [p1 (-> g1 :plyr-to first)
+        mon1 (-> g1 :monuments :public first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        :monuments :public count)))
+; new monument draw
+(expect 7
+  (let [p1 (-> g1 :plyr-to first)
+        mon1 (-> g1 :monuments :public first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        :monuments :secret count)))
+
+;; Place essence - Monument and Pop
+
+
+; Turn Mage
 (expect true
   (let [p1 (-> g1 :plyr-to first)  
         mage (-> g1 :players (get p1) :public :mage)] 
     (-> g1 
         (ramodel/parseaction {:action :usecard :useraction (-> mage :action first) :card mage} p1)
-        :players (get p1) :public :mage :exhausted?)))
-; Exhaust 'Artifact'
+        :players (get p1) :public :mage :turned?)))
+; Turn 'Artifact'
 (expect true
   (let [p1 (-> g1 :plyr-to first)
         artifact (-> g1 :players (get p1) :private :artifacts last)]
     (-> g1
         (ramodel/parseaction {:action :place :card artifact :essence (:cost artifact)} p1)
         (ramodel/parseaction {:action :usecard :useraction (-> artifact :action first) :card artifact} p1)
-        :players (get p1) :public :artifacts first :exhausted?)))
-; Exhaust Magic Item
+        :players (get p1) :public :artifacts first :turned?)))
+; Turn Magic Item
 (expect true
   (let [p1 (-> g2 :plyr-to first)
         mi (->> g2 :magicitems (filter #(= (:owner %) p1)) first)]      ; Research 
     (->>  (ramodel/parseaction g2 {:action :usecard :useraction (-> mi :action first (assoc :cost {:death 1})) :card mi} p1)
           :magicitems
-          (filter #(= (:owner %) p1)) first :exhausted?)))
+          (filter #(= (:owner %) p1)) first :turned?)))
 
 
-; Unexhaust (mage)
+; Straighten (mage)
 (expect nil
   (let [p1 (-> g1 :plyr-to first)  
         mage (-> g1 :players (get p1) :public :mage)] 
     (-> g1 
-        (ramodel/parseaction {:action :usecard :useraction {:exhaust true, :cost {:death -1}, :place {:gold 1}} :card mage} p1)
+        (ramodel/parseaction {:action :usecard :useraction {:turn true, :cost {:death -1}, :place {:gold 1}} :card mage} p1)
         (end-turn p1)
-        :players (get p1) :public :mage :exhausted?)))
-; Unexhaust 'Artifact'
+        :players (get p1) :public :mage :turned?)))
+; Straighten 'Artifact'
 (expect nil
   (let [p1 (-> g1 :plyr-to first)
         artifact (-> g1 :players (get p1) :private :artifacts last)]
@@ -905,8 +935,8 @@
         (ramodel/parseaction {:action :place :card artifact :essence (:cost artifact)} p1)
         (ramodel/parseaction {:action :usecard :useraction (-> artifact :action first) :card artifact} p1)
         (end-turn p1)
-        :players (get p1) :public :artifacts first :exhausted?)))
-; Unexhaust MagicItem
+        :players (get p1) :public :artifacts first :turned?)))
+; Straighten MagicItem
 (expect {nil 8}
   (let [p1 (-> g2 :plyr-to first)
         mi (->> g2 :magicitems (filter #(= (:owner %) p1)) first)]      ; Research 
@@ -914,7 +944,7 @@
               (ramodel/parseaction {:action :usecard :useraction (-> mi :action first (assoc :cost {:death 1})) :card mi} p1)
               (end-turn p1))
           :magicitems
-          (map :exhausted?)
+          (map :turned?)
           frequencies
           )))
 
@@ -930,7 +960,7 @@
 ; Take essence from card (mage)
 (expect 100
   (let [p1 (-> g1 :plyr-to first)  
-        mage (-> g1 :players (get p1) :public :mage)] ; Duelist :action [{:exhaust true :cost {:death 1} :place {:gold 1}}] 
+        mage (-> g1 :players (get p1) :public :mage)] ; Duelist :action [{:turn true :cost {:death 1} :place {:gold 1}}] 
     (-> g1 
         (ramodel/parseaction {:action :usecard :useraction (-> mage :action first) :card mage} p1)
         (ramodel/parseaction {:action :pass} p1)
@@ -939,7 +969,7 @@
         :players (get p1) :public :essence :gold)))
 (expect nil
   (let [p1 (-> g1 :plyr-to first)  
-        mage (-> g1 :players (get p1) :public :mage)] ; Duelist :action [{:exhaust true :cost {:death 1} :place {:gold 1}}] 
+        mage (-> g1 :players (get p1) :public :mage)] ; Duelist :action [{:turn true :cost {:death 1} :place {:gold 1}}] 
     (-> g1 
         (ramodel/parseaction {:action :usecard :useraction (-> mage :action first) :card mage} p1)
         (ramodel/parseaction {:action :pass} p1)
@@ -986,3 +1016,24 @@
 ;(expect 200
 ;  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence gold 200" p1) :players (get p1) :public :essence :gold)))
 ;
+
+;;; VP Check
+; Basic functionality - 
+(expect {"Colossus" 2}
+    (let [p1 (-> g1 :plyr-to first)
+          mon1 (-> g1 :monuments :public first)]
+      (-> g1
+          (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+          (end-turn p1)
+          :players (get p1) :vp)))
+; Extended 1 - calculated VP
+(expect {"Colossus" 2 "Catacombs of the Dead" 1}
+  (let [p1 (-> g1 :plyr-to first)
+        pop1 (-> g1 :pops second)
+        mon1 (-> g1 :monuments :public first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        (ramodel/parseaction {:action :place :card pop1 :essence (:cost pop1)} p1)
+        (ramodel/parseaction {:action :usecard :card pop1 :useraction (-> pop1 :action first)} p1)
+        (end-turn p1)
+        :players (get p1) :vp)))
