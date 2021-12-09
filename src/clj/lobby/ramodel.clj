@@ -22,17 +22,21 @@
                 (assoc-in [k :secret] (reduce-kv #(assoc %1 %2 (count %3)) {} (:secret v))))
           ) (:players state) (:players state)))))
                
-(defn- message-map [ msg uname ]
-  (hash-map 
-    :msg msg
-    :uname uname 
-    :timestamp (new java.util.Date)))
+(defn- message-map 
+  ([ msg uname event]
+    (hash-map 
+      :msg msg
+      :uname uname 
+      :event event
+      :timestamp (new java.util.Date)))
+  ([ msg uname ] (message-map msg uname nil)))
 
 (defn- add-chat
-  ([ gs msg uname ]
+  ([ gs msg uname event ]
     (update-in gs [:chat] 
-      conj (message-map msg uname)))
-  ([ gs msg ] (add-chat gs msg nil)))
+      conj (message-map msg uname event)))
+  ([ gs msg uname ] (add-chat gs msg uname nil))
+  ([ gs msg ] (add-chat gs msg nil nil)))
 
 (defn- is-ai? [ uname ]
   (some? (re-matches #"AI\d+" uname)))
@@ -91,7 +95,8 @@
   (case (:type card)
     "mage"      (update-in gs [:players uname :public :mage] dissoc attr)
     "magicitem" (assoc gs :magicitems (map #(if (= (:uid %) (:uid card)) (dissoc % attr) %) (:magicitems gs)))
-    "artifact"  (assoc-in gs [:players uname :public :artifacts] (map #(if (= (:uid %) (:uid card)) (dissoc % attr) %) (-> gs :players (get uname) :public :artifacts)))
+    ("artifact" "monument" "pop")
+                (assoc-in gs [:players uname :public :artifacts] (map #(if (= (:uid %) (:uid card)) (dissoc % attr) %) (-> gs :players (get uname) :public :artifacts)))
     gs))
 
 (defn- collect-essence [ gamestate {:keys [essence card] :as ?data} uname ]
@@ -259,15 +264,17 @@
     (apply conj [] mage mi artifacts)))
 
 (defn- update-vp [ gs ]
-  (reduce-kv ; m = gs [k v] :players
-    (fn [m k v]
-      (assoc-in m [:players k :vp]
-        (->>  (player-public-components m k)
-              (filter :vp)
-              (map #(hash-map (:name %) (vpfn %)))
-              (apply conj)
-        )))
-    gs (:players gs)))
+  (let [p1 (if (-> gs :pass-to empty?) (-> gs :plyr-to first) (-> gs :pass-to first))]
+    (reduce-kv ; m = gs [k v] :players
+      (fn [m k v]
+        (assoc-in m [:players k :vp]
+          (->>  (player-public-components m k)
+                (filter :vp)
+                (map #(hash-map (:name %) (vpfn %)))
+                (concat (if (= p1 k) [{"First Player" 1}]))
+                (apply conj )
+          )))
+      gs (:players gs))))
 
 (defn- new-round-check [ gamestate ]
   (if verbose? (println "new round check:" (-> gamestate :plyr-to empty?)))
@@ -387,7 +394,7 @@
 
 (defn- place-essence [ gamestate card essence uname ]
   ;; will only be a mage or in the players :public artifacts
-  (if verbose? (println "place-essence:" uname card essence))
+  (println "place-essence:" uname card essence)
   (case (:type card)
     "mage" 
       (reduce-kv 
@@ -402,9 +409,9 @@
           #(if (= (:uid %) (:uid card))
                 (reduce-kv 
                   (fn [m k v] 
-                      (if (-> % :take-essence k)
-                          (update-in % [:take-essence k] + v)
-                          (assoc-in  % [:take-essence k]   v))) 
+                      (if (-> m :take-essence k)
+                          (update-in m [:take-essence k] + v)
+                          (assoc-in  m [:take-essence k]   v))) 
                   % essence)
                 %) (-> gamestate :players (get uname) :public :artifacts)))
     gamestate))
@@ -637,26 +644,41 @@
                               gamestate)
       gamestate)))
 
-(defn- res-match-handler [ gs uname func & args ]
-  (println "Chat Handler" func args)
+(defn- essence-match-handler [ gs uname k v ]
+  (println "essence-match-handler:" uname k v)
   (-> gs 
-      (assoc-in [:players uname :public :essence (-> args first clojure.string/lower-case keyword)] (-> args second read-string))
-      (add-chat (str "Set " (first args) " to " (second args)) uname)
-      ))
+      (assoc-in [:players uname :public :essence (-> k clojure.string/lower-case keyword)] (-> v read-string))
+      (add-chat (str "Set " k " to " v) uname :usercmd)))
 
 (def chat-fn-help {
   "essence" "/essence <essence name> <new value>"
 })
 
+(defn- usercmd-playcard [ gs cardname uname ]
+;; IMPORTANT FOR TESTING ONLY TODO LIMIT BY ENV VARIABLE
+  (println "PLAYING" cardname)
+  (if-let [card (->> @data :artifacts (filter #(= (:name %) cardname)) first)]
+    (-> gs
+        (update-in [:players uname :public :artifacts] conj (assoc card :uid (gensym "art")))
+        (add-chat (str "Played " cardname " OUT OF NOWHERE!") uname :usercmd))
+    gs))
+
 (defn chat-handler [ gs msg uname ]
-  (let [gs-w-cmd (add-chat gs msg uname)
-        res-fn-hint (re-find #"(?i)\/(\w+)" msg)
-        res-match (re-matches #"(?i)\/(\w+)\s(gold|elan|calm|life|death)\s(\d+)" msg)]
-    ;(prn "Chat Handler" msg res-match)
+  (let [fn-hint (re-find #"(?i)\/(\w+)" msg)
+        essence-match (re-matches #"(?i)\/(essence)\s(gold|elan|calm|life|death)\s(\d+)" msg)
+        card-match    (re-matches #"(?i)\/playcard\s(.+)" msg)]
+    (println "chat-handler:" uname msg essence-match)
     (cond
-      res-match (apply res-match-handler gs-w-cmd uname (rest res-match))
-      res-fn-hint (add-chat gs-w-cmd (str "help: " (-> res-fn-hint last clojure.string/lower-case chat-fn-help)) uname)
-      :default gs-w-cmd)))
+      essence-match   (-> gs 
+                      (add-chat msg uname :usercmd) 
+                      (essence-match-handler uname (nth essence-match 2) (last essence-match)))
+      card-match      (-> gs 
+                          (add-chat msg uname :userdm) 
+                          (usercmd-playcard (last card-match) uname))                
+      fn-hint         (-> gs 
+                          (add-chat msg uname :usercmdhelp) 
+                          (add-chat (str "help: " (-> fn-hint last clojure.string/lower-case (chat-fn-help fn-hint))) uname :usercmdhelp))
+      :default        (add-chat gs msg uname))))
 ;; Player States :action
 ; :waiting
 ; :play
