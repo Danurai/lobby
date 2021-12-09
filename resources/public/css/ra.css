@@ -1,3 +1,8 @@
+.debug {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.8em;
+}
+
 .ra-main {
   font-family: "Pirata One", cursive ;
   font-size: 14pt;
@@ -5,10 +10,14 @@
 }
 
 .p1token {
-  height: 100px;
+  height: 50px;
 }
 .clickable {
   cursor: pointer;
+}
+.clickable.essence:hover {
+  border-radius: 0.25rem;
+  box-shadow: 0 0 10px 0 blue;
 }
 
 .plyr-status {
@@ -139,8 +148,8 @@
   background-color: rgba(255,255,255,0.8);
 }
 .ra-chat .chatbox {
+  display: flex;
   flex-direction: column !important;
-  justify-content: flex-end !important;
 }
 
 .ra-chat:hover {
@@ -173,13 +182,15 @@
 
 .focus {
     border: 1.5px solid darkblue !important;
-    background-color: rgba(255,255,255,0.5);
+    background-color: rgb(255, 238, 205);
     border-radius: 5px;
     color: darkblue;
 }
 
 .bg-essence {
-  background-color: #c5b197;
+  background-color: rgba(0,0,0,0.2); /* #c5b197 */
+  padding: 0.125em 0;
+  border-radius: 0.25rem;
 }
 
 .vp {
@@ -190,4 +201,16 @@
   border-radius: 50%;
   text-align: center;
   padding-top: .2em;
+}
+
+.modalcontent {
+  background: #fff8e9;
+}
+.modal-action {
+  min-width: 300px;
+  border-bottom: 1px solid #222222;
+  border-radius: .25rem;
+}
+.modal-module {
+  box-shadow: -5px 5px 15px 0 #AAA;
 }
