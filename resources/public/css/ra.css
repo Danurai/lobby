@@ -149,7 +149,7 @@
 }
 .ra-chat .chatbox {
   display: flex;
-  flex-direction: column !important;
+  flex-direction: column-reverse !important;
 }
 
 .ra-chat:hover {

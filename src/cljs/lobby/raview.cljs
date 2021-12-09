@@ -113,7 +113,7 @@
 (defn- chat [ gs ]
   [:div.ra-chat.border.rounded
     [:div.chatbox.p-1.mb-1
-      (for [msg (-> @gm :state :chat) :let [{:keys [msg uname timestamp event]} msg]]
+      (for [msg (-> @gm :state :chat reverse) :let [{:keys [msg uname timestamp event]} msg]]
         [:div.px-1 {:key (gensym) :style {:word-wrap "break-word"} :class (cond (nil? uname) "bg-secondary text-light" (= event :usercmd) "bg-warning" (= event :usercmdhelp) "bg-info")}
           ;[:span.mr-1 (model/timeformat timestamp)]
           [:b.text-primary.me-1 uname]
