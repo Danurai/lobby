@@ -46,9 +46,9 @@
             [:select.form-control.form-control-sm.me-2 {
               :value (:game @formdata)
               :on-change #(swap! formdata assoc :game (.. % -target -value))}
-              [:option "BBTM"]
               [:option "Res Arcana"]
-              [:option "Death Angel"]
+              ;[:option "BBTM"]
+              ;[:option "Death Angel"]
               ;(for [g (:gamelist @model/app)] [:option {:key (gensym)} (key g)])
             ]]
           [:div.me-1 {:style {:flex-grow 1}}

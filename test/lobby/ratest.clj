@@ -847,6 +847,15 @@
         (ramodel/parseaction {:action :usecard :card artifact :useraction (-> artifact :action first)} p1)
         :players (get p1) :public :artifacts first :take-essence :elan)))
 
+;; USE with custom cost and gain
+(expect {:calm 1 :elan 1 :death 1}
+  (let [p1 (-> g1 :plyr-to first)
+        g1x (ramodel/chat-handler g1 "/playcard Cursed Skull" p1) 
+        cs (-> g1x :players (get p1) :public :artifacts first)]
+    (-> g1x
+        (ramodel/parseaction {:action :usecard :useraction {:turn true :cost {:life 1} :place {:calm 1, :elan 1, :death 1}} :card cs} p1)
+        :players (get p1) :public :artifacts first :take-essence)))
+        
 ;; Claim Pop
 ; Added to Artifacts
 (expect "Sacred Grove"
@@ -996,26 +1005,6 @@
         (end-turn p1)
         (ramodel/parseaction {:action :take-essence :card (assoc artifact :take-essence {:elan 3})} p1)
         :players (get p1) :public :artifacts first :take-essence)))
-;
-;
-;;;;;; Chat Commands ;;;;;
-;;; Route chat commands through model.clj
-;(expect "This is a test message"
-;  (let [gid (lobbytest/newgamegid)]
-;    (-> (model/addchat! gid "p1" "This is a test message") :games gid :state :chat first :msg)))
-;
-;(expect "This is a test message"
-;  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "This is a test message" p1) :chat second :msg)))
-;  
-;(expect "help: /essence <essence name> <new value>"
-;  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence" p1) :chat last :msg)))
-;
-;;; Set essence
-;(expect "/essence gold 200"
-;  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence gold 200" p1) :chat second :msg)))
-;(expect 200
-;  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence gold 200" p1) :players (get p1) :public :essence :gold)))
-;
 
 ;;; VP Check
 ; Basic functionality - 
@@ -1037,3 +1026,50 @@
         (ramodel/parseaction {:action :usecard :card pop1 :useraction (-> pop1 :action first)} p1)
         (end-turn p1)
         :players (get p1) :vp)))
+
+; First player
+(expect {"First Player" 1}
+  (let [p1 (-> g1 :plyr-to first) mi (->> g1 :magicitems (remove :owner) first)]
+    (-> g1 
+        (ramodel/parseaction {:action :pass} p1)
+        (ramodel/parseaction {:action :selectmagicitem :card (:uid mi)} p1)
+        :players (get p1) :vp)))
+
+
+
+;;;; Chat Commands ;;;;;
+;; Route chat commands through model.clj
+(expect "This is a test message"
+  (let [gid         (lobbytest/newgamegid)
+        start-state (-> (model/startgame! gid) :games gid :state)
+        p1          (-> start-state :plyr-to first)
+        m1          (-> start-state :players (get p1) :private :mages first)
+        mi1         (-> start-state :magicitems first)]
+    (model/updategame! {:gid gid :action :selectmage :card (:uid m1)} p1)
+    (model/updategame! {:gid gid :action :selectstartitem :card (:uid mi1)} p1)
+    (model/updategame! {:gid gid :action :collected} p1)
+    (model/addchat! gid p1 "This is a test message")
+    (-> @model/appstate :games gid :state :chat last :msg)))
+  
+(expect "This is a test message"
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "This is a test message" p1) :chat second :msg)))
+  
+(expect "help: /essence <essence name> <new value>"
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence" p1) :chat last :msg)))
+
+(expect :usercmdhelp
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence" p1) :chat last :event)))
+(expect :usercmd
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence gold 200" p1) :chat second :event)))
+
+; Set essence
+(expect "/essence gold 200"
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence gold 200" p1) :chat second :msg)))
+(expect 200
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence gold 200" p1) :players (get p1) :public :essence :gold)))
+
+(expect "Celestial Horse"
+  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/playcard Celestial Horse" p1) :players (get p1) :public :artifacts first :name)))
+;;; Bug Tests ;;;
+;; Remove essence from Place of Power / Monument
+; Fixed in defn- remove-card-essence
