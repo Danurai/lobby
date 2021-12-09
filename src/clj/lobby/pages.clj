@@ -96,7 +96,7 @@
         [:div.container
           [:div.d-flex.mb-2
             [:div.btn-group 
-              (for [ k ["cost" "subtype" "collect" "action"]]
+              (for [ k ["cost" "subtype" "collect" "action" "vp"]]
                 [:a {:href (str "test?" k) :role "button" :class (str "btn btn-outline-secondary" (if (= q k) " active" ""))} k]) ]]
           [:div.row
             (for [a artifacts] ;(sort-by :fg artifacts)]

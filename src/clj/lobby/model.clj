@@ -5,7 +5,7 @@
     [lobby.bbmodel :as bbmodel]
   ))
 
-(defonce verbose? false)
+(defonce verbose? true)
 
 (defonce gamelist {
   "Res Arcana" {
@@ -27,11 +27,11 @@
 
 (defn addchat! 
   ([ gid uname txt event ]
-    (if verbose? (println "AddChat:" gid uname txt))
+    (if verbose? (println "model/addchat!" gid uname txt event))
     (let [msg {:msg txt :uname uname :timestamp (new java.util.Date)}]
       (if gid
-          (case (-> @appstate :games gid :name)
-            "Res Arcana" (ramodel/chat-handler txt uname)
+          (case (-> @appstate :games gid :game)
+            "Res Arcana" (swap! appstate assoc-in [:games gid :state] (ramodel/chat-handler (-> @appstate :games gid :state) txt uname))
             (swap! appstate update-in [:games gid :state :chat] conj msg))
           (swap! appstate update-in [:chat] conj msg))))
   ([ gid uname txt ]
@@ -99,7 +99,7 @@
       (swap! appstate assoc-in [:games gid :state] (gamesetup (:game gm) (:plyrs gm))))))
            
 (defn updategame! [ ?data uname ]
-  (if verbose? (println "Request:" ?data uname))
+  (if verbose? (println "model/updategame!" ?data uname))
   (when-let [gid (:gid ?data)]
     (let [game (-> @appstate :games gid)]
       (swap! appstate assoc-in [:games gid :state]
