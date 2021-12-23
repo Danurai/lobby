@@ -66,6 +66,22 @@
 (defn- invert-essence [ essence ]
   (reduce-kv (fn [m k v] (assoc m k (* -1 v))) {} essence))
 
+;;; Turn Card
+(defn- apply-turn [ card turn? ]  
+  (if verbose? (println "apply-turn:" card turn? ))
+  (if turn? (assoc card :turned? true) (dissoc card :turned?)))
+
+(defn- turn-card [ gamestate card turn? uname]
+  (if verbose? (println "turn-card:" uname card turn? ))
+  (case (:type card)
+    "mage"
+      (update-in gamestate [:players uname :public :mage] #(apply-turn % turn?)) ; regardless of card id
+    ("artifact" "pop" "monument")
+      (assoc-in  gamestate [:players uname :public :artifacts] (mapv #(if (= (:uid %) (:uid card)) (apply-turn % turn?) %) (-> gamestate :players (get uname) :public :artifacts) )) 
+    "magicitem"
+      (assoc     gamestate :magicitems (map #(if (= (:uid %) (:uid card)) (apply-turn % turn?) %) (:magicitems gamestate)))
+    gamestate))
+
 ;;; VP Functions ;;;;
 (defn- vpfn-essence [ take-essence essence ]
   (if take-essence
@@ -74,10 +90,15 @@
 (defn- vpfn [ card ]
   (let [te (:take-essence card)]
     (case (:name card)
-      "Sacred Grove"          (+ 2 (vpfn-essence te :life))
+      "Alchemist's Tower"     (vpfn-essence te :gold)
+      "Dwarven Mines"         (vpfn-essence te :gold)
       "Catacombs of the Dead" (vpfn-essence te :death)
       "Cursed Forge"          (+ 1 (vpfn-essence te :gold))
       "Dragon's Lair"         (vpfn-essence te :gold)
+      "Sacred Grove"          (+ 2 (vpfn-essence te :life))
+      "Sacrificial Pit"       (+ 2 (vpfn-essence te :death))
+      "Sunken Reef"           (vpfn-essence te :calm)
+      "Sorcerer's Bestiary"   0
       (:vp card) ; mostly monuments and artifacts
     )))
 
@@ -100,12 +121,18 @@
     gs))
 
 (defn- collect-essence [ gamestate {:keys [essence card] :as ?data} uname ]
-  (-> gamestate
-      (update-player-essence ?data uname)
-      (remove-card-essence card :collect-essence uname)
-      (add-chat 
-        (str "collected " (clojure.string/join ", " (map #(str (val %) " " (-> % key name)) essence)) " from " (:name card))
-        uname)))
+  ;(println "collect-essence:" essence card uname)
+  (if (:turn essence)
+      (-> gamestate
+          (turn-card card true uname)
+          (remove-card-essence card :collect-essence uname)
+          (add-chat (str "Turned " (:name card)) uname))
+      (-> gamestate
+          (update-player-essence ?data uname)
+          (remove-card-essence card :collect-essence uname)
+          (add-chat 
+            (str "collected " (clojure.string/join ", " (map #(str (val %) " " (-> % key name)) essence)) " from " (:name card))
+            uname))))
 
 ; update functions above to take :collect-essence or :take-essence params)
 (defn- take-essence [ gamestate {:keys [card] :as ?data} uname]
@@ -128,21 +155,6 @@
                 (assoc-in [k :public :artifacts] (mapv #(assoc % :collect-essence (:collect %)) (-> v :public :artifacts)))   ; artifact / monument / pop
             )
           ) (:players gamestate) (:players gamestate))))) 
-
-;;; Turn Card
-(defn- apply-turn [ card turn? ]  
-  (if turn? (assoc card :turned? true) (dissoc card :turned)))
-
-(defn- turn-card [ gamestate card turn? uname]
-  (if verbose? (println "turn-card:" uname card turn? ))
-  (case (:type card)
-    "mage"
-      (update-in gamestate [:players uname :public :mage] #(apply-turn % turn?)) ; regardless of card id
-    ("artifact" "pop" "monument")
-      (assoc-in  gamestate [:players uname :public :artifacts] (mapv #(if (= (:uid %) (:uid card)) (apply-turn % turn?) %) (-> gamestate :players (get uname) :public :artifacts) )) 
-    "magicitem"
-      (assoc     gamestate :magicitems (map #(if (= (:uid %) (:uid card)) (apply-turn % turn?) %) (:magicitems gamestate)))
-    gamestate))
 
 ; AI Collect  
 
@@ -227,7 +239,7 @@
       (add-chat (str "Collect Phase"))
       ai-collect-essence))
 
-(defn- determine-winner [] nil)
+(defn- determine-winner [ gamestate ] gamestate)
 
 ;;;;; ASSIGN MAGIC ITEMS ;;;;;       
 
@@ -300,15 +312,18 @@
   (let [nextplyrs (if (-> gamestate :players (get uname) :action (= :pass))
                       (:plyr-to gamestate)    
                       (->> gamestate :plyr-to (drop-while #(not= % uname)) rest))
-        nextp     (if (empty? nextplyrs) (-> gamestate :plyr-to first) (first nextplyrs))]
-    (if verbose? (println "End Action:" uname "nextplayer" nextp ))
-    (-> gamestate
-        (set-player-action uname (if (-> gamestate :plyr-to set (contains? uname)) :waiting :pass))
-        (set-player-action nextp :play)
-        (add-chat "End of turn" uname)
-        new-round-check
-        update-vp
-        )))
+        nextp     (if (empty? nextplyrs) (-> gamestate :plyr-to first) (first nextplyrs))
+        loselife? (->> gamestate :players vals (map :loselife) (remove nil?) )]
+    (if verbose? (println "end-action:" uname "nextplayer" nextp loselife? (empty? loselife?)))
+    (if (not-empty loselife?)  ; DON@T ADVANCE IF THERE IS A ?LOSELIFE ACTION LIVE
+        gamestate
+        (-> gamestate
+            (set-player-action uname (if (-> gamestate :plyr-to set (contains? uname)) :waiting :pass))
+            (set-player-action nextp :play)
+            (add-chat "End of turn" uname)
+            new-round-check
+            update-vp
+            ))))
 
 (defn- pass [ gamestate uname ]
   (let [can-pass? (and (-> gamestate :phase (not= :collect)) (-> gamestate :players (get uname) :action (= :play)))
@@ -326,6 +341,8 @@
         gamestate)))
 
 ;;;;; ACTIONS ;;;;;
+
+
 ;;; PLAY A CARD ;;
 ; Depends on update-player-essence
 ; depends on next player/round TODO
@@ -339,11 +356,11 @@
     
 
 (defn- playcard [ gamestate {:keys [card essence]} uname ]
-  (if verbose? (println "playcard:" uname card "paid" essence))
+  (if verbose? (println "playcard:" uname card "paid" essence ))
   (-> gamestate
     (assoc-in [:players uname :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> gamestate :players (get uname) :private :artifacts))) ; Artifact
-    (assoc :pops (->> gamestate :pops (remove #(= (:uid %) (:uid card)))))                                                                    ; Place of power
-    (assoc-in [:monuments :public] (->> gamestate :monuments :public (remove #(= (:uid %) (:uid card))) vec))                                 ; Monument 
+    (assoc :pops (->> gamestate :pops (remove #(= (:uid %) (:uid card)))))                                                                     ; Place of power
+    (assoc-in [:monuments :public] (->> gamestate :monuments :public (remove #(= (:uid %) (:uid card))) vec))                                  ; Monument 
     (replacemonument (= "monument" (:type card)))
     (update-in [:players uname :public :artifacts] conj card)
     (add-chat (str (case (:type card) "artifact" "Played " "Claimed ") (:name card)) uname)
@@ -394,7 +411,7 @@
 
 (defn- place-essence [ gamestate card essence uname ]
   ;; will only be a mage or in the players :public artifacts
-  (println "place-essence:" uname card essence)
+  (if verbose? (println "place-essence:" uname card essence))
   (case (:type card)
     "mage" 
       (reduce-kv 
@@ -416,12 +433,24 @@
                 %) (-> gamestate :players (get uname) :public :artifacts)))
     gamestate))
 
+(defn- lose-life [ gamestate card action uname ]
+  (if (and verbose? (:loselife action)) (println "lose-life:" card action uname))
+  (if (:loselife action)
+    (assoc gamestate :players
+      (reduce
+        (fn [ m k ]
+          (if (not= k uname)
+              (assoc-in m [k :loselife] (conj action (select-keys card [:name :id :type]) {:plyr uname}) )
+              m))
+        (:players gamestate) (:plyr-to gamestate)))
+    gamestate))
+
 ;;; USE A CARD ;;;
 ;; Request: {:action :usecard, :useraction {:turn true, :cost {}, :gain {:death 2}, :rivals {:death 1}}, :gid :gm93866} dan
 (defn- use-card [ gamestate {:keys [card useraction]} uname] 
     (if verbose? (println "use-card:" card useraction uname))
     (-> gamestate
-        (add-chat (str "Used card " (:name card)) uname)                ; Chat
+        (add-chat (str "Used " (:type card) " " (:name card)) uname)                ; Chat
         (assoc :players                                                 ; Rivals gain 
           (:players 
             (reduce-kv (fn [m k v] 
@@ -431,8 +460,20 @@
         (update-player-essence {:essence (invert-essence (:cost useraction))} uname)     ; Pay cost
         (update-player-essence {:essence (:gain useraction)} uname)     ; Gain essence
         (place-essence card (:place useraction) uname)                  ; Place essence
-        (drawcard uname (:draw useraction))
-        (turn-card card (:turn useraction) uname)))
+        (turn-card (:straighten useraction) nil uname)                  ; Straighten
+        (drawcard uname (:draw useraction))                             ; Draw
+        (turn-card card (:turn useraction) uname)                       ; Turn
+        (lose-life card useraction uname)                               ; Trigger Lose Life responses
+    ))
+
+
+;;; REACT ;;;
+(defn- react [ gamestate {:keys [card useraction] :as ?data} uname]
+  (if verbose? (println "react:" uname useraction card))
+  (-> gamestate 
+      (add-chat "Reacted to lose life effect" uname)
+      (use-card ?data uname)
+      (update-in [:players uname] dissoc :loselife)))
 
 ;;;;;;;;;; SETUP/START GAME ;;;;;;;;;;
 
@@ -635,17 +676,24 @@
                               (assoc-in gamestate [:players uname :err] err)))
     ; PASS
       :pass             (pass             gamestate uname)
+    ; REACT (lose life, check for winner)
+      :react            (-> gamestate 
+                            (react ?data uname)
+                            (end-action (get-active-player gamestate))
+                            ai-action)
+    ; TESTING ONLY
     ; Done - Only used for Testing
       :done             (end-action       gamestate uname)
-    ; TESTING ONLY
       :swapgame         (case (:game ?data)
                               1 ragames/game1
                               2 ragames/game2
+                              3 ragames/game3
+                              4 ragames/game4
                               gamestate)
       gamestate)))
 
 (defn- essence-match-handler [ gs uname k v ]
-  (println "essence-match-handler:" uname k v)
+  (if verbose? (println "essence-match-handler:" uname k v))
   (-> gs 
       (assoc-in [:players uname :public :essence (-> k clojure.string/lower-case keyword)] (-> v read-string))
       (add-chat (str "Set " k " to " v) uname :usercmd)))
@@ -656,7 +704,7 @@
 
 (defn- usercmd-playcard [ gs cardname uname ]
 ;; IMPORTANT FOR TESTING ONLY TODO LIMIT BY ENV VARIABLE
-  (println "PLAYING" cardname)
+  (if verbose? (println "PLAYING" cardname))
   (if-let [card (->> @data :artifacts (filter #(= (:name %) cardname)) first)]
     (-> gs
         (update-in [:players uname :public :artifacts] conj (assoc card :uid (gensym "art")))
@@ -666,18 +714,39 @@
 (defn chat-handler [ gs msg uname ]
   (let [fn-hint (re-find #"(?i)\/(\w+)" msg)
         essence-match (re-matches #"(?i)\/(essence)\s(gold|elan|calm|life|death)\s(\d+)" msg)
-        card-match    (re-matches #"(?i)\/playcard\s(.+)" msg)]
-    (println "chat-handler:" uname msg essence-match)
+        card-match    (re-matches #"(?i)\/playcard\s(.+)" msg)
+        mage-match    (re-matches #"(?i)\/setmage\s(.+)"  msg)
+        loselife-match (re-matches #"(?i)\/loselife\s(\d)\s(gold|elan|calm|life|death)(|.+)" msg)
+        ]
+    (if verbose? (println "chat-handler:" uname msg essence-match card-match mage-match loselife-match ))
     (cond
       essence-match   (-> gs 
                       (add-chat msg uname :usercmd) 
                       (essence-match-handler uname (nth essence-match 2) (last essence-match)))
       card-match      (-> gs 
                           (add-chat msg uname :userdm) 
-                          (usercmd-playcard (last card-match) uname))                
-      fn-hint         (-> gs 
-                          (add-chat msg uname :usercmdhelp) 
-                          (add-chat (str "help: " (-> fn-hint last clojure.string/lower-case (chat-fn-help fn-hint))) uname :usercmdhelp))
+                          (usercmd-playcard (last card-match) uname))     
+      mage-match      (if-let [mage (->> @data :mages (filter #(= (:name %) (last mage-match))) first)]
+                              (-> gs 
+                                  (add-chat msg uname :userdm)
+                                  (add-chat (str "Changed Mage to " (last mage-match)) uname :usercmd)
+                                  (assoc-in [:players uname :public :mage] (assoc mage :uid (gensym "mage"))))
+                              (-> gs 
+                                  (add-chat msg uname :userdm)))
+      loselife-match  (let [life (nth loselife-match 1) px (if (empty? (nth loselife-match 3)) uname (-> loselife-match (nth 3) clojure.string/trim)) essence (nth loselife-match 2)]
+                        (-> gs 
+                            (add-chat msg uname :userdm)
+                            (add-chat (str px " triggered Lose Life event: Lose " life " life. Spend 1 " essence " to ignore" ))
+                            (lose-life {:name "User Action"} {:loselife (read-string life) :ignore {(keyword essence) 1}} px)
+                            (end-action px)))
+      fn-hint         (case (last fn-hint)
+                            "endturn" (-> gs 
+                                          (add-chat msg uname :usercmd)
+                                          (end-action uname)
+                                          ai-action)
+                            (-> gs 
+                                (add-chat msg uname :usercmdhelp) 
+                                (add-chat (str "help: " (-> fn-hint last clojure.string/lower-case (chat-fn-help fn-hint ))) uname :usercmdhelp)))
       :default        (add-chat gs msg uname))))
 ;; Player States :action
 ; :waiting
