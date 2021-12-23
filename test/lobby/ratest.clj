@@ -709,6 +709,8 @@
 ;;;;; TESTING Games ;;;;;;
 (def g1 (ramodel/parseaction {} {:action :swapgame :game 1} "p1"))
 (def g2 (ramodel/parseaction {} {:action :swapgame :game 2} "p1"))
+(def g3 (ramodel/parseaction {} {:action :swapgame :game 3} "p1"))
+(def g4 (ramodel/parseaction {} {:action :swapgame :game 4} "p1"))
 
 ; setup tests
 (expect 2 (-> g1 :plyr-to count))
@@ -719,6 +721,12 @@
 (expect 2 (-> g1 :monuments :public count))
 (expect 8 (-> g1 :monuments :secret count))
 (expect 78 (-> g1 :allcards count))
+(expect 78 (-> g2 :allcards count))
+(expect 78 (-> g3 :allcards count))
+(expect 78 (-> g4 :allcards count))
+(expect ["p1" "p2"] (-> g4 :plyr-to))
+(expect ["p2" "p1"] (-> g4 :players keys vec))
+(expect 5 (-> g4 :pops count))
 
 (defn- end-turn [ gs p1 ]
   (-> gs 
@@ -928,15 +936,15 @@
           (filter #(= (:owner %) p1)) first :turned?)))
 
 
-; Straighten (mage)
+; End Turn: Straighten (mage)
 (expect nil
-  (let [p1 (-> g1 :plyr-to first)  
+  (let [p1   (-> g1 :plyr-to first)  
         mage (-> g1 :players (get p1) :public :mage)] 
     (-> g1 
-        (ramodel/parseaction {:action :usecard :useraction {:turn true, :cost {:death -1}, :place {:gold 1}} :card mage} p1)
+        (ramodel/parseaction {:action :usecard :card mage :useraction {:turn true, :cost {:death -1}, :place {:gold 1}} } p1)
         (end-turn p1)
         :players (get p1) :public :mage :turned?)))
-; Straighten 'Artifact'
+; End Turn: Straighten 'Artifact'
 (expect nil
   (let [p1 (-> g1 :plyr-to first)
         artifact (-> g1 :players (get p1) :private :artifacts last)]
@@ -945,7 +953,7 @@
         (ramodel/parseaction {:action :usecard :useraction (-> artifact :action first) :card artifact} p1)
         (end-turn p1)
         :players (get p1) :public :artifacts first :turned?)))
-; Straighten MagicItem
+; End Turn: Straighten MagicItem
 (expect {nil 8}
   (let [p1 (-> g2 :plyr-to first)
         mi (->> g2 :magicitems (filter #(= (:owner %) p1)) first)]      ; Research 
@@ -956,6 +964,38 @@
           (map :turned?)
           frequencies
           )))
+
+; Straighten card through card power 'Mage'
+(expect nil
+  (let [p1   (-> g3 :plyr-to first)
+        mage (-> g3 :players (get p1) :public :mage) ; Duelist
+        mi   (->> g3 :magicitems (filter #(= (:owner %) p1)) first)]  ; Reanimate
+    (-> g3
+        (ramodel/parseaction {:action :usecard :useraction (-> mage :action first) :card mage} p1)
+        (ramodel/parseaction {:action :usecard :useraction (assoc mi :cost {:elan 1} :straighten mage)} p1)
+        :players (get p1) :public :mage :turned?)))          
+; Straighten card through card power 'Magicitem'
+(expect nil
+  (let [p1   (-> g2 :plyr-to first)
+        mage (-> g2 :players (get p1) :public :mage) ; Duelist
+        mi   (->> g2 :magicitems (filter #(= (:owner %) p1)) first)]  ; Research
+    (->> (-> g2
+            (ramodel/parseaction {:action :usecard :useraction (-> mi :action first (assoc :cost {:death 1})) :card mi} p1) ; Use magicitem
+            (ramodel/parseaction {:action :usecard :useraction {:turn true :cost {:death 2} :straighten mi} :card mage} p1)) ; Substitute Witch Power 
+        :magicitems
+        (filter #(= (:owner %) p1))
+        first :turned?)))
+
+; Straighten card through card power 'Artifact'
+(expect nil
+  (let [p1       (-> g3 :plyr-to first)
+        artifact (-> g3 :players (get p1) :private :artifacts last)       ; Hand of Glory
+        mi       (->> g3 :magicitems (filter #(= (:owner %) p1)) first)]  ; Reanimate
+    (-> g3
+        (ramodel/parseaction {:action :place :card artifact :essence (:cost artifact)} p1)
+        (ramodel/parseaction {:action :usecard :useraction (-> artifact :action first) :card artifact} p1)
+        (ramodel/parseaction {:action :usecard :useraction (assoc mi :cost {:elan 1} :straighten artifact)} p1)
+        :players (get p1) :public :artifacts first :turned?)))          
 
 ;;; Use card - Draw
 (expect 4
@@ -1073,3 +1113,167 @@
 ;;; Bug Tests ;;;
 ;; Remove essence from Place of Power / Monument
 ; Fixed in defn- remove-card-essence
+
+;; BUG -> 
+; 1. End Turn, Select Research Magic Item, 
+; 2. Use Research Magic Item, 
+; 3. Play card from hand - BUG: lose a card from hand
+; FIX - g1 deck did nit generate :uid for (-> players p1 private artifacts)
+; (1)
+;(expect "Research"
+;  (let [p1 (-> g1 :plyr-to first)
+;        research (->> g1 :magicitems (filter #(= (:name %) "Research")) first)]
+;    (->> (-> g1 
+;            (ramodel/parseaction {:action :pass} p1)
+;            (ramodel/parseaction {:action :selectmagicitem :card (:uid research) } p1)
+;            (ramodel/parseaction {:action :collected} p1))
+;        :magicitems
+;        (filter #(= (:owner %) p1))
+;        first :name)))
+;; (2)
+;(expect 5
+;  (let [p1 (-> g1 :plyr-to first)
+;        research (->> g1 :magicitems (filter #(= (:name %) "Research")) first)]
+;    (-> g1 
+;        (ramodel/parseaction {:action :pass} p1)
+;        (ramodel/parseaction {:action :selectmagicitem :card (:uid research) } p1)
+;        (ramodel/parseaction {:action :collected} p1)
+;        (ramodel/parseaction {:action :usecard :card research :useraction (-> research :action first (assoc :cost {:calm 1}))} p1)
+;        :players (get p1) :private :artifacts count)))
+;(expect 4
+;  (let [p1 (-> g1 :plyr-to first)
+;        research (->> g1 :magicitems (filter #(= (:name %) "Research")) first)
+;        r1state (-> g1 
+;                    (ramodel/parseaction {:action :pass} p1)
+;                    (ramodel/parseaction {:action :selectmagicitem :card (:uid research) } p1)
+;                    (ramodel/parseaction {:action :collected} p1)
+;                    (ramodel/parseaction {:action :usecard :card research :useraction (-> research :action first (assoc :cost {:calm 1}))} p1))
+;        a2        (-> r1state :players (get p1) :private :artifacts second)]
+;      (-> r1state 
+;        ;(start-test "Play Card Bug")
+;        (ramodel/parseaction {:action :place :card a2  :essence (:cost a2)} p1)
+;        :players (get p1) :private :artifacts count)))
+
+; CURSED FORGE - Turn in collect phase
+(expect true
+  (let [p1 (-> g1 :plyr-to first)
+        cf (-> g1 :pops (nth 2))]
+      (-> g1
+          (ramodel/parseaction {:action :place :card cf :essence (:cost cf)} p1)
+          (end-turn p1)
+          (ramodel/parseaction {:action :collect-essence :card cf :essence {:turn true}} p1)
+          :players (get p1) :public :artifacts first :turned?)))
+; CURSED FORGE - remove collect-essence
+(expect nil
+  (let [p1 (-> g1 :plyr-to first)
+        cf (-> g1 :pops (nth 2))]
+      (-> g1
+          (ramodel/parseaction {:action :place :card cf :essence (:cost cf)} p1)
+          (end-turn p1)
+          (ramodel/parseaction {:action :collect-essence :card cf :essence {:turn true}} p1)
+          :players (get p1) :public :artifacts first :collect-essence)))
+
+;;;;; LOSE LIFE ;;;;;
+
+; Manual trigger for testing
+(expect "Bone Dragon"
+  (let [p1  (-> g4 :plyr-to first) 
+        p1a (-> g4 :players (get p1) :private :artifacts last)
+        p2  (-> g4 :plyr-to last)
+        gs  (ramodel/chat-handler g4 "/playcard Bone Dragon" p1)] ; P1 starts with Bone Dragon
+    (-> gs :players (get p1) :public :artifacts first :name)))
+; Use BD Exhausts it
+(expect true
+  (let [p1  (-> g4 :plyr-to first) 
+        p1a (-> g4 :players (get p1) :private :artifacts last)
+        p2  (-> g4 :plyr-to last)
+        gs  (ramodel/chat-handler g4 "/playcard Bone Dragon" p1)
+        bd  (-> gs :players (get p1) :public :artifacts first)] ; P1 starts with Bone Dragon
+    (-> gs 
+        (ramodel/parseaction {:action :usecard :card bd :useraction (-> bd :action first)} p1)
+        :players (get p1) :public :artifacts first :turned?)))
+; use BD triggers :loselife effect
+(expect {:turn true :loselife 2 :ignore {:death 1} :source :dragon :name "Bone Dragon" :type "artifact" :id 1 :plyr "p1"}
+  (let [p1  (-> g4 :plyr-to first) 
+        p2  (-> g4 :plyr-to last)
+        gs  (ramodel/chat-handler g4 "/playcard Bone Dragon" p1)
+        bd  (-> gs :players (get p1) :public :artifacts first)] ; P1 starts with Bone Dragon
+    (-> gs 
+        (ramodel/parseaction {:action :usecard :card bd :useraction (-> bd :action first)} p1)
+        :players (get p2) :loselife)))
+; immune to loselife if passed
+(expect nil
+  (let [p1  (-> g4 :plyr-to first) 
+        p2  (-> g4 :plyr-to last)
+        gs  (ramodel/chat-handler g4 "/playcard Bone Dragon" p2)
+        bd  (-> gs :players (get p2) :public :artifacts first)] ; P2 starts with Bone Dragon
+    (-> gs 
+        (ramodel/parseaction {:action :pass} p1)
+        (ramodel/parseaction {:action :usecard :card bd :useraction (-> bd :action first)} p2)
+        :players (get p1) :loselife)))
+
+; trigger same effect using chat commands 
+(expect {:loselife 2 :ignore {:death 1} :name "User Action" :plyr "p1"}
+  (let [p1 (-> g1 :plyr-to first) p2 (-> g1 :plyr-to last)]
+    (-> g1 
+        (ramodel/chat-handler "/loselife 2 death" p1)
+        :players (get p2) :loselife)))
+
+; trigger same effect using chat commands 
+(expect {:loselife 2 :ignore {:gold 1} :name "User Action" :plyr "p2"}
+  (let [p1 (-> g1 :plyr-to first) p2 (-> g1 :plyr-to last)]
+    (-> g1 
+        (ramodel/chat-handler "/loselife 2 gold p2" p1)
+        :players (get p1) :loselife)))
+
+; do not end turn until all :loselife responses are completed
+(expect :play
+  (let [p1 (-> g4 :plyr-to first)
+        gs (ramodel/chat-handler g4 "/playcard Elvish Bow" p1)
+        eb (-> gs :players (get p1) :public :artifacts first)]
+    (-> g4
+        (ramodel/parseaction {:action :usecard :card eb :useraction (-> eb :action first)} p1)
+        :players (get p1) :action)))
+(expect :waiting
+  (let [p1 (-> g4 :plyr-to first) p2 (-> g4 :plyr-to last)
+        gs (ramodel/chat-handler g4 "/playcard Elvish Bow" p1)
+        eb (-> gs :players (get p1) :public :artifacts first)]
+    (-> g4
+        (ramodel/parseaction {:action :usecard :card eb :useraction (-> eb :action first)} p1)
+        (ramodel/parseaction {:action :react} p2)
+        :players (get p1) :action)))
+
+
+; react to life loss by paying cost
+(expect 97 
+  (let [p1 (-> g4 :plyr-to first) p2 (-> g4 :plyr-to last)]
+    (-> g4
+        (ramodel/chat-handler "/endturn" p1)
+        (ramodel/chat-handler "/loselife 2 death" p2)
+        (ramodel/parseaction {:action :react :card {:type "reaction" :name "pay essence"} :useraction {:cost {:life 2}}} p1)
+        :players (get p1) :public :essence :life)))
+; react to life loss by paying cost
+(expect 95
+  (let [p1 (-> g4 :plyr-to first) p2 (-> g4 :plyr-to last)]
+    (-> g4
+        (ramodel/chat-handler "/endturn" p1)
+        (ramodel/chat-handler "/loselife 2 death" p2)
+        (ramodel/parseaction {:action :react :card {:type "reaction" :name "pay essence"} :useraction {:cost {:death 4}}} p1)
+        :players (get p1) :public :essence :death)))
+(expect 98
+  (let [p1 (-> g4 :plyr-to first) p2 (-> g4 :plyr-to last)]
+    (-> g4
+        (ramodel/chat-handler "/endturn" p1)
+        (ramodel/chat-handler "/loselife 2 death" p2)
+        (ramodel/parseaction {:action :react :card {:type "reaction" :name "pay essence"} :useraction {:cost {:death 1}}} p1)
+        :players (get p1) :public :essence :death)))
+; use a component and turn it
+(expect true 
+  (let [p1 (-> g4 :plyr-to first) p2 (-> g4 :plyr-to last)
+        gs (-> g4 (ramodel/chat-handler "/playcard Chalice of Life" p1))
+        col (-> gs :players (get p1) :public :artifacts first)]
+    (-> gs
+        (ramodel/chat-handler "/endturn" p1)
+        (ramodel/chat-handler "/loselife 2 death" p2)
+        (ramodel/parseaction {:action :react :card col :useraction (-> col :action last)} p1)
+        :players (get p1) :public :artifacts first :turned?)))

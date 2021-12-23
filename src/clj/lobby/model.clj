@@ -5,7 +5,7 @@
     [lobby.bbmodel :as bbmodel]
   ))
 
-(defonce verbose? true)
+(defonce verbose? false)
 
 (defonce gamelist {
   "Res Arcana" {

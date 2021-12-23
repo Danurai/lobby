@@ -9,6 +9,12 @@
 		:password (hash-bcrypt "user")
     :pin "1234" ;; only used by multi-factor
     :roles #{::user}}
+	"p1" {
+		:uid 1001
+		:username "p1"
+		:password (hash-bcrypt "user")
+    :pin "1234" ;; only used by multi-factor
+    :roles #{::user}}
 	"andy" {
 		:uid 1002
 		:username "andy"
