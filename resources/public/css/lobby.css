@@ -58,3 +58,10 @@
   margin: auto;
   position: relative;
 }
+.wrap-label {
+  word-wrap: break-word;
+  font-size: .825em;
+  white-space: pre-line;
+  line-height: 1em;
+  text-align: center;
+}
