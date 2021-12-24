@@ -8,10 +8,10 @@
 
 (def ra-app (let [scale (or (.getItem js/localStorage "cardscale") 4)]
   (r/atom {
-    :modal {
-      :show? true
-      :card {:uid "art90966", :name "Mermaid", :type "artifact", :collect [{:calm 1}], :can-use? true, :id 27, :action [{:turn true, :cost {:any 1 :exclude #{:death :elan}}, :place {:cost true}, :targetany true}], :cost {:life 2, :calm 2}, :target? true, :subtype "Creature"}
-    }
+    ;:modal {
+    ;  :show? true
+    ;  :card {:uid "art90966", :name "Mermaid", :type "artifact", :collect [{:calm 1}], :can-use? true, :id 27, :action [{:turn true, :cost {:any 1 :exclude #{:death :elan}}, :place {:cost true}, :targetany true}], :cost {:life 2, :calm 2}, :target? true, :subtype "Creature"}
+    ;}
     :settings {
       :cardsize {
         :scale scale
@@ -319,15 +319,16 @@
   [:div.d-flex.justify-content-center.mb-2.bg-essence.py-2
     (if (:turn a) [:i.fas.fa-directions.fa-lg.my-auto.me-1])                      ; Turn
                                                                                   ; Extra card turn?
-    (if-let [exclude (-> a :cost :exclude)]
-      [:div.d-flex 
-        [:div.wrap-label.mx-1 "+"]
+    (if (:cost a)
+      (if-let [exclude (-> a :cost :exclude)]
         [:div.d-flex 
-          (for [ess (->> essence-list (remove #(contains? exclude %)) (interpose "/"))] 
-            [:div.essence-or {:key (gensym)} (if (= ess "/") [:h4.mx-1 "/"] (essence-icon ess -1))])]]  ; Display options for any list with exclusion 
-      [:div.d-flex
-        [:div.wrap-label.mx-1 "+"]
-        (render-essence-list (reduce-kv #(assoc %1 %2 (- 0 %3)) {} (:cost a)))])  ; Invert costs and display
+          [:div.wrap-label.mx-1 "+"]
+          [:div.d-flex 
+            (for [ess (->> essence-list (remove #(contains? exclude %)) (interpose "/"))] 
+              [:div.essence-or {:key (gensym)} (if (= ess "/") [:h4.mx-1 "/"] (essence-icon ess -1))])]]  ; Display options for any list with exclusion 
+        [:div.d-flex
+          [:div.wrap-label.mx-1 "+"]
+          (render-essence-list (reduce-kv #(assoc %1 %2 (- 0 %3)) {} (:cost a)))]))  ; Invert costs and display
                                                                                   ; Destroy
     [:i.fas.fa-caret-right.fa-lg.my-auto {:style {:color "darkblue"}}]            ; >
     (render-essence-list (:gain a) )                                              ; Gain
@@ -626,13 +627,13 @@
 ;;; Main
 (defn- react-modal [ gs pdata uname]
   (let [ll-active? (->> gs :players vals (map :loselife) (remove nil?) count (< 0))
-        ll-plyrs (reduce (fn [m k] (if (= k (-> pdata :loselife :plyr)) (dissoc m k) m)) (:players gs) (-> gs :plyr-to))]
+        ll-plyr (->> gs :players vals (filter :loselife) first :loselife :plyr)
+        ll-plyrs (reduce (fn [m k] (if (= k ll-plyr) (dissoc m k) m)) (:players gs) (-> gs :plyr-to))]
     [:div.modal.ra-main {:hidden (not ll-active?)}
       [:div.modalcontent.p-2.rounded {:style {:min-width "400px"}}
         [:div.row
           [:div.col
-            [:h4 "Waiting for players to react to " (str (-> pdata :loselife :name))]
-            [:div.debug (-> gs :players (get "p2") :loselife str)]
+            [:h4 "Waiting for players to react to " (->> gs :players vals (filter :loselife) first :loselife :name str)]
             (for [[llp-k llp-v] ll-plyrs]
               [:div.d-flex.mb-2 {:key (gensym)} 
                 [:div.h4.me-2.my-auto llp-k]
@@ -642,7 +643,9 @@
           (if (-> pdata :loselife)
             (let [reactions   (->>  (pdata-public-cards pdata) 
                                     (remove :turned?) 
-                                    (filter #(->> % :action (filter (fn [a] (and (= (:source a) (-> pdata :Loselife :source)) (= :loselife (:ignore a))))) count (< 0))))
+                                    (filter #(->> % :action 
+                                      (filter (fn [a] (and (or (-> a :source nil?) (= (:source a) (-> pdata :loselife :source))) (= :loselife (:ignore a))))) 
+                                      count (< 0))))
                   cost {:life (-> pdata :loselife :loselife)}
                   ignorecost  (-> pdata :loselife :ignore)
                   ess         (-> pdata :public :essence)]
@@ -651,6 +654,7 @@
                 [:div.d-flex.justify-content-between.mb-2
                   [:div.h4 "Choose how to react"]
                   [:i.fas.fa-info-circle.text-secondary {:title "Each rival must lose the indicated number of Life essences from their pool. For each Life essence a rival does not have, they must instead, if possible, lose any 2 other essences in their pool (including Gold)."}]]
+                [:div.debug (-> pdata :loselife :source str)]
                 [:button.btn.btn-outline-secondary.w-100.me-1.mb-1 {
                     :disabled (not (can-pay-cost? cost {:life (min (:life cost) (:life ess))})) 
                     :on-click #(comms/ra-send! {:action :react :card nil :useraction {:cost cost}})} 
@@ -676,7 +680,7 @@
                             :title (str react)
                             :on-click #(comms/ra-send! {:action :react :card react :useraction a})}
                           [:img.modal-reaction.clickable {:src (imgsrc react)} ]])]])
-                [:button.btn.btn-danger {:on-click #(comms/ra-send! {:action :react})} "EXIT"]
+                ;[:button.btn.btn-danger {:on-click #(comms/ra-send! {:action :react})} "EXIT"]
               ]))]]]))
 
 ;; Main View
@@ -790,9 +794,11 @@
     [:div.row
       [:div.col-2
         [:div.d-flex.justify-content-center
-          [:img.img-fluid {:src (if-let [mage (-> pdata :public :mage)]
-                                        (imgsrc mage)
-                                        "/img/ra/mage-back.jpg")}]]]
+          [:img.img-fluid {:src (if-let [setupmage (->> pdata :private :mages (filter #(= (:uid %) (-> pdata :public :mage))) first)]
+                                        (imgsrc setupmage)
+                                        (if-let [mage (-> pdata :public :mage)]
+                                          (imgsrc mage)
+                                          (imgsrc {:type "mage"} "back")))}]]]
       [:div.col-8
         (case (-> pdata :action)
           :selectmage 
