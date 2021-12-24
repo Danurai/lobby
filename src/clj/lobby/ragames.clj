@@ -41,7 +41,7 @@
 
 (defn- setplayerdata [ n ]
 	(-> playerdata
-			(assoc-in [:public :mage] (->> @data :mages (filter #(= n (:fg %))) first))
+			(assoc-in [:public :mage] (->> @data :mages (filter #(= n (:fg %))) (map #(assoc % :uid (gensym "mage"))) first))
 			(assoc-in [:private :artifacts] (->> @data :artifacts (filter #(= n (:fg %))) (map #(assoc % :uid (gensym "art"))) ))
 			(assoc-in [:secret :artifacts] (take 5 (nthrest (->> @data :artifacts (remove :fg) (map #(assoc % :uid (gensym "art")))) (* n 5) )))
 			(assoc-in [:public :essence] {:gold 99 :calm 99 :elan 99 :life 99 :death 99})

@@ -82,7 +82,7 @@
     {:id 24 :type "artifact" :name "Hypnotic Basin"       :cost {:calm 2 :elan 1 :death 1} :collect [{:calm 2}]}  
     {:id 25 :type "artifact" :name "Jeweled Statuette"    :cost {:death 2 :gold 1} :vp 1} 
     {:id 26 :type "artifact" :name "Magical Shard"  :fg 3 :action [{:turn true :gain {:any 1 :exclude #{:gold}}}] } 
-    {:id 27 :type "artifact" :name "Mermaid"              :cost {:life 2 :calm 2} :collect [{:calm 1}] :subtype "Creature"}
+    {:id 27 :type "artifact" :name "Mermaid"              :cost {:life 2 :calm 2} :collect [{:calm 1}] :action [{:turn true :cost {:any 1 :exclude #{:death :elan}} :place {:cost true} :targetany true}] :subtype "Creature"}
     {:id 28 :type "artifact" :name "Nightingale"          :cost {:life 1 :calm 1} :subtype "Creature" :vp 1}
     {:id 29 :type "artifact" :name "Philosopher's Stone"  :cost {:elan 2 :life 2 :calm 2 :death 2} :vp 1 :action [{:turn true :cost {:any 2} :convertfrom {:any :equal} :convertto {:gold :equal} }]}
     
@@ -95,6 +95,6 @@
     {:id 36 :type "artifact" :name "Vault"          :fg 2 :cost {:gold 1 :any 1} :collect [{:special 36}] :action [{:turn true :place {:gold 1}}]}
     {:id 37 :type "artifact" :name "Water Dragon"         :cost {:calm 6} :subtype "Dragon" :vp 1 :action [{:turn true :loselife 2 :ignore {:elan 1} :source :dragon}]}
     {:id 38 :type "artifact" :name "Wind Dragon"          :cost {:calm 4 :any 4} :subtype "Dragon" :vp 1  :action [{:turn true :loselife 2 :ignore {:discard 1} :source :dragon}]}
-    {:id 39 :type "artifact" :name "Windup Man"           :cost {:elan 1 :life 1 :calm 1 :gold 1} :collect {:special 39} :action [{:turn true :cost {:any 1} :place {:any 1}}]}
+    {:id 39 :type "artifact" :name "Windup Man"           :cost {:elan 1 :life 1 :calm 1 :gold 1} :collect [{:special 39}] :action [{:turn true :cost {:any 1} :place {:cost true}}]}
   ]
 }))
