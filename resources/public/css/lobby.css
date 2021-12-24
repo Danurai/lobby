@@ -64,4 +64,6 @@
   white-space: pre-line;
   line-height: 1em;
   text-align: center;
+  margin-top: auto;
+  margin-bottom: auto;
 }

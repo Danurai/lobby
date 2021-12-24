@@ -34,7 +34,7 @@
 4,Dragon's Lair,pop,1,3,-,-,-,-,-,-,N,FAIL,,-,,,Y,,,,,,,XXXXX,
 5,Dwarven Mines,pop,,2,Y,Y,Y,Y,Y,Y,Y,Y,Y,-,,,,,,,,,,,
 6,Sacred Grove,pop,1,2,x,x,Y,Y,C,,Y,,,-,Y,Y,Y,,,,,,,,
-7,Sacrificial Pit,pop,,2,x,x,Y,Y,C,,Y,Y,,-,,,,,,,,,,,
+7,Sacrificial Pit,pop,,2,x,x,Y,Y,C,,Y,,,-,,,,,,,,,,Y,
 8,Sorcerer's Bestiary,pop,,2,x,x,SS,,C,,Y,,,-,,,,Yp,,,,,,XXXXX,
 9,Sunken Reef,pop,,1,Y,Y,Y,Y,x,x,Y,Y,Y,-,,,,,,,,,,,
 0,Athanor,artifact,,2,x,x,Y,Y,SS,,x,x,,-,,,,,,,,,,Y,
@@ -45,36 +45,36 @@
 5,Corrupt Altar,artifact,,2,Y,Y,Y,Y,SS,,x,x,,-,,,,,,,,,,Y,
 6,Crypt,artifact,,2,x,x,Y,,C,,x,x,,-,,,,Yp,,,,,,Y,
 7,Cursed Skull, artifact,,1,x,x,Y,Y,x,x,x,x,Y,-,,,,,,,,,,,
-8,Dancing Sword,artifact,4,1,Y,Y,Y,Y,x,x,x,x,raview checks,-,Y,,,,,,,,Y,,>:cost :place ignore
-9,Dragon Bridle,artifact,,2,x,x,Y,Y,Y,,Y,Y,Check vs dragon power,-,,,,Ya,,,,,Y,Y,>ignore (dragon only)
+8,Dancing Sword,artifact,4,1,Y,Y,RAV,Y,x,x,x,x,Can Pay?,-,Y,,,,,,,,Y,,>:cost :place ignore
+9,Dragon Bridle,artifact,,2,x,x,Y,Y,Y,,Y,Y,Test VS Dragon Power,-,,,,Ya,,,,,Y,Y,>ignore (dragon only)
 10,Dragon Egg,artifact,,1,x,x,C,,x,x,Y,Y,,-,,X,,Yp,,,,,,,
 11,Dragon Teeth,artifact,1,2,x,x,Y,Y,C,,x,x,,-,Y,Y,,Yp,,,,,,,
 12,Dwarven Pickaxe,artifact,,1,x,x,Y,Y,x,x,x,x,Y,-,,,,,,,,,,,
 13,Earth Dragon,artifact,,1,x,x,Y,Y,x,x,Y,Y,Y,-,,,,,,,,Y,,,
-14,Elemental Spring,artifact,1,1,Y,Y,C,,x,x,x,x,raview checks,-,Y,,,,,,,,Y,,>:cost ignore
+14,Elemental Spring,artifact,1,1,Y,Y,RAV,Y,x,x,x,x,Can Pay?,-,Y,,,,,,,,Y,,>:cost ignore
 15,Elvish Bow,artifact,,2,x,x,Y,Y,Y,Y,x,x,Y,-,,,,,,,,Y,,,
 16,Fiery Whip,artifact,,2,x,x,Y,,SS,,x,x,,-,,,,,,,,,,Y,
 17,Fire Dragon,artifact,,1,x,x,Y,Y,x,x,Y,Y,Y,-,,,,,,,,Y,,,
 18,Flaming Pit,artifact,2,1,Y,Y,Y,Y,x,x,x,x,Y,-,Y,Y,,,,,,,,,
 19,Fountain of Youth,artifact,4,1,Y,Y,Y,Y,x,x,x,x,Y,-,Y,,,,,,,,,,
-20,Guard Dog,artifact,,2,x,x,Y,??,Y,Y,x,x,> Action Bar,-,,,,,,,,,Y,Y,>ignore
+20,Guard Dog,artifact,,2,x,x,RAV,Y,Y,Y,x,x,Action Bar,-,,,,,,,,,Y,Y,>ignore
 21,Hand of Glory,artifact,1,1,x,x,Y,Y,xx,x,x,x,Y,-,Y,Y,,,,,,,,Y,
 22,Hawk,artifact,4,2,Y,Y,C,,Y,,x,x,,-,Y,Y,,,Y,Y,,,,,
 23,Horn of Plenty,artifact,,2,x,x,Y,Y,Y,Y,x,x,Y,-,,,,,,,,,,,
 24,Hypnotic Basin,artifact,,1,Y,Y,SS,,x,x,x,x,,-,,,,,,,,,,,
 25,Jeweled Statuette,artifact,,2,x,x,,,,,Y,Y,,-,,Y,,,,,,,,Y,
 26,Magical Shard,artifact,3,1,x,x,Y,Y,x,x,x,x,Y,-,Y,Y,,,,,,,,,
-27,Mermaid,artifact,,1,Y,Y,SS,,x,x,x,x,,-,,,,,,,,,,Y,
+27,Mermaid,artifact,,1,Y,Y,Y,Y,x,x,x,x,Y,-,,,,,,,,,,Y,
 28,Nightingale,artifact,,0,x,x,x,x,x,x,Y,Y,Y,-,,,,,,,,,,,
 29,Philosopher's Stone,artifact,,1,x,x,C,,x,x,Y,Y,,-,,,,,,,,,,,
 30,Prism,artifact,,2,x,x,C,,C,,x,x,,-,,,,,,,,,,,
-31,Ring of Midas,artifact,,2,x,x,Y,,Y,,Y,Y,,-,,,,,,,,,,,
+31,Ring of Midas,artifact,,2,x,x,Y,Y,Y,Y,Y,Y,Y,-,,,,,,,,,,,
 32,Sacrificial Dagger,artifact,,2,x,x,Y,,xx,,x,x,,-,,,,,,,,,,Y,
 33,Sea Serpent,artifact,,1,x,x,Y,Y,x,x,Y,Y,Y,-,,,,,,,,Y,,,
 34,Treant,artifact,,1,Y,Y,SS,,x,x,x,x,,-,,,,,,,,,,Y,
 35,Tree of Life,artifact,3,2,x,x,Y,,C,,x,x,Y,-,Y,Y,,,,,,,Y,,>ignore
-36,Vault,artifact,2,1,SS,,Y,Y,x,x,x,x,,-,Y,Y,,,,,,,,Y,
+36,Vault,artifact,2,1,Y,Y,Y,Y,x,x,x,x,Y,-,Y,Y,,,,,,,,Y,
 37,Water Dragon,artifact,,1,x,x,Y,Y,x,x,Y,Y,Y,-,,,,,,,,Y,,,
 38,Wind Dragon,artifact,,1,x,x,Y,Y,x,x,Y,Y,Y,-,,,,,,,,Y,,,
-39,Windup Man,artifact,,1,SS,,C,,x,x,x,x,,-,,,,,,,,,,Y,
-,,,,,,,,,,,,,,,27,29,2,2/4,4,3,1,7,12,15,
+39,Windup Man,artifact,,1,Y,Y,Y,Y,x,x,x,x,Y,-,,,,,,,,,,Y,
+,,,,,,,,,,,,,,,27,29,2,2/4,4,3,1,7,12,16,

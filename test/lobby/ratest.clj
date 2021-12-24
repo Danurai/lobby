@@ -298,7 +298,7 @@
   (let [gs  (started2pgm)]
     (=  (-> gs :players (get "p1") :public :mage :collect)
         (-> gs :players (get "p1") :public :mage :collect-essence))))
-    
+        
 ; Take essence from card
 (expect 2
   (let [gs (started2pgm)]
@@ -1277,3 +1277,69 @@
         (ramodel/chat-handler "/loselife 2 death" p2)
         (ramodel/parseaction {:action :react :card col :useraction (-> col :action last)} p1)
         :players (get p1) :public :artifacts first :turned?)))
+
+;; Card Specific Tests ;;
+; Collect {:special 36} - Vault - if gold left on card, {:any 2 :exclude #{:gold}}
+(expect [{:any 2 :exclude #{:gold}}]
+  (let [p1 (-> g3 :plyr-to first)
+        gs (ramodel/chat-handler g3 "/playcard Vault" p1)
+        vault (-> gs :players (get p1) :public :artifacts first)]
+      (-> gs
+          (ramodel/parseaction {:action :usecard :card vault :useraction (-> vault :action first)} p1)
+          (ramodel/parseaction {:action :pass} p1)
+          (ramodel/parseaction {:action :selectmagicitem :card (->> gs :magicitems (remove :owner) first :uid)} p1)
+          :players (get p1) :public :artifacts first :collect-essence )))
+; Collect {:special 36} - Vault - if NO gold left on card, {:any 2 :exclude #{:gold}}
+(expect nil
+  (let [p1 (-> g3 :plyr-to first)
+        gs (ramodel/chat-handler g3 "/playcard Vault" p1)
+        vault (-> gs :players (get p1) :public :artifacts first)]
+      (-> gs
+          ;(ramodel/parseaction {:action :usecard :card vault :useraction (-> vault :action first)} p1)
+          (ramodel/parseaction {:action :pass} p1)
+          (ramodel/parseaction {:action :selectmagicitem :card (->> gs :magicitems (remove :owner) first :uid)} p1)
+          :players (get p1) :public :artifacts first :collect-essence )))
+; Windup Man :place {:cost true}
+(expect {:elan 1}
+  (let [p1 (-> g3 :plyr-to first)
+        gs (ramodel/chat-handler g3 "/playcard Windup Man" p1)
+        wm (-> gs :players (get p1) :public :artifacts first)]
+      (-> gs
+          (ramodel/parseaction {:action :usecard :card wm :useraction {:turn true :cost {:elan 1} :place {:cost true}}} p1)
+          :players (get p1) :public :artifacts first :take-essence)))
+; Collect {:special 39} - Windup Man - if any essence left on card, add 2 of it
+(expect {:elan 3 :death 3}
+  (let [p1 (-> g3 :plyr-to first)
+        gs (ramodel/chat-handler g3 "/playcard Windup Man" p1)
+        wm (-> gs :players (get p1) :public :artifacts first)]
+      (-> gs
+          (ramodel/parseaction {:action :usecard :card wm :useraction {:turn true :cost {:elan 1 :death 1} :place {:cost true}}} p1)
+          (end-turn p1)
+          :players (get p1) :public :artifacts first :take-essence)))
+; Collect {:special 39} - Windup Man - if NO essence left on card
+(expect nil
+  (let [p1 (-> g3 :plyr-to first)
+        gs (ramodel/chat-handler g3 "/playcard Windup Man" p1)
+        wm (-> gs :players (get p1) :public :artifacts first)]
+      (-> gs
+          ;(ramodel/parseaction {:action :usecard :card wm :useraction {:turn true :cost {:elan 1 :death 1} :place {:cost true}}} p1)
+          (end-turn p1)
+          :players (get p1) :public :artifacts first :take-essence)))
+
+;; Mermaid -> place calm on mage
+(expect {:calm 1}
+  (let [p1 (-> g1 :plyr-to first)
+        gs (-> g1 (ramodel/chat-handler "/playcard Mermaid" p1))
+        mg (-> gs :players (get p1) :public :mage)
+        mm (-> gs :players (get p1) :public :artifacts first)]
+    (-> gs 
+        (ramodel/parseaction {:action :usecard :card mm :useraction (-> mm :action first (assoc :targetany mg :cost {:calm 1}))} p1)
+        :players (get p1) :public :mage :take-essence))) 
+(expect nil
+  (let [p1 (-> g1 :plyr-to first)
+        gs (-> g1 (ramodel/chat-handler "/playcard Mermaid" p1))
+        mg (-> gs :players (get p1) :public :mage)
+        mm (-> gs :players (get p1) :public :artifacts first)]
+    (-> gs 
+        (ramodel/parseaction {:action :usecard :card mm :useraction {:turn true, :cost {:calm 1}, :place {:cost true}, :targetany mg :gain nil}} p1)
+        :players (get p1) :public :artifacts first :take-essence))) 

@@ -143,7 +143,7 @@
 
 (defn- generate-essence [ gamestate ]
   ; copy from :collect to :collect-essence
-  (if verbose? (println "Generate essence"))
+  (if verbose? (println "generate-essence:"))
     (-> gamestate
       (assoc :magicitems
         (map #(if (-> % :owner some?) (assoc % :collect-essence (:collect %)) %) (:magicitems gamestate)))
@@ -152,7 +152,15 @@
           (fn [m k v]
             (-> m
                 (assoc-in [k :public :mage :collect-essence] (-> v :public :mage :collect)) ; mage
-                (assoc-in [k :public :artifacts] (mapv #(assoc % :collect-essence (:collect %)) (-> v :public :artifacts)))   ; artifact / monument / pop
+                (assoc-in [k :public :artifacts] 
+                  (mapv 
+                    (fn [c]
+                      (assoc c :collect-essence 
+                        (case (-> c :collect first :special)
+                            36 (if (-> c :take-essence :gold) [{:any 2 :exclude #{:gold}}] nil)
+                            39 nil 
+                            (:collect c))))
+                    (-> v :public :artifacts)))   ; artifact / monument / pop
             )
           ) (:players gamestate) (:players gamestate))))) 
 
@@ -231,7 +239,7 @@
 ;;;;; PHASE TRANSITION ;;;;;
 
 (defn- collect-phase [ gamestate ]
-  (if verbose? "Collect phase")
+  (if verbose? (println "Collect phase"))
   (-> gamestate
       (assoc :phase :collect)
       generate-essence
@@ -394,7 +402,15 @@
                   (-> m 
                       (update-in [k] dissoc :collected?) 
                       (update-in [k :public :mage] dissoc :collect-essence)
-                      (assoc-in  [k :public :artifacts] (map #(dissoc % :collect-essence) (-> v :public :artifacts)))
+                      (assoc-in  [k :public :artifacts] 
+                        (map 
+                          (fn [a]
+                            (case (-> a :collect first :special)
+                                  39 (if-let [te (:take-essence a)]
+                                        (assoc a :take-essence (reduce-kv (fn [m k v] (update m k + 2)) te te))
+                                        a)
+                                  (dissoc a :collect-essence) ))
+                          (-> v :public :artifacts)))
                       )) (:players gamestate) (:players gamestate)))
             (assoc :magicitems (map #(dissoc % :collect-essence) (:magicitems gamestate)))
             (add-chat "Action Phase")
@@ -409,29 +425,30 @@
           (update-in [:players uname] #(if newstate? (assoc % :collected? true) (dissoc % :collected?)))
           collect-to-action-phase)))
 
-(defn- place-essence [ gamestate card essence uname ]
+(defn- place-essence [ gamestate card useraction uname ]
   ;; will only be a mage or in the players :public artifacts
-  (if verbose? (println "place-essence:" uname card essence))
-  (case (:type card)
-    "mage" 
-      (reduce-kv 
-        (fn [m k v]
-          (if (-> m :players (get uname) :public :mage :take-essence k)
-              (update-in m [:players uname :public :mage :take-essence k] + v)
-              (assoc-in  m [:players uname :public :mage :take-essence k]   v)))
-        gamestate essence) ; regardless of card id
-    ("artifact" "monument" "pop")
-      (assoc-in gamestate [:players uname :public :artifacts] 
-        (mapv 
-          #(if (= (:uid %) (:uid card))
-                (reduce-kv 
-                  (fn [m k v] 
-                      (if (-> m :take-essence k)
-                          (update-in m [:take-essence k] + v)
-                          (assoc-in  m [:take-essence k]   v))) 
-                  % essence)
-                %) (-> gamestate :players (get uname) :public :artifacts)))
-    gamestate))
+  (let [essence (if (-> useraction :place :cost) (:cost useraction) (:place useraction))]
+    (if verbose? (println "place-essence:" uname card useraction) )
+    (case (:type card)
+      "mage" 
+        (reduce-kv 
+          (fn [m k v]
+            (if (-> m :players (get uname) :public :mage :take-essence k)
+                (update-in m [:players uname :public :mage :take-essence k] + v)
+                (assoc-in  m [:players uname :public :mage :take-essence k]   v)))
+          gamestate essence) ; regardless of card id
+      ("artifact" "monument" "pop")
+        (assoc-in gamestate [:players uname :public :artifacts] 
+          (mapv 
+            #(if (= (:uid %) (:uid card))
+                  (reduce-kv 
+                    (fn [m k v]
+                        (if (-> m :take-essence k)
+                            (update-in m [:take-essence k] + v)
+                            (assoc-in  m [:take-essence k]   v))) 
+                    % essence)
+                  %) (-> gamestate :players (get uname) :public :artifacts)))
+      gamestate)))
 
 (defn- lose-life [ gamestate card action uname ]
   (if (and verbose? (:loselife action)) (println "lose-life:" card action uname))
@@ -448,23 +465,23 @@
 ;;; USE A CARD ;;;
 ;; Request: {:action :usecard, :useraction {:turn true, :cost {}, :gain {:death 2}, :rivals {:death 1}}, :gid :gm93866} dan
 (defn- use-card [ gamestate {:keys [card useraction]} uname] 
-    (if verbose? (println "use-card:" card useraction uname))
-    (-> gamestate
-        (add-chat (str "Used " (:type card) " " (:name card)) uname)                ; Chat
-        (assoc :players                                                 ; Rivals gain 
-          (:players 
-            (reduce-kv (fn [m k v] 
-              (if (not= uname k)
-                  (update-player-essence m {:essence (:rivals useraction)} k)
-                  m)) gamestate (:players gamestate))))
-        (update-player-essence {:essence (invert-essence (:cost useraction))} uname)     ; Pay cost
-        (update-player-essence {:essence (:gain useraction)} uname)     ; Gain essence
-        (place-essence card (:place useraction) uname)                  ; Place essence
-        (turn-card (:straighten useraction) nil uname)                  ; Straighten
-        (drawcard uname (:draw useraction))                             ; Draw
-        (turn-card card (:turn useraction) uname)                       ; Turn
-        (lose-life card useraction uname)                               ; Trigger Lose Life responses
-    ))
+  (if verbose? (println "use-card:" card useraction uname))
+  (-> gamestate
+      (add-chat (str "Used " (:type card) " " (:name card)) uname)                ; Chat
+      (assoc :players                                                 ; Rivals gain 
+        (:players 
+          (reduce-kv (fn [m k v] 
+            (if (not= uname k)
+                (update-player-essence m {:essence (:rivals useraction)} k)
+                m)) gamestate (:players gamestate))))
+      (update-player-essence {:essence (invert-essence (:cost useraction))} uname)     ; Pay cost
+      (update-player-essence {:essence (:gain useraction)} uname)     ; Gain essence
+      (place-essence (or (:targetany useraction) card) useraction uname)                           ; Place essence
+      (turn-card (:straighten useraction) nil uname)                  ; Straighten
+      (drawcard uname (:draw useraction))                             ; Draw
+      (turn-card card (:turn useraction) uname)                       ; Turn
+      (lose-life card useraction uname)                               ; Trigger Lose Life responses
+  ))
 
 
 ;;; REACT ;;;
