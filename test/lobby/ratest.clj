@@ -1094,18 +1094,19 @@
 (expect "This is a test message"
   (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "This is a test message" p1) :chat second :msg)))
   
-(expect "help: /essence <essence name> <new value>"
-  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence" p1) :chat last :msg)))
+;(expect "help: /essence <essence name> <new value>"
+;  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence" p1) :chat last :msg)))
+;
+;(expect :usercmdhelp
+;  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence" p1) :chat last :event)))
 
-(expect :usercmdhelp
-  (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence" p1) :chat last :event)))
 (expect :usercmd
   (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence gold 200" p1) :chat second :event)))
 
 ; Set essence
 (expect "/essence gold 200"
   (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence gold 200" p1) :chat second :msg)))
-(expect 200
+(expect 299
   (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/essence gold 200" p1) :players (get p1) :public :essence :gold)))
 
 (expect "Celestial Horse"
@@ -1216,14 +1217,21 @@
 (expect {:loselife 2 :ignore {:death 1} :name "User Action" :plyr "p1"}
   (let [p1 (-> g1 :plyr-to first) p2 (-> g1 :plyr-to last)]
     (-> g1 
-        (ramodel/chat-handler "/loselife 2 death" p1)
+        (ramodel/chat-handler "/loselife life 2 death 1" p1)
         :players (get p2) :loselife)))
 
-; trigger same effect using chat commands 
-(expect {:loselife 2 :ignore {:gold 1} :name "User Action" :plyr "p2"}
+(expect :play 
   (let [p1 (-> g1 :plyr-to first) p2 (-> g1 :plyr-to last)]
-    (-> g1 
-        (ramodel/chat-handler "/loselife 2 gold p2" p1)
+    (-> g1
+        (ramodel/chat-handler "/endturn" p1)
+        :players (get p2) :action)))
+      
+; trigger same effect using chat commands 
+(expect {:loselife 2 :ignore {:gold 1} :name "User Action" :plyr "AI123"}
+  (let [p1 (-> g1 :plyr-to first) p2 (-> g1 :plyr-to last)]
+    (-> g1
+        (ramodel/chat-handler "/endturn" p1)
+        (ramodel/chat-handler "/loselife life 2 gold 1 AI123" p1)
         :players (get p1) :loselife)))
 
 ; do not end turn until all :loselife responses are completed
@@ -1343,3 +1351,60 @@
     (-> gs 
         (ramodel/parseaction {:action :usecard :card mm :useraction {:turn true, :cost {:calm 1}, :place {:cost true}, :targetany mg :gain nil}} p1)
         :players (get p1) :public :artifacts first :take-essence))) 
+
+;; Recised chat commands
+(expect {:command "essence" :essence {:gold 1 :death -2} :cardname nil :player "AI123"}
+  (ramodel/regexp-result g1 "/essence gold 1 death -2 AI123" (-> g1 :plyr-to first)))
+
+(expect {:command "playcard" :cardname "Chalice of Life" :essence nil :player "p1"}
+  (ramodel/regexp-result g1 "/playcard Chalice of Life"  (-> g1 :plyr-to first)))
+
+(expect true
+  (let [p1 (-> g1 :plyr-to first)
+        gx (ramodel/chat-handler g1 "/playcard Mermaid" p1)]
+    (-> gx
+        (ramodel/chat-handler "/turn Mermaid" p1)
+        :players (get p1) :public :artifacts first :turned?)))
+(expect nil
+  (let [p1 (-> g1 :plyr-to first)
+        gx (ramodel/chat-handler g1 "/playcard Mermaid" p1)]
+    (-> gx
+        (ramodel/chat-handler "/turn Mermaid" p1)
+        (ramodel/chat-handler "/turn Mermaid" p1)
+        :players (get p1) :public :artifacts first :turned?)))
+
+(expect 4
+  (let [p1 (-> g1 :plyr-to first)]
+    (-> g1 
+        (ramodel/chat-handler "/draw" p1)
+        :players (get p1) :private :artifacts count)))
+(expect 5
+  (let [p1 (-> g1 :plyr-to first)]
+    (-> g1 
+        (ramodel/chat-handler "/draw 2" p1)
+        :players (get p1) :private :artifacts count)))
+(expect 8
+  (let [p1 (-> g1 :plyr-to first)]
+    (-> g1 
+        (ramodel/chat-handler "/draw 100" p1)
+        :players (get p1) :private :artifacts count)))
+(expect 2
+  (let [p1 (-> g1 :plyr-to first)
+        c1 (-> g1 :players (get p1) :private :artifacts first)]
+    (-> g1 
+        (ramodel/parseaction {:action :discard :card c1 :essence {:gold 1}} p1)
+        :players (get p1) :private :artifacts count)))
+(expect 8
+  (let [p1 (-> g1 :plyr-to first)
+        c1 (-> g1 :players (get p1) :private :artifacts first)]
+    (-> g1 
+        (ramodel/parseaction {:action :discard :card c1 :essence {:gold 1}} p1)
+        (ramodel/chat-handler "/draw 100" p1)
+        :players (get p1) :private :artifacts count)))
+(expect 0
+  (let [p1 (-> g1 :plyr-to first)
+        c1 (-> g1 :players (get p1) :private :artifacts first)]
+    (-> g1 
+        (ramodel/parseaction {:action :discard :card c1 :essence {:gold 1}} p1)
+        (ramodel/chat-handler "/draw 100" p1)
+        :players (get p1) :public :discard count)))

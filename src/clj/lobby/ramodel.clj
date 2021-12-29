@@ -50,11 +50,19 @@
   ([ gamestate uname n]
     (if verbose? (println "drawcard:" uname n))
     (if n 
-      (let [artdeck (-> gamestate :players (get uname) :secret :artifacts)]
-        (-> gamestate
-            (update-in [:players uname :private :artifacts] #(apply conj % (take n artdeck)))
-            (assoc-in [:players uname :secret :artifacts] (nthrest artdeck n))
-            (add-chat "Draw 1 card." uname)))
+      (let [artdeck  (-> gamestate :players (get uname) :secret :artifacts vec)
+            discard  (-> gamestate :players (get uname) :public :discard vec)
+            drawdeck (apply conj artdeck (shuffle discard))]
+        (if (> n (count artdeck))
+            (-> gamestate
+                (update-in [:players uname :private :artifacts] #(apply conj % (take n drawdeck)))
+                (assoc-in  [:players uname :secret :artifacts] (nthrest drawdeck n))
+                (assoc-in  [:players uname :public :discard] [])
+                (add-chat (str "Draw " n) uname))
+            (-> gamestate
+                (update-in [:players uname :private :artifacts] #(apply conj % (take n artdeck)))
+                (assoc-in [:players uname :secret :artifacts] (nthrest artdeck n))
+                (add-chat (str "Draw " n) uname))))
       gamestate))
   ([ gamestate uname ] (drawcard gamestate uname 1)))
  
@@ -223,18 +231,17 @@
   
 ;;;;; DISCARD ;;;;;
 
-(defn discardcard [ gs ?data uname ]
-  (if verbose? (println uname "discard" (-> ?data :card :name) "essence" (:essence ?data)))
-  (let [{:keys [essence card]} ?data]
-    (if (= uname (get-active-player gs))
-        (-> gs 
-            (update-in [:players uname :public :discard] conj card)
-            (assoc-in [:players uname :private :artifacts] (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :private :artifacts)))
-            (update-player-essence ?data uname)
-            (add-chat (str "Discard " (:name card)) uname)
-            (add-chat (str "Gained " (clojure.string/join "," (map #(str (val %) " " (-> % key name clojure.string/capitalize)) essence))) uname)
-            )
-        gs)))
+(defn discardcard [ gs {:keys [card essence] :as ?data} uname ]
+  (if verbose? (println uname "discard" (:name card) "essence" essence))
+  (if (= uname (get-active-player gs))
+      (-> gs 
+          (update-in [:players uname :public :discard] conj card)
+          (assoc-in [:players uname :private :artifacts] (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :private :artifacts)))
+          (update-player-essence ?data uname)
+          (add-chat (str "Discard " (:name card)) uname)
+          (add-chat (str "Gained " (clojure.string/join "," (map #(str (val %) " " (-> % key name clojure.string/capitalize)) essence))) uname)
+          )
+      gs))
 
 ;;;;; PHASE TRANSITION ;;;;;
 
@@ -719,16 +726,87 @@
   "essence" "/essence <essence name> <new value>"
 })
 
-(defn- usercmd-playcard [ gs cardname uname ]
+(defn- usercmd-playcard [ gs {:keys [cardname essence] :as rer} uname ]
 ;; IMPORTANT FOR TESTING ONLY TODO LIMIT BY ENV VARIABLE
   (if verbose? (println "PLAYING" cardname))
   (if-let [card (->> @data :artifacts (filter #(= (:name %) cardname)) first)]
     (-> gs
-        (update-in [:players uname :public :artifacts] conj (assoc card :uid (gensym "art")))
-        (add-chat (str "Played " cardname " OUT OF NOWHERE!") uname :usercmd))
+        (update-in [:players uname :public :artifacts] conj (assoc card :uid (gensym "card")))
+        (add-chat (str "Played " cardname " OUT OF NOWHERE!") uname :usercmd)
+        (update-player-essence rer uname))
     gs))
 
+(defn- usercmd-turn [ gs rer ]
+  (assoc-in gs [:players (:player rer) :public :artifacts]
+    (mapv 
+      (fn [a]
+        (if (= (:name a) (:cardname rer))
+            (if (:turned? a) (dissoc a :turned?) (assoc a :turned? true))
+            a))
+      (-> gs :players (get (:player rer)) :public :artifacts))))
+
+;; parse message into variables
+;; /<command>
+;; card name
+;; essence number
+(defn regexp-result [ gs msg uname ]
+  (let [command-match (re-find  #"\/(\w+)" msg)
+        essence-match (re-seq   #"(life|death|calm|elan|gold)\s(\-?\d+)"  msg)
+        player-match  (re-find (re-pattern (str "(" (clojure.string/join "|" (-> gs :display-to)) ")" )) msg)
+        card-match    (re-find
+                        (re-pattern 
+                          (str "(" 
+                              (clojure.string/join "|" (map :name (concat (:monuments @data) (:placesofpower @data) (:mages @data) (:artifacts @data) (:magicitems @data) )))
+                              ")")) 
+                        msg)
+        ]
+    (hash-map 
+      :command  (last command-match)
+      :essence  (if (not-empty essence-match) (apply conj (map #(hash-map (-> % second keyword) (-> % last read-string)) essence-match)))
+      :cardname (last card-match)
+      :player   (if (nil? player-match) uname (last player-match))
+    )))
+
 (defn chat-handler [ gs msg uname ]
+  (let [rer (regexp-result gs msg uname)]
+    (if verbose? (println "chat-handler" msg uname rer))
+    (case (:command rer)
+      "essence"  (-> gs
+                    (add-chat msg uname :usercmd) 
+                    (update-player-essence rer uname))
+                    ;(essence-match-handler uname (nth essence-match 2) (last essence-match)))
+      "playcard" (-> gs 
+                    (add-chat msg uname :userdm) 
+                    (usercmd-playcard rer uname)
+                    )
+      "loselife" (let [ll-essence-match (re-seq   #"(death|calm|elan|gold)\s(\-?\d+)"  msg)
+                      ll-essence (apply conj (map #(hash-map (-> % second keyword) (-> % last read-string)) ll-essence-match))
+                       ll-rer (assoc rer :ll ll-essence)]
+                    (-> gs
+                        (add-chat msg uname :usercmd)
+                        ;(add-chat (str (:player rer) " triggered Lose Life event: Lose " (-> ll-rer :essence :life) " life. Spend "(-> ll-rer :essence last val) " " (-> ll-rer :essence last key name) " to ignore" ))
+                        (lose-life {:name "User Action"} {:loselife (-> ll-rer :essence :life) :ignore (-> ll-rer :essence (dissoc :life))} (:player ll-rer))
+                        (end-action (:player ll-rer))))
+      "endturn"  (-> gs
+                    (add-chat msg uname :usercmd)
+                    (end-action uname))
+      "turn"     (-> gs
+                    (add-chat msg uname :usercmd)
+                    (usercmd-turn rer))
+      "setmage"  (if-let [mage (->> @data :mages (filter #(= (:name %) (:cardname rer))) first)]
+                    (-> gs 
+                        (add-chat msg uname :userdm)
+                        (add-chat (str "Changed Mage to " (:name mage)) uname :usercmd)
+                        (assoc-in [:players uname :public :mage] (assoc mage :uid (gensym "mage"))))
+                    (-> gs 
+                        (add-chat msg uname :userdm)))
+      "draw"    (let [n (->> msg (re-find #"\d+"))]
+                  (-> gs
+                    (add-chat msg uname :usercmd)
+                    (drawcard uname (if n (read-string n) 1))))
+      (add-chat gs msg uname))))
+
+(defn chat-handlerx [ gs msg uname ]
   (let [fn-hint (re-find #"(?i)\/(\w+)" msg)
         essence-match (re-matches #"(?i)\/(essence)\s(gold|elan|calm|life|death)\s(\d+)" msg)
         card-match    (re-matches #"(?i)\/playcard\s(.+)" msg)
