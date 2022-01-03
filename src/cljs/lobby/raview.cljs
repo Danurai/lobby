@@ -602,22 +602,31 @@
                     )])]))
 
 ;; functions
-(defn- react-btn-disabled? [ cost ess ]
+
+(defn- all-player-essence? [ cost pess ]
+  (->>  (reduce-kv 
+          (fn [m k v]
+            (update m k - v))
+          pess cost)
+        vals (filter #(> % 0)) (apply +) (= 0)))
+
+(defn- react-btn-disabled? [ cost ess pdata ]
   (not 
-    (can-pay-cost? 
-      {:any (-> cost :life (* 2))}  ; double all :life cost
-      (reduce-kv #(if (= :life %2)
-                      (assoc %1 %2 (* 2 %3))
-                      %1) ess ess)  ;count life paid as double
-      )
-    ))
+    (or
+      (all-player-essence? ess (-> pdata :public :essence))
+      (can-pay-cost? 
+        {:any (-> cost :life (* 2))}  ; double all :life cost
+        (reduce-kv #(if (= :life %2)
+                        (assoc %1 %2 (* 2 %3))
+                        %1) ess ess)  ;count life paid as double
+        ))))
 
 (defn- pay-essence-module [ pdata cost ]
   (let [useraction (r/atom {})]
     (fn []
       [:div
         [:button.btn.btn-outline-secondary.w-100.me-1 {
-            :disabled (react-btn-disabled? cost (:cost @useraction))
+            :disabled (react-btn-disabled? cost (:cost @useraction) pdata)
             :on-click #(comms/ra-send! {:action :react :card nil :useraction @useraction})}
           [:div.d-flex.justify-content-center 
             [:div.me-2.text-dark "Pay"] 
@@ -646,7 +655,7 @@
                                     (filter #(->> % :action 
                                       (filter (fn [a] (and (or (-> a :source nil?) (= (:source a) (-> pdata :loselife :source))) (= :loselife (:ignore a))))) 
                                       count (< 0))))
-                  cost {:life (-> pdata :loselife :loselife)}
+                  cost        {:life (-> pdata :loselife :loselife)}
                   ignorecost  (-> pdata :loselife :ignore)
                   ess         (-> pdata :public :essence)]
               [:div.col

@@ -1266,8 +1266,8 @@
     (-> g4
         (ramodel/chat-handler "/endturn" p1)
         (ramodel/chat-handler "/loselife 2 death" p2)
-        (ramodel/parseaction {:action :react :card {:type "reaction" :name "pay essence"} :useraction {:cost {:death 4}}} p1)
-        :players (get p1) :public :essence :death)))
+        (ramodel/parseaction {:action :react :card {:type "reaction" :name "pay essence"} :useraction {:cost {:elan 4}}} p1)
+        :players (get p1) :public :essence :elan)))
 (expect 98
   (let [p1 (-> g4 :plyr-to first) p2 (-> g4 :plyr-to last)]
     (-> g4
@@ -1285,6 +1285,17 @@
         (ramodel/chat-handler "/loselife 2 death" p2)
         (ramodel/parseaction {:action :react :card col :useraction (-> col :action last)} p1)
         :players (get p1) :public :artifacts first :turned?)))
+; Not enough essence to pay total cost - take all remaining essence (Implement OK in raview)
+(expect :play 
+  (let [p1 (-> g4 :plyr-to first) p2 (-> g4 :plyr-to last)
+        gs (-> g4 (ramodel/chat-handler "/playcard Chalice of Life" p1))
+        col (-> gs :players (get p1) :public :artifacts first)]
+    (-> gs
+        (ramodel/chat-handler "/endturn" p1)
+        (ramodel/chat-handler "/loselife 2 death" p2)
+        (ramodel/chat-handler "/essence life -99 elan -98 death -99 gold -99 calm -99" p1)
+        (ramodel/parseaction {:action :react :card {:type "reaction" :name "pay essence"} :useraction {:cost {:elan 1}}} p1)
+        :players (get p1) :action)))
 
 ;; Card Specific Tests ;;
 ; Collect {:special 36} - Vault - if gold left on card, {:any 2 :exclude #{:gold}}
@@ -1352,7 +1363,7 @@
         (ramodel/parseaction {:action :usecard :card mm :useraction {:turn true, :cost {:calm 1}, :place {:cost true}, :targetany mg :gain nil}} p1)
         :players (get p1) :public :artifacts first :take-essence))) 
 
-;; Recised chat commands
+;; Revised chat commands
 (expect {:command "essence" :essence {:gold 1 :death -2} :cardname nil :player "AI123"}
   (ramodel/regexp-result g1 "/essence gold 1 death -2 AI123" (-> g1 :plyr-to first)))
 
