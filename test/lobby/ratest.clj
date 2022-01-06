@@ -863,7 +863,7 @@
     (-> g1x
         (ramodel/parseaction {:action :usecard :useraction {:turn true :cost {:life 1} :place {:calm 1, :elan 1, :death 1}} :card cs} p1)
         :players (get p1) :public :artifacts first :take-essence)))
-        
+
 ;; Claim Pop
 ; Added to Artifacts
 (expect "Sacred Grove"
@@ -1234,6 +1234,35 @@
         (ramodel/chat-handler "/loselife life 2 gold 1 AI123" p1)
         :players (get p1) :loselife)))
 
+(expect {:loselife 2 :ignore {:discard 1} :name "User Action" :plyr "AI123"}
+  (let [p1 (-> g1 :plyr-to first) p2 (-> g1 :plyr-to last)]
+    (-> g1
+        (ramodel/chat-handler "/endturn" p1)
+        (ramodel/chat-handler "/loselife life 2 discard 1 AI123" p1)
+        :players (get p1) :loselife)))
+
+;; Discard response test
+(expect 2
+  (let [p1  (-> g4 :plyr-to first) 
+        p2  (-> g4 :plyr-to last)
+        gs  (ramodel/chat-handler g4 "/playcard Wind Dragon" p1)
+        wd  (-> gs :players (get p1) :public :artifacts first)] ; P1 starts with Sea serpent
+    (-> gs 
+        (ramodel/parseaction {:action :usecard :card wd :useraction (-> wd :action first)} p1)
+        (ramodel/parseaction {:action :react :card (-> gs :players (get p2) :private :artifacts first) :useraction {:discard true}} p2)
+        :players (get p2) :private :artifacts count)))
+
+;; Destroy response test
+(expect 0
+  (let [p1  (-> g4 :plyr-to first) 
+        p2  (-> g4 :plyr-to last)
+        gs  (-> g4 (ramodel/chat-handler "/playcard Sea Serpent" p1) (ramodel/chat-handler "/playcard Athanor" p2))
+        ss  (-> gs :players (get p1) :public :artifacts first)] ; P1 starts with Sea serpent
+    (-> gs 
+        (ramodel/parseaction {:action :usecard :card ss :useraction (-> ss :action first)} p1)
+        (ramodel/parseaction {:action :react :useraction {:destroy true :card (-> gs :players (get p2) :public :artifacts first)}} p2)
+        :players (get p2) :public :artifacts count)))
+
 ; do not end turn until all :loselife responses are completed
 (expect :play
   (let [p1 (-> g4 :plyr-to first)
@@ -1383,6 +1412,27 @@
         (ramodel/chat-handler "/turn Mermaid" p1)
         (ramodel/chat-handler "/turn Mermaid" p1)
         :players (get p1) :public :artifacts first :turned?)))
+(expect true 
+  (let [p1 (-> g1 :plyr-to first)]
+    (-> g1
+        (ramodel/chat-handler "/turn Duelist" p1)
+        :players (get p1) :public :mage :turned?)))
+(expect nil 
+  (let [p1 (-> g1 :plyr-to first)]
+    (-> g1
+        (ramodel/chat-handler "/turn Duelist" p1)
+        (ramodel/chat-handler "/turn Duelist" p1)
+        :players (get p1) :public :mage :turned?)))
+(expect true 
+  (let [p1 (-> g2 :plyr-to first)]
+    (->>  (ramodel/chat-handler g2 "/turn Research" p1)
+          :magicitems (filter #(= (:name %) "Research")) first :turned?)))
+(expect nil
+  (let [p1 (-> g2 :plyr-to first)]
+    (->>  (-> g2
+              (ramodel/chat-handler "/turn Research" p1)
+              (ramodel/chat-handler "/turn Research" p1))
+          :magicitems (filter #(= (:name %) "Research")) first :turned?)))
 
 (expect 4
   (let [p1 (-> g1 :plyr-to first)]
@@ -1419,3 +1469,50 @@
         (ramodel/parseaction {:action :discard :card c1 :essence {:gold 1}} p1)
         (ramodel/chat-handler "/draw 100" p1)
         :players (get p1) :public :discard count)))
+
+
+;; Artifact order after end turn
+
+;; draw card
+(expect true 
+  (let [p1 (-> g1 :plyr-to first)]
+    (-> g1 
+        (ramodel/chat-handler "/draw" p1)
+        :players (get p1) :public :artifacts vector?)))
+
+;; end turn
+(expect true
+  (let [p1 (-> g1 :plyr-to first)
+        artifacts (-> g1 :players (get p1) :private :artifacts)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card (first artifacts)  :essence (-> artifacts first :cost)} p1)
+        (ramodel/parseaction {:action :place :card (second artifacts) :essence (-> artifacts second :cost)} p1)
+        (ramodel/parseaction {:action :place :card (last artifacts)   :essence (-> artifacts last :cost)} p1)
+        (ramodel/parseaction {:action :pass} p1)
+        (ramodel/parseaction {:action :selectmagicitem :card (->> g1 :magicitems (remove :owner) first :uid)} p1)
+        (ramodel/parseaction {:action :collected} p1)
+        :players (get p1) :public :artifacts vector?)))
+
+;; USE draw3
+(expect true
+  (let [gs g4
+        p1 (-> g4 :plyr-to first)
+        m1 (-> g4 :players (get p1) :public :mage )
+        p2 (-> g4 :plyr-to last)
+        m2 (-> g4 :players (get p2) :public :mage) ]  ; Seer
+    (-> g4
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :usecard :card m2 :useraction (-> m2 :action first)} p2)
+        :players (get p2) :draw3)))
+;; USE draw3
+(expect :play
+  (let [gs g4
+        p1 (-> g4 :plyr-to first)
+        m1 (-> g4 :players (get p1) :public :mage )
+        p2 (-> g4 :plyr-to last)
+        m2 (-> g4 :players (get p2) :public :mage) ]  ; Seer
+    (-> g4
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :usecard :card m2 :useraction (-> m2 :action first)} p2)
+        :players (get p2) :action)))
+  
