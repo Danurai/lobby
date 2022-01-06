@@ -220,7 +220,7 @@
   height: 3.5em;
 }
 .modal-reaction {
-  width: 5em; height: 7em;
+  width: 5em !important; height: 7em !important;
 }
 .modal-reaction:hover {
   box-shadow: 0px 0px 1em 0px #888;

@@ -95,3 +95,6 @@
 			(assoc :pops (->> @data :placesofpower (remove :fg?) (map #(assoc % :uid (gensym "pop")))))
 			(update-in [:players] dissoc "AI123")
 			(assoc-in [:chat 0 :msg] "Swap to predefined Game4")))
+
+(def game5 
+	game4)

@@ -33,8 +33,9 @@
 
 (defn- add-chat
   ([ gs msg uname event ]
-    (update-in gs [:chat] 
-      conj (message-map msg uname event)))
+    (if (some? msg)
+        (update-in gs [:chat] conj (message-map msg uname event))
+        gs))
   ([ gs msg uname ] (add-chat gs msg uname nil))
   ([ gs msg ] (add-chat gs msg nil nil)))
 
@@ -139,7 +140,7 @@
           (update-player-essence ?data uname)
           (remove-card-essence card :collect-essence uname)
           (add-chat 
-            (str "collected " (clojure.string/join ", " (map #(str (val %) " " (-> % key name)) essence)) " from " (:name card))
+            (str "Collected " (clojure.string/join ", " (map #(str (val %) " " (-> % key name)) essence)) " from " (:name card))
             uname))))
 
 ; update functions above to take :collect-essence or :take-essence params)
@@ -231,12 +232,12 @@
   
 ;;;;; DISCARD ;;;;;
 
-(defn discardcard [ gs {:keys [card essence] :as ?data} uname ]
+(defn discard-card [ gs {:keys [card essence] :as ?data} uname ]
   (if verbose? (println uname "discard" (:name card) "essence" essence))
   (if (= uname (get-active-player gs))
       (-> gs 
           (update-in [:players uname :public :discard] conj card)
-          (assoc-in [:players uname :private :artifacts] (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :private :artifacts)))
+          (assoc-in [:players uname :private :artifacts] (vec (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :private :artifacts))))
           (update-player-essence ?data uname)
           (add-chat (str "Discard " (:name card)) uname)
           (add-chat (str "Gained " (clojure.string/join "," (map #(str (val %) " " (-> % key name clojure.string/capitalize)) essence))) uname)
@@ -328,9 +329,10 @@
                       (:plyr-to gamestate)    
                       (->> gamestate :plyr-to (drop-while #(not= % uname)) rest))
         nextp     (if (empty? nextplyrs) (-> gamestate :plyr-to first) (first nextplyrs))
-        loselife? (->> gamestate :players vals (map :loselife) (remove nil?) )]
+        loselife? (->> gamestate :players vals (map :loselife) (remove nil?) not-empty)
+        draw3?    (->> gamestate :players vals (map :draw3) (remove nil?) not-empty)]
     (if verbose? (println "end-action:" uname "nextplayer" nextp loselife? (empty? loselife?)))
-    (if (not-empty loselife?)  ; DON@T ADVANCE IF THERE IS A ?LOSELIFE ACTION LIVE
+    (if (or loselife? draw3?)  ; Don't advance if there are :loselife or :draw3 or :divine actions live
         gamestate
         (-> gamestate
             (set-player-action uname (if (-> gamestate :plyr-to set (contains? uname)) :waiting :pass))
@@ -410,7 +412,7 @@
                       (update-in [k] dissoc :collected?) 
                       (update-in [k :public :mage] dissoc :collect-essence)
                       (assoc-in  [k :public :artifacts] 
-                        (map 
+                        (mapv 
                           (fn [a]
                             (case (-> a :collect first :special)
                                   39 (if-let [te (:take-essence a)]
@@ -457,6 +459,29 @@
                   %) (-> gamestate :players (get uname) :public :artifacts)))
       gamestate)))
 
+(defn- react-discard [ gs {:keys [card useraction]} uname ]
+  (if (:discard useraction) (println "react-discard:" useraction))
+  (if (:discard useraction)
+      (-> gs 
+        (update-in [:players uname :public :discard] conj card)
+        (assoc-in [:players uname :private :artifacts] (vec (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :private :artifacts))))
+        (add-chat (str "Discard " (:name card)) uname))
+      gs))
+
+(defn- destroy-card [ gs {:keys [card destroy]} uname]
+  (if (and destroy card) (println "destroy-card:" destroy card uname))
+  (if (and destroy card)
+    (-> gs 
+        (assoc-in [:players uname :public :artifacts] (vec (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :public :artifacts))))
+        (add-chat (str "Destroyed " (:name card)) uname))
+    gs))
+
+;(defn- react-destroy [ gs {:keys [card useraction]} uname ]
+;  (if (:destroy useraction) (println "react-destroy:" card useraction uname))
+;  (if (:destroy useraction)
+;      (destroy-card gs (assoc useraction :card card) uname)
+;      gs))
+
 (defn- lose-life [ gamestate card action uname ]
   (if (and verbose? (:loselife action)) (println "lose-life:" card action uname))
   (if (:loselife action)
@@ -469,25 +494,33 @@
         (:players gamestate) (:plyr-to gamestate)))
     gamestate))
 
+(defn- draw3 [ gamestate action uname ]
+  (if (:draw3 action)
+      (assoc-in gamestate [:players uname :draw3] true)
+      gamestate))
+
 ;;; USE A CARD ;;;
 ;; Request: {:action :usecard, :useraction {:turn true, :cost {}, :gain {:death 2}, :rivals {:death 1}}, :gid :gm93866} dan
-(defn- use-card [ gamestate {:keys [card useraction]} uname] 
+(defn- use-card [ gamestate {:keys [card useraction] :as ?data} uname] 
   (if verbose? (println "use-card:" card useraction uname))
   (-> gamestate
-      (add-chat (str "Used " (:type card) " " (:name card)) uname)                ; Chat
-      (assoc :players                                                 ; Rivals gain 
+      (add-chat (str "Used " (:type card) " " (:name card)) uname)                    ; Chat
+      (assoc :players                                                                 ; Rivals gain 
         (:players 
           (reduce-kv (fn [m k v] 
             (if (not= uname k)
                 (update-player-essence m {:essence (:rivals useraction)} k)
                 m)) gamestate (:players gamestate))))
-      (update-player-essence {:essence (invert-essence (:cost useraction))} uname)     ; Pay cost
-      (update-player-essence {:essence (:gain useraction)} uname)     ; Gain essence
-      (place-essence (or (:targetany useraction) card) useraction uname)                           ; Place essence
-      (turn-card (:straighten useraction) nil uname)                  ; Straighten
-      (drawcard uname (:draw useraction))                             ; Draw
-      (turn-card card (:turn useraction) uname)                       ; Turn
-      (lose-life card useraction uname)                               ; Trigger Lose Life responses
+      (update-player-essence {:essence (invert-essence (:cost useraction))} uname)    ; Pay cost
+      (update-player-essence {:essence (:gain useraction)} uname)                     ; Gain essence
+      (place-essence (or (:targetany useraction) card) useraction uname)              ; Place essence
+      (turn-card (:straighten useraction) nil uname)                                  ; Straighten
+      (drawcard uname (:draw useraction))                                             ; Draw
+      (turn-card card (:turn useraction) uname)                                       ; Turn
+      (destroy-card useraction uname)                                                 ; Destroy (react | card action)
+      (react-discard ?data uname)                                                     ; Discard
+      (lose-life card useraction uname)                                               ; Apply Lose Life :action s
+      (draw3 useraction uname)                                                        ; Apply draw3 action
   ))
 
 
@@ -687,7 +720,7 @@
                               (assoc-in gamestate [:players uname :err] err)))
     ; DISCARD
       :discard          (-> gamestate 
-                            (discardcard ?data uname)
+                            (discard-card ?data uname)
                             (end-action uname)
                             ai-action)
     ; USE
@@ -726,8 +759,7 @@
   "essence" "/essence <essence name> <new value>"
 })
 
-(defn- usercmd-playcard [ gs {:keys [cardname essence] :as rer} uname ]
-;; IMPORTANT FOR TESTING ONLY TODO LIMIT BY ENV VARIABLE
+(defn- usercmd-playcard [ gs {:keys [cardname essence] :as rer} uname ] ;; IMPORTANT FOR TESTING ONLY  TODO: LIMIT BY ENV VARIABLE
   (if verbose? (println "PLAYING" cardname))
   (if-let [card (->> @data :artifacts (filter #(= (:name %) cardname)) first)]
     (-> gs
@@ -736,14 +768,26 @@
         (update-player-essence rer uname))
     gs))
 
-(defn- usercmd-turn [ gs rer ]
-  (assoc-in gs [:players (:player rer) :public :artifacts]
-    (mapv 
-      (fn [a]
-        (if (= (:name a) (:cardname rer))
-            (if (:turned? a) (dissoc a :turned?) (assoc a :turned? true))
-            a))
-      (-> gs :players (get (:player rer)) :public :artifacts))))
+(defn- usercmd-turn [ gs rer uname ]
+  (let [mage (-> gs :players (get (:player rer)) :public :mage)]
+    (-> gs
+      (add-chat (str "Turn card " (:cardname rer)) uname :usercmd)
+      (assoc-in [:players (:player rer) :public :artifacts]
+        (mapv 
+          (fn [a]
+            (if (= (:name a) (:cardname rer))
+                (if (:turned? a) (dissoc a :turned?) (assoc a :turned? true))
+                a))
+          (-> gs :players (get (:player rer)) :public :artifacts)))
+      (assoc-in [:players (:player rer) :public :mage]
+        (if (= (:cardname rer) (:name mage))
+            (if (:turned? mage) (dissoc mage :turned?) (assoc mage :turned? true))
+            mage))
+      (assoc :magicitems
+        (mapv 
+          #(if (= (:name %) (:cardname rer)) 
+              (if (:turned? %) (dissoc % :turned?) (assoc % :turned? true)) %) (:magicitems gs)))
+    )))
 
 ;; parse message into variables
 ;; /<command>
@@ -768,83 +812,28 @@
     )))
 
 (defn chat-handler [ gs msg uname ]
-  (let [rer (regexp-result gs msg uname)]
+  (let [rer (regexp-result gs msg uname)
+        gs-ch (add-chat gs msg uname :usercmd)]
     (if verbose? (println "chat-handler" msg uname rer))
     (case (:command rer)
-      "essence"  (-> gs
-                    (add-chat msg uname :usercmd) 
+      "essence"  (-> gs-ch 
+                    (add-chat "Updated essence" uname :usercmd)
                     (update-player-essence rer uname))
-                    ;(essence-match-handler uname (nth essence-match 2) (last essence-match)))
-      "playcard" (-> gs 
-                    (add-chat msg uname :userdm) 
-                    (usercmd-playcard rer uname)
-                    )
-      "loselife" (let [ll-essence-match (re-seq   #"(death|calm|elan|gold)\s(\-?\d+)"  msg)
-                      ll-essence (apply conj (map #(hash-map (-> % second keyword) (-> % last read-string)) ll-essence-match))
-                       ll-rer (assoc rer :ll ll-essence)]
-                    (-> gs
-                        (add-chat msg uname :usercmd)
+      "playcard" (usercmd-playcard gs-ch rer uname)
+      "loselife" (let [ll-essence-match (re-seq   #"(death|calm|elan|gold|destroy|discard)\s(\-?\d+)"  msg)
+                      ll-essence        (apply conj (map #(hash-map (-> % second keyword) (-> % last read-string)) ll-essence-match))
+                      ll-rer            (assoc rer :ignore ll-essence)]
+                    (-> gs-ch
                         ;(add-chat (str (:player rer) " triggered Lose Life event: Lose " (-> ll-rer :essence :life) " life. Spend "(-> ll-rer :essence last val) " " (-> ll-rer :essence last key name) " to ignore" ))
-                        (lose-life {:name "User Action"} {:loselife (-> ll-rer :essence :life) :ignore (-> ll-rer :essence (dissoc :life))} (:player ll-rer))
+                        (lose-life {:name "User Action"} {:loselife (-> ll-rer :essence :life) :ignore (-> ll-rer :ignore)} (:player ll-rer))
                         (end-action (:player ll-rer))))
-      "endturn"  (-> gs
-                    (add-chat msg uname :usercmd)
-                    (end-action uname))
-      "turn"     (-> gs
-                    (add-chat msg uname :usercmd)
-                    (usercmd-turn rer))
+      "endturn"  (end-action gs-ch uname)
+      "turn"     (usercmd-turn gs-ch rer uname)
       "setmage"  (if-let [mage (->> @data :mages (filter #(= (:name %) (:cardname rer))) first)]
-                    (-> gs 
-                        (add-chat msg uname :userdm)
+                    (-> gs-ch
                         (add-chat (str "Changed Mage to " (:name mage)) uname :usercmd)
                         (assoc-in [:players uname :public :mage] (assoc mage :uid (gensym "mage"))))
-                    (-> gs 
-                        (add-chat msg uname :userdm)))
+                    gs-ch)
       "draw"    (let [n (->> msg (re-find #"\d+"))]
-                  (-> gs
-                    (add-chat msg uname :usercmd)
-                    (drawcard uname (if n (read-string n) 1))))
-      (add-chat gs msg uname))))
-
-(defn chat-handlerx [ gs msg uname ]
-  (let [fn-hint (re-find #"(?i)\/(\w+)" msg)
-        essence-match (re-matches #"(?i)\/(essence)\s(gold|elan|calm|life|death)\s(\d+)" msg)
-        card-match    (re-matches #"(?i)\/playcard\s(.+)" msg)
-        mage-match    (re-matches #"(?i)\/setmage\s(.+)"  msg)
-        loselife-match (re-matches #"(?i)\/loselife\s(\d)\s(gold|elan|calm|life|death)(|.+)" msg)
-        ]
-    (if verbose? (println "chat-handler:" uname msg essence-match card-match mage-match loselife-match ))
-    (cond
-      essence-match   (-> gs 
-                      (add-chat msg uname :usercmd) 
-                      (essence-match-handler uname (nth essence-match 2) (last essence-match)))
-      card-match      (-> gs 
-                          (add-chat msg uname :userdm) 
-                          (usercmd-playcard (last card-match) uname))     
-      mage-match      (if-let [mage (->> @data :mages (filter #(= (:name %) (last mage-match))) first)]
-                              (-> gs 
-                                  (add-chat msg uname :userdm)
-                                  (add-chat (str "Changed Mage to " (last mage-match)) uname :usercmd)
-                                  (assoc-in [:players uname :public :mage] (assoc mage :uid (gensym "mage"))))
-                              (-> gs 
-                                  (add-chat msg uname :userdm)))
-      loselife-match  (let [life (nth loselife-match 1) px (if (empty? (nth loselife-match 3)) uname (-> loselife-match (nth 3) clojure.string/trim)) essence (nth loselife-match 2)]
-                        (-> gs 
-                            (add-chat msg uname :userdm)
-                            (add-chat (str px " triggered Lose Life event: Lose " life " life. Spend 1 " essence " to ignore" ))
-                            (lose-life {:name "User Action"} {:loselife (read-string life) :ignore {(keyword essence) 1}} px)
-                            (end-action px)))
-      fn-hint         (case (last fn-hint)
-                            "endturn" (-> gs 
-                                          (add-chat msg uname :usercmd)
-                                          (end-action uname)
-                                          ai-action)
-                            (-> gs 
-                                (add-chat msg uname :usercmdhelp) 
-                                (add-chat (str "help: " (-> fn-hint last clojure.string/lower-case (chat-fn-help fn-hint ))) uname :usercmdhelp)))
-      :default        (add-chat gs msg uname))))
-;; Player States :action
-; :waiting
-; :play
-; :selectmagicitem
-; :reaction?
+                  (drawcard gs-ch uname (if n (read-string n) 1)))
+      gs-ch)))
