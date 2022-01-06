@@ -250,6 +250,12 @@
   (comms/ra-send! {:action action :card card :essence essence})
   (hidemodal))
 
+;(def useraction (r/atom nil)) ;; Parameters for a card action (action) :cost :gain :turn
+; 1. Store - cost - gain ^^^^^^^^^^^^^^^^^^^^^
+; 2. Use modules to display :any - cost - gain
+; 3. Show cards to straighten
+; 4. Show user(s) to target
+
 ; gain or pay? - parameterise
 (defn- gain-any-essence-module [ card gain-any collect-gain-any ]
   [:div
@@ -261,6 +267,18 @@
           [:button.btn.btn-outline-secondary {:key (gensym) :on-click #(swap! ra-app update-in [:modal :card :collect-gain-any ess] inc)}
             (essence-icon ess 1)]) 
         [:button.btn.btn-outline-secondary.text-dark {:title "Reset" :on-click #(swap! ra-app update-in [:modal :card] dissoc :collect-gain-any)} "X"]]]])
+
+(defn- reset-essences [ tua k ] [:div.d-flex.px-2.essence.clickable {:title "Reset" :on-click #(swap! tua dissoc k)} [:h4.m-auto "X"]])
+
+(defn- pay-module [ pdata {:keys [cost]} thisuseraction ]
+  [:div.p-2.modal-module
+    [:div.h5.text-center "Select essence to spend"]; [:small "(remaining shown)"]]
+    [:div.d-flex.justify-content-center 
+      (doall (for [[k v] (reduce (fn [m k] (dissoc m k)) (-> pdata :public :essence) (-> cost :exclude vec)) :let [adj_v (- v (-> @thisuseraction :cost (k 0)))]] 
+        (if (> adj_v 0) 
+          [:div.essence.clickable.px-1 {:key (gensym) :on-click #(swap! thisuseraction update-in [:cost k] inc)}
+            (essence-icon k adj_v)])))
+      (reset-essences thisuseraction :cost)]])
 
 (defn- invert-essences [ e ]
   (reduce-kv 
@@ -332,6 +350,8 @@
                                                                                   ; Destroy
     [:i.fas.fa-caret-right.fa-lg.my-auto {:style {:color "darkblue"}}]            ; >
     (render-essence-list (:gain a) )                                              ; Gain
+    (if (:draw3 a)
+      [:div.wrap-label.mx-1 [:div "draw 3 cards, reorder, put back"][:div [:em "(may also use on Monument deck)"]]])
     (if-let [rivals (:rivals a)]                                                  ; Rivals Gain
       [:div.d-flex [:div.me-1 "+ all rivals gain"] (render-essence-list rivals)])
     (if-let [place (:place a)]                                                    ; Place essence
@@ -351,25 +371,6 @@
               [:div.d-flex [:div.wrap-label.mx-1 "rivals\nmay"] (essence-icon (-> a :ignore first key) -1) [:div.wrap-label.mx-1 "to\nignore"]])
             ])
         ])])
-
-
-;(def useraction (r/atom nil)) ;; Parameters for a card action (action) :cost :gain :turn
-; 1. Store - cost - gain ^^^^^^^^^^^^^^^^^^^^^
-; 2. Use modules to display :any - cost - gain
-; 3. Show cards to straighten
-; 4. Show user(s) to target
-(defn- reset-essences [ tua k ] [:div.d-flex.px-2.essence.clickable {:title "Reset" :on-click #(swap! tua dissoc k)} [:h4.m-auto "X"]])
-
-(defn- pay-module [ pdata {:keys [cost]} thisuseraction ]
-  [:div.py-2.modal-module
-    [:div.h5.text-center "Select essence to spend"]; [:small "(remaining shown)"]]
-    ;[:div.debug (str @thisuseraction)]
-    [:div.d-flex.justify-content-center 
-      (doall (for [[k v] (reduce (fn [m k] (dissoc m k)) (-> pdata :public :essence) (-> cost :exclude vec)) :let [adj_v (- v (-> @thisuseraction :cost (k 0)))]] 
-        (if (> adj_v 0) 
-          [:div.essence.clickable.px-1 {:key (gensym) :on-click #(swap! thisuseraction update-in [:cost k] inc)}
-            (essence-icon k adj_v)])))
-      (reset-essences thisuseraction :cost)]])
   
 (defn- gain-module [ cardaction thisuseraction k ]
   [:div.py-2.modal-module
@@ -556,7 +557,6 @@
       [:div [:button.btn.btn-outline-secondary.mb-1.w-100 {:on-click #((select-btn-handler (:action pdata) card) (hidemodal))} "Select"]]
       [:div [:button.btn.btn-outline-secondary.mb-1.w-100 {:on-click #(hidemodal)} "Cancel"]]]))
 
-
 (defn- modal-info [ pg ]
   [:div.modalcontent.p-2.rounded.bg-light {:on-click #(.stopPropagation %)}
     [:button.btn-sm.btn-close.ms-auto.bg-light {:on-click #(hidemodal) :style {:position "absolute" :right "5px" :top "5px" :z-index 99}}]
@@ -625,13 +625,15 @@
   (let [useraction (r/atom {})]
     (fn []
       [:div
-        [:button.btn.btn-outline-secondary.w-100.me-1 {
-            :disabled (react-btn-disabled? cost (:cost @useraction) pdata)
-            :on-click #(comms/ra-send! {:action :react :card nil :useraction @useraction})}
-          [:div.d-flex.justify-content-center 
-            [:div.me-2.text-dark "Pay"] 
-            (render-essence-list (:cost @useraction))]]
-        (pay-module pdata {:cost cost} useraction)])))
+        (conj 
+          (pay-module pdata {:cost cost} useraction)
+          [:button.btn.btn-outline-secondary.w-100.mt-1 {
+              :disabled (react-btn-disabled? cost (:cost @useraction) pdata)
+              :on-click #(comms/ra-send! {:action :react :card nil :useraction @useraction})}
+            [:div.d-flex.justify-content-center 
+              [:div.me-2.text-dark "Pay"] 
+              (render-essence-list (:cost @useraction))]])
+              ])))
 
 ;;; Main
 (defn- react-modal [ gs pdata uname]
@@ -671,25 +673,47 @@
                     [:div.me-2.text-dark "Lose Life"] 
                     (essence-icon :life (-> cost :life (* -1)))]]
               ; ignore option(s)
-                [:button.btn.btn-outline-secondary.w-100.me-1.mb-1 {
-                    :disabled (not (can-pay-cost? ignorecost {(-> ignorecost first key) (min (-> ignorecost first val) ((-> ignorecost first key) ess))}))
-                    :on-click #(comms/ra-send! {:action :react :card nil :useraction {:cost ignorecost}})}
-                  [:div.d-flex.justify-content-center
-                    [:div.me-2.text-dark "Ignore"] 
-                    (essence-icon (-> ignorecost first key) (-> ignorecost first val (* -1)))]]
+                (case (-> pdata :loselife :ignore first key)
+                      :discard 
+                        [:div.modal-module.mb-2 
+                          [:div.text-center "Ignore: Discard 1"]
+                          [:div.d-flex.justify-content-center.py-1
+                            (for [card (-> pdata :private :artifacts)]
+                              [:div.mx-1.clickable {
+                                  :key (gensym)
+                                  :on-click #(comms/ra-send! {:action :react :card (select-keys card [:name :uid]) :useraction {:discard true}})
+                                }
+                                [:img.modal-reaction {:src (imgsrc card) :title (str "Discard " (:name card))}]
+                              ])]]
+                      :destroy 
+                        [:div.modal-module.mb-2 
+                          [:div.text-center "Ignore: Destroy an artifact"]
+                          [:div.d-flex.justify-content-center.py-1
+                            (for [card (-> pdata :public :artifacts)]
+                              [:div.mx-1.clickable {
+                                  :key (gensym)
+                                  :on-click #(comms/ra-send! {:action :react :useraction {:destroy true :card (select-keys card [:name :uid])}})
+                                }
+                                [:img.modal-reaction {:src (imgsrc card) :title (str "Destroy " (:name card))}]
+                              ])]]
+                      [:button.btn.btn-outline-secondary.w-100.me-1.mb-1 {
+                          :disabled (not (can-pay-cost? ignorecost {(-> ignorecost first key) (min (-> ignorecost first val) ((-> ignorecost first key) ess))}))
+                          :on-click #(comms/ra-send! {:action :react :card nil :useraction {:cost ignorecost}})}
+                        [:div.d-flex.justify-content-center
+                          [:div.me-2.text-dark "Ignore"] 
+                          (essence-icon (-> ignorecost first key) (-> ignorecost first val (* -1)))]])
                 [pay-essence-module pdata cost]
                 (if (not-empty reactions)
-                  [:div.mt-2
+                  [:div.p-2.mt-2.modal-module
                     [:div.h5.text-center "Use a power"]
                     [:div.d-flex.justify-content-center.mb-1
                       (for [react reactions :let [a (->> react :action (filter #(= :loselife (:ignore %))) first)]]
                         [:button.btn.btn-outline-secondary.mx-1 {
                             :key (gensym) 
-                            :disabled false
+                            :disabled (not (can-pay-cost? (:cost a) (default-payment (:cost a) (-> pdata :public :essence))))
                             :title (str react)
                             :on-click #(comms/ra-send! {:action :react :card react :useraction a})}
                           [:img.modal-reaction.clickable {:src (imgsrc react)} ]])]])
-                ;[:button.btn.btn-danger {:on-click #(comms/ra-send! {:action :react})} "EXIT"]
               ]))]]]))
 
 ;; Main View
@@ -861,12 +885,13 @@
           [:small.ms-1 (str "(" p ")") ]
           ])]
     [:div
-      [:div.btn-group.btn-group-sm.me-2
-        [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 1})} "G1"]
-        [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 2})} "G2"]
-        [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 3})} "G3"]
-        [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 4})} "G4"]]
-        ;[:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 5})} "G5"]]
+      (if (contains? #{"p1" "p2" "AI123"} uname)
+        [:div.btn-group.btn-group-sm.me-2
+          [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 1})} "G1"]
+          [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 2})} "G2"]
+          [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 3})} "G3"]
+          [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 4})} "G4"]
+          [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 5})} "G5"]])
       [:button.btn.btn-sm.btn-primary.ms-auto.me-2 {:on-click #(swap! ra-app assoc :modal {:show? true :info (if (= :setup (:status gs)) 0 1)})} [:i.fas.fa-info-circle]]
       [:button.btn.btn-sm.btn-danger {:on-click #(if (js/confirm "Are you sure you want to Quit?") (comms/leavegame @gid))} [:i.fas.fa-times-circle]]]])
 
