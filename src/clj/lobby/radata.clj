@@ -11,7 +11,7 @@
     {:id 6 :name "Alchemist"   :type "mage" :fg 3                                 :action [{:turn true :cost {:any 4} :gain {:gold 2}} {:turn true :gain {:any 1 :exclude #{:gold}}}]}
     {:id 7 :name "Witch"       :type "mage"       :collect [{:life 1} {:death 1}] :action [{:turn true :cost {:any 2} :straighten true}]}
     {:id 8 :name "Scholar"     :type "mage"                                       :action [{:turn true :cost {:any 1} :draw 1}]}
-    {:id 9 :name "Seer"        :type "mage" :fg 2 :collect [{:calm 1}]            :action [{:turn true :special :seer}]}
+    {:id 9 :name "Seer"        :type "mage" :fg 2 :collect [{:calm 1}]            :action [{:turn true :draw3 true}]}
   ]
   :magicitems [
     {:id 0 :name "Alchemy"        :type "magicitem" :action [{:turn true :cost {:any 4} :gain {:gold 2}}]}
@@ -53,7 +53,7 @@
   ]
   
   :artifacts [
-    {:id 0  :type "artifact" :name "Athanor"               :cost {:gold 1 :elan 1} :action [{:turn true :cost {:elan 1} :place {:elan 2}} {:turn true :remove {:elan 6}} ]}
+    {:id 0  :type "artifact" :name "Athanor"               :cost {:gold 1 :elan 1} :action [{:turn true :cost {:elan 1} :place {:elan 2}} {:turn true :remove {:elan 6} :convertfrom {:any :equal} :convertto {:gold :equal}} ]}
     {:id 1  :type "artifact" :name "Bone Dragon"           :cost {:death 4 :life 1} :subtype "Dragon" :action [{:turn true :loselife 2 :ignore {:death 1} :source :dragon}] :vp 1}
     {:id 2  :type "artifact" :name "Celestial Horse" :fg 3 :cost {:calm 2 :elan 1} :subtype "Creature" :collect [{:any 2 :exclude #{:gold :death}}]}
     {:id 3  :type "artifact" :name "Chalice of Fire"       :cost {:gold 1 :elan 1} :collect [{:elan 2}] :action [{:turn true :cost {:elan 1} :straighten true}]}
@@ -89,7 +89,7 @@
     {:id 30 :type "artifact" :name "Prism"                :action [{:turn true :cost {:any 1} :gain {:any 2 :exclude #{:gold}}} {:turn true :convertfrom {:any :equal} :converto {:any :equal :exclude #{:gold}}}]}
     {:id 31 :type "artifact" :name "Ring of Midas"        :cost {:life 1 :gold 1} :vp 1 :action [{:cost {:life 2} :place {:gold 1}} {:turn true :place {:gold 1}}]}
     {:id 32 :type "artifact" :name "Sacrificial Dagger"   :cost {:death 1 :gold 1} :action [{:turn true :cost {:life 1} :place {:death 3}} {}] }
-    {:id 33 :type "artifact" :name "Sea Serpent"          :cost {:calm 6 :life 3} :subtype "Dragon Creature" :vp 1  :action [{:turn true :loselife 2 :ignore {:destroy "artifact"} :source :dragon}]}
+    {:id 33 :type "artifact" :name "Sea Serpent"          :cost {:calm 6 :life 3} :subtype "Dragon Creature" :vp 1  :action [{:turn true :loselife 2 :ignore {:destroy 1} :source :dragon}]}
     {:id 34 :type "artifact" :name "Treant"               :cost {:life 3 :elan 2} :subtype "Creature":collect [{:life 2}]}
     {:id 35 :type "artifact" :name "Tree of Life"   :fg 3 :cost {:any 2 :life 1} :action [{:turn true :gain {:life 3} :rivals {:life 1}} {:react true :ignore :loselife :cost {:life 1}}]}
     {:id 36 :type "artifact" :name "Vault"          :fg 2 :cost {:gold 1 :any 1} :collect [{:special 36}] :action [{:turn true :place {:gold 1}}]}
