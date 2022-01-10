@@ -716,6 +716,45 @@
                           [:img.modal-reaction.clickable {:src (imgsrc react)} ]])]])
               ]))]]]))
 
+
+;;; Main
+(defn- divine-modal [ ]
+  (let [useraction (r/atom [])]
+    (fn []
+      (let [gs    (:state @gm)
+            mi    (->> gs :magicitems (filter #(= (:owner %) @uname)) first)
+            pdata (-> gs :players (get @uname) (assoc-in [:public :magicitem] mi))
+            uname @uname]
+        [:div.modal.ra-main {:hidden (-> pdata :draw3 nil?)}
+          [:div.modalcontent.p-2.rounded {:style {:min-width "400px"}}
+            [:h4.p-2 "Draw 3 cards, reorder, put back " [:i.small "(may also use on Monument deck)"]]
+            (if (-> pdata :draw3 true?)
+                [:div
+                  [:h5 "Select a deck"]
+                  [:div.d-flex.justify-content-around.p-2
+                    [:button.btn.btn-outline-secondary {:on-click #(comms/ra-send! {:action :draw3 :deck "artifact"})} "Artifact"]
+                    [:button.btn.btn-outline-secondary {:on-click #(comms/ra-send! {:action :draw3 :deck "monument"})} "Monument"]
+                    ;[:button.btn.btn-outline-secondary {:on-click #(comms/ra-send! {:action :draw3 :cancel? true})} "Cancel"] ;TODO would require turning trigger action also
+                    ]]
+                [:div
+                  [:h5.text-center (-> pdata :draw3 (str " deck") clojure.string/capitalize)]
+                  [:div.d-flex.justify-content-center.mb-2
+                    (doall (for [a (-> pdata :private :draw3)] 
+                      (if (contains? (->> @useraction (map :name) set) (:name a))
+                        [:img.modal-divine.selected.mx-1 {:key (gensym) :src (imgsrc a)}]
+                        [:img.clickable.modal-divine.active.mx-1 {:key (gensym) :on-click #(reset! useraction (conj @useraction a)) :src (imgsrc a)}])))]
+                  [:h5.text-center "Replace Order"]
+                  [:div.d-flex.justify-content-center
+                    [:div.my-auto.me-1 "Top"] 
+                    [:div.d-flex.justify-content-center
+                      (for [a @useraction] [:img.clickable.modal-divine.mx-1 {:key (gensym) :src (imgsrc a)}])]
+                    [:div.my-auto.ms-1 "Bottom"]]
+                  [:div.d-flex 
+                    [:button.btn.ms-auto.btn-outline-secondary {:on-click #(reset! useraction [])} "Reset"]
+                    [:div.d-flex [:button.ms-2.btn.btn-primary {:on-click #((comms/ra-send! {:action :draw3 :useraction @useraction}) (reset! useraction []))} "OK"]]]]
+                  )
+          ]]
+    ))))
 ;; Main View
 ;;; Modules
 (defn- pop-mon-mi-row [ status phase action ] 
@@ -854,17 +893,6 @@
     (playerdisplay gs uname pdata)
   ])
 
-;(defn- icon-drop-down [v]
-;  [:div.bg-light.border.px-2.w-100 {:style {:position "absolute" :top "1.5em" :left "0" :display (if (:hidden? @v) "none" "unset")}}
-;    (for [r essence-list] [:div.my-2.text-center {:on-click (fn [e] (.stopPropagation e) (reset! v {:icon r :hidden? true})) :key (gensym) :class (str "icon-" (name r)) }] )])
-;(defn- icon-select []
-;  (let [v (r/atom {:icon :gold :hidden? true})]
-;    (fn []
-;      [:div [:div.border.bg-light.px-2.clickable {:style {:position "relative" :width "2em"} :on-click #(swap! v assoc :hidden? (-> @v :hidden? false?))}
-;        [:div.text-center [:span {:class (str "icon-" (-> @v :icon name))}]]
-;        [icon-drop-down v]
-;        ]])))
-
 (defn- page-banner [ gs ] 
   [:div.d-flex.justify-content-between.ra-main.m-1
     [:h2.mt-auto.mb-0 "Res Arcana - " (if (= (:status gs) :setup) "Setup" (-> gs :phase name clojure.string/capitalize (str " phase")))]
@@ -885,7 +913,7 @@
           [:small.ms-1 (str "(" p ")") ]
           ])]
     [:div
-      (if (contains? #{"p1" "p2" "AI123"} uname)
+      (if (contains? #{"p1" "p2" "AI123"} @uname)
         [:div.btn-group.btn-group-sm.me-2
           [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 1})} "G1"]
           [:button.btn.btn-secondary {:on-click #(comms/ra-send! {:action :swapgame :game 2})} "G2"]
@@ -907,6 +935,7 @@
     [:div.container-fluid
       ;[:div.debug (-> gs (dissoc :monuments :magicitems) str)]
       (react-modal gs pdata @uname)
+      [divine-modal gs pdata @uname]
       (modal gs pdata @uname)
       [chat gs]
       [page-banner gs]
