@@ -232,7 +232,7 @@
   
 ;;;;; DISCARD ;;;;;
 
-(defn discard-card [ gs {:keys [card essence] :as ?data} uname ]
+(defn- discard-card [ gs {:keys [card essence] :as ?data} uname ]
   (if verbose? (println uname "discard" (:name card) "essence" essence))
   (if (= uname (get-active-player gs))
       (-> gs 
@@ -469,7 +469,7 @@
       gs))
 
 (defn- destroy-card [ gs {:keys [card destroy]} uname]
-  (if (and destroy card) (println "destroy-card:" destroy card uname))
+  (if (and destroy card verbose?) (println "destroy-card:" destroy card uname))
   (if (and destroy card)
     (-> gs 
         (assoc-in [:players uname :public :artifacts] (vec (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :public :artifacts))))
@@ -681,6 +681,38 @@
             "pop"      (if (contains? (->> gs :pops (map :uid) set) (:uid card))                  0 8)
             16) ])))
 
+(defn- draw3-handler [ gs ?data uname ]
+; Step0 use-card :draw3
+; Step1 set deck ?data {:deck "x"}
+; Step2 apply choices
+  (let []
+    (if verbose? (println "draw3-handler:" ?data uname))
+    (if-let [deckname (:deck ?data)] ; Driven by ?data
+      (case deckname
+        "monument"
+          (-> gs 
+              (assoc-in [:players uname :draw3] deckname)
+              (assoc-in [:players uname :private :draw3] (->> gs :monuments :secret (take 3)))
+              (assoc-in [:monuments :secret] (-> gs :monuments :secret (nthrest 3)))) ; TODO - do you really want ot 'MOVE' the cards here?
+        "artifact"
+          (let [artdeck  (-> gs :players (get uname) :secret :artifacts vec)
+                discard  (-> gs :players (get uname) :public :discard vec)
+                drawdeck (if (> (count artdeck) 2) artdeck (apply conj artdeck (shuffle discard)))]
+            (-> gs 
+                (assoc-in [:players uname :draw3] deckname)
+                (assoc-in [:players uname :private :draw3] (take 3 drawdeck))
+                (assoc-in [:players uname :secret :artifacts] (-> drawdeck (nthrest 3)))
+                (assoc-in [:players uname :public :discard] (if (> (count artdeck) 2) discard []))
+              )) ; TODO - do you really want ot 'MOVE' the cards here?
+        gs)
+      (if-let [ua (:useraction ?data)]
+        (-> (if (= "monument" (-> ua first :type))
+                (-> gs (assoc-in [:monuments :secret] (apply conj ua (-> gs :monuments :secret))))
+                (-> gs (assoc-in [:players uname :secret :artifacts] (apply conj ua (-> gs :players (get uname) :secret :artifacts)))))
+            (update-in [:players uname] dissoc :draw3)
+            (update-in [:players uname :private] dissoc :draw3)
+            (end-action uname))
+        gs))))
 ; PLACE an artifact
 ; CLAIM a place of power or Monument
 ; DISCARD a card for 1g or 2other
@@ -738,6 +770,9 @@
                             (react ?data uname)
                             (end-action (get-active-player gamestate))
                             ai-action)
+    ; DRAW3 (draw 3 cards and replace in any order)
+      :draw3            (-> gamestate 
+                            (draw3-handler ?data uname))
     ; TESTING ONLY
     ; Done - Only used for Testing
       :done             (end-action       gamestate uname)
@@ -746,18 +781,16 @@
                               2 ragames/game2
                               3 ragames/game3
                               4 ragames/game4
+                              5 ragames/game5
                               gamestate)
       gamestate)))
 
+;; CHAT HANDLER ;;
 (defn- essence-match-handler [ gs uname k v ]
   (if verbose? (println "essence-match-handler:" uname k v))
   (-> gs 
       (assoc-in [:players uname :public :essence (-> k clojure.string/lower-case keyword)] (-> v read-string))
       (add-chat (str "Set " k " to " v) uname :usercmd)))
-
-(def chat-fn-help {
-  "essence" "/essence <essence name> <new value>"
-})
 
 (defn- usercmd-playcard [ gs {:keys [cardname essence] :as rer} uname ] ;; IMPORTANT FOR TESTING ONLY  TODO: LIMIT BY ENV VARIABLE
   (if verbose? (println "PLAYING" cardname))
@@ -836,4 +869,6 @@
                     gs-ch)
       "draw"    (let [n (->> msg (re-find #"\d+"))]
                   (drawcard gs-ch uname (if n (read-string n) 1)))
+      "discard" (let [card (->> gs :players (get uname) :private :artifacts (filter #(= (:name %) (:cardname rer))) first)]
+                  (discard-card gs-ch {:card card :essence nil} uname))
       gs-ch)))

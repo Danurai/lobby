@@ -31,7 +31,7 @@
     {:id 4 :name "Library"          :type "monument" :cost {:gold 4} :vp 1 :action [{:turn true :draw 1}]}
     {:id 5 :name "Mausoleum"        :type "monument" :cost {:gold 4} :vp 2 :action [{:cost {:any 1} :place {:death 1}}]}
     {:id 6 :name "Obelisk"          :type "monument" :cost {:gold 4} :vp 1 :bought {:collect {:any 6 :exclude #{:gold}}}}
-    {:id 7 :name "Oracle"           :type "monument" :cost {:gold 4} :vp 2 :action [{:turn true :special :seer}]}
+    {:id 7 :name "Oracle"           :type "monument" :cost {:gold 4} :vp 2 :action [{:turn true :draw3 true}]}
     {:id 8 :name "Solomon's Mine"   :type "monument" :cost {:gold 4} :vp 1 :action [{:turn true :place {:gold 1}}]}
     {:id 9 :name "Temple"           :type "monument" :cost {:gold 4} :vp 2 :collect [{:life 1}] :action [{:react true :ignore :loselife :turn true}]}
   ]
@@ -77,7 +77,7 @@
       
     {:id 20 :type "artifact" :name "Guard Dog"            :cost {:elan 1}:subtype "Creature" :action [{:usewhenturned? true :cost {:elan 1} :straighten true :restriction {:name "Guard Dog"}} {:react true :turn true :ignore :loselife}]}
     {:id 21 :type "artifact" :name "Hand of Glory"  :fg 1 :cost {:life 1 :death 1} :action [{:turn true :gain {:death 2} :rivals {:death 1}}]}
-    {:id 22 :type "artifact" :name "Hawk"           :fg 4 :cost {:life 1 :calm 1} :subtype "Creature" :collect [{:calm 1}] :action [{:turn true :reorder true :deck #{:monument :artifact}} {:turn true :cost {:calm 2} :draw 1}]}
+    {:id 22 :type "artifact" :name "Hawk"           :fg 4 :cost {:life 1 :calm 1} :subtype "Creature" :collect [{:calm 1}] :action [{:turn true :draw3 true} {:turn true :cost {:calm 2} :draw 1}]}
     {:id 23 :type "artifact" :name "Horn of Plenty"       :cost {:gold 2} :action [{:turn true :gain {:any 3 :exclude #{:gold}}} {:turn true :gain {:gold 1}}]}
     {:id 24 :type "artifact" :name "Hypnotic Basin"       :cost {:calm 2 :elan 1 :death 1} :collect [{:calm 2}]}  
     {:id 25 :type "artifact" :name "Jeweled Statuette"    :cost {:death 2 :gold 1} :vp 1} 
