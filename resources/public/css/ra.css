@@ -219,10 +219,13 @@
   width: 2.5em;
   height: 3.5em;
 }
-.modal-reaction {
+.modal-reaction, .modal-divine {
   width: 5em !important; height: 7em !important;
 }
-.modal-reaction:hover {
+.modal-divine.selected {
+  filter: grayscale(1);
+}
+.modal-reaction:hover, .modal-divine.active:hover {
   box-shadow: 0px 0px 1em 0px #888;
 }
 .modal-module img.active {
