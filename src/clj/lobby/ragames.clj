@@ -96,5 +96,11 @@
 			(update-in [:players] dissoc "AI123")
 			(assoc-in [:chat 0 :msg] "Swap to predefined Game4")))
 
+(defn- get-card [ name cards ]
+	(->> cards (filter #(= (:name %) name)) first))
+
 (def game5 
-	game4)
+	(let [mages (mapv #(assoc % :uid (gensym "mage")) (:mages @data))]
+		(-> game4
+				(assoc-in [:players "p1" :public :mage] (get-card "Seer" mages))
+				(assoc-in [:players "p2" :public :mage] (get-card "Witch" mages)))))

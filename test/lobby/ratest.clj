@@ -711,6 +711,7 @@
 (def g2 (ramodel/parseaction {} {:action :swapgame :game 2} "p1"))
 (def g3 (ramodel/parseaction {} {:action :swapgame :game 3} "p1"))
 (def g4 (ramodel/parseaction {} {:action :swapgame :game 4} "p1"))
+(def g5 (ramodel/parseaction {} {:action :swapgame :game 5} "p1"))
 
 ; setup tests
 (expect 2 (-> g1 :plyr-to count))
@@ -1111,6 +1112,13 @@
 
 (expect "Celestial Horse"
   (let [p1 (-> g1 :plyr-to first)] (-> g1 (ramodel/chat-handler "/playcard Celestial Horse" p1) :players (get p1) :public :artifacts first :name)))
+
+(expect 1
+  (let [p1 (-> g1 :plyr-to first) 
+        ar (-> g1 :players (get p1) :private :artifacts first)] 
+    (-> g1 
+        (ramodel/chat-handler (str "/discard " (:name ar)) p1)
+        :players (get p1) :public :discard count)))
 ;;; Bug Tests ;;;
 ;; Remove essence from Place of Power / Monument
 ; Fixed in defn- remove-card-essence
@@ -1495,24 +1503,167 @@
 
 ;; USE draw3
 (expect true
-  (let [gs g4
-        p1 (-> g4 :plyr-to first)
-        m1 (-> g4 :players (get p1) :public :mage )
-        p2 (-> g4 :plyr-to last)
-        m2 (-> g4 :players (get p2) :public :mage) ]  ; Seer
-    (-> g4
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )]  ; Seer
+    (-> g5
         (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
-        (ramodel/parseaction {:action :usecard :card m2 :useraction (-> m2 :action first)} p2)
-        :players (get p2) :draw3)))
+        :players (get p1) :draw3)))
 ;; USE draw3
 (expect :play
-  (let [gs g4
-        p1 (-> g4 :plyr-to first)
-        m1 (-> g4 :players (get p1) :public :mage )
-        p2 (-> g4 :plyr-to last)
-        m2 (-> g4 :players (get p2) :public :mage) ]  ; Seer
-    (-> g4
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )]  ; Seer
+    (-> g5
         (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
-        (ramodel/parseaction {:action :usecard :card m2 :useraction (-> m2 :action first)} p2)
-        :players (get p2) :action)))
-  
+        :players (get p1) :action)))
+
+;; Step1.1.0 CANCEL
+;(expect nil
+;  (let [p1 (-> g5 :plyr-to first)
+;        m1 (-> g5 :players (get p1) :public :mage )]  ; Seer
+;    (-> g5
+;        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+;        (ramodel/parseaction {:action :draw3   :cancel? true} p1)
+;        :players (get p1) :draw3)))
+;; Step1.1.1 - select deck {"player" {:draw3 <deck>} "MONUMENT"
+(expect "monument"
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )]  ; Seer
+    (-> g5
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :draw3   :deck "monument"} p1)
+        :players (get p1) :draw3)))
+;; Step1.1.2 - 3 cards in {"player" {:private {:draw3 []}}}
+(expect 3
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )]  ; Seer
+    (-> g5
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :draw3   :deck "monument"} p1)
+        :players (get p1) :private :draw3 count)))
+;; Step1.1.3 - 3 cards removed from {"player" {:secret }} ; TODO - do you really want ot 'MOVE' the cards here?
+(expect 5
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )]  ; Seer
+    (-> g5
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :draw3   :deck "monument"} p1)
+        (ramodel/obfuscate p1) :monuments :secret)))
+
+;; Step1.2.1 - select deck {"player" {:draw3 <deck>} @uname
+(expect "artifact"
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )]  ; Seer
+    (-> g5
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :draw3   :deck "artifact"} p1)
+        :players (get p1) :draw3)))
+;; Step1.2.2 - 3 cards in {"player" {:private {:draw3 []}}}
+(expect 3
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )]  ; Seer
+    (-> g5
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :draw3   :deck "artifact"} p1)
+        :players (get p1) :private :draw3 count)))
+;; Step1.2.3 - 3 cards removed from {"player" {:secret }} ; TODO - do you really want ot 'MOVE' the cards here?
+(expect 2
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )]  ; Seer
+    (-> g5
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :draw3   :deck "artifact"} p1)
+        (ramodel/obfuscate p1) :players (get p1) :secret :artifacts)))
+;; Step1.2.2 - 3 cards in {"player" {:private {:draw3 []}}} - Populate from Discard
+;;; a) 2 cards in deck, 2 cards in discard
+(expect [2 2]
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )  ; Seer
+        ar (-> g5 :players (get p1) :private :artifacts)
+        gs (-> g5 (ramodel/chat-handler "/draw 3" p1) 
+                  (ramodel/chat-handler (str "/discard " (-> ar first :name)) p1) 
+                  (ramodel/chat-handler (str "/discard " (-> ar last :name)) p1) 
+                  )]
+    [ 
+      (-> gs :players (get p1) :public :discard count)
+      (-> gs :players (get p1) :secret :artifacts count)
+    ]))
+;;; b) draw deck populated from discard
+(expect 3
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )  ; Seer
+        ar (-> g5 :players (get p1) :private :artifacts)
+        gs (-> g5 (ramodel/chat-handler "/draw 3" p1) 
+                  (ramodel/chat-handler (str "/discard " (-> ar first :name)) p1) 
+                  (ramodel/chat-handler (str "/discard " (-> ar last :name)) p1) 
+                  )]
+    (-> gs
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :draw3   :deck "artifact"} p1)
+        :players (get p1) :private :draw3 count)))
+;;; c) discard emptied
+(expect 0
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )  ; Seer
+        ar (-> g5 :players (get p1) :private :artifacts)
+        gs (-> g5 (ramodel/chat-handler "/draw 3" p1) 
+                  (ramodel/chat-handler (str "/discard " (-> ar first :name)) p1) 
+                  (ramodel/chat-handler (str "/discard " (-> ar last :name)) p1) 
+                  )]
+    (-> gs
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :draw3   :deck "artifact"} p1)
+        :players (get p1) :public :discard count)))
+;; Step 3.1 replace cards - monument 
+(expect ["Library" "Great Pyramid" "Hanging Gardens"]
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )
+        mons (-> g5 :monuments :secret)]  ; Seer
+    (->>  (-> g5
+              (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+              (ramodel/parseaction {:action :draw3   :deck "monument"} p1)
+              (ramodel/parseaction {:action :draw3   :useraction [(nth mons 2) (first mons) (second mons)]} p1)
+              :monuments :secret)
+          (map :name)
+          (take 3))))
+
+;; Step 3.2 replace cards - artifact
+(expect ["Dragon Egg" "Dragon Bridle" "Cursed Skull"]
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )
+        arts (-> g5 :players (get p1) :secret :artifacts)]  ; Seer
+    (->>  (-> g5
+              (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+              (ramodel/parseaction {:action :draw3   :deck "artifact"} p1)
+              (ramodel/parseaction {:action :draw3   :useraction [(nth arts 2) (second arts) (first arts)]} p1)
+              :players (get p1) :secret :artifacts)
+          (map :name)
+          (take 3))))
+;; remove :draw3 attributes
+(expect nil
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )
+        arts (-> g5 :players (get p1) :secret :artifacts)]  ; Seer
+    (-> g5
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :draw3   :deck "artifact"} p1)
+        (ramodel/parseaction {:action :draw3   :useraction [(nth arts 2) (second arts) (first arts)]} p1)
+        :players (get p1) :draw3)))
+(expect nil
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )
+        arts (-> g5 :players (get p1) :secret :artifacts)]  ; Seer
+    (-> g5
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :draw3   :deck "artifact"} p1)
+        (ramodel/parseaction {:action :draw3   :useraction [(nth arts 2) (second arts) (first arts)]} p1)
+        :players (get p1) :private :draw3)))
+;; and end user turn
+(expect :waiting
+  (let [p1 (-> g5 :plyr-to first)
+        m1 (-> g5 :players (get p1) :public :mage )
+        arts (-> g5 :players (get p1) :secret :artifacts)]  ; Seer
+    (-> g5
+        (ramodel/parseaction {:action :usecard :card m1 :useraction (-> m1 :action first)} p1)
+        (ramodel/parseaction {:action :draw3   :deck "artifact"} p1)
+        (ramodel/parseaction {:action :draw3   :useraction [(nth arts 2) (second arts) (first arts)]} p1)
+        :players (get p1) :action)))
