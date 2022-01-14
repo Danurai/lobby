@@ -56,8 +56,10 @@
               :width     (str (* scale 1.1) "em")
             }
           }
-          (if (< n 0) [:div {:style {:color (case type :elan "black" "darkred") :position "absolute" :left "-4px" :bottom "-6px" :font-size "1em"}} "x"])
-          (Math.abs n)])))
+          (if (number? n) (if (< n 0) [:div {:style {:color (case type :elan "black" "darkred") :position "absolute" :left "-4px" :bottom "-6px" :font-size "1em"}} "x"]))
+          (if (number? n)
+              (Math.abs n)
+              n)])))
 
 (defn- select-btn-handler [ action card ]
   (comms/ra-send! {:action action :card (:uid card)}))
@@ -350,6 +352,9 @@
                                                                                   ; Destroy
     [:i.fas.fa-caret-right.fa-lg.my-auto {:style {:color "darkblue"}}]            ; >
     (render-essence-list (:gain a) )                                              ; Gain
+    (if-let [gr (:gainrival a)] 
+      [:div.d-flex
+        [:div "gain"] (essence-icon (:gain gr) "?") [:div "equal to"] (essence-icon (:rival gr) "?") [:div "of one rival"] ])
     (if (:draw3 a)
       [:div.wrap-label.mx-1 [:div "draw 3 cards, reorder, put back"][:div [:em "(may also use on Monument deck)"]]])
     (if-let [rivals (:rivals a)]                                                  ; Rivals Gain
@@ -403,7 +408,7 @@
     [:div.me-2.mt-auto "Remaining Essence:"]
       [:small.d-flex.justify-content-center (for [[k v] (-> pdata :public :essence)] (essence-icon k (- v (k cost 0)))  )]])
 
-(defn- modal-use-action-ele [ card a pdata ]
+(defn- modal-use-action-ele [ card a pdata gs ]
   (let [thisuseraction (r/atom (assoc a 
                                   :cost (default-payment (-> a :cost (dissoc :exclude)) (-> pdata :public :essence)) 
                                   :gain (-> a :gain (dissoc :any :exclude))
@@ -415,7 +420,7 @@
             canplace      (can-pay-cost? (:place a) (:place @thisuseraction))
             canstraighten (or (-> a :straighten nil?) (-> @thisuseraction :straighten :uid some?))]
         [:div.mb-2.modal-action 
-          ;[:div.debug (str a)]
+          [:div.debug (str a)]
           ;[:div.debug (str @thisuseraction)]
           (render-action-bar a)
           (if (-> a :cost :any)
@@ -442,13 +447,13 @@
               } "Use Action"]]
         ]))))
 
-(defn- modal-use [ card pdata ]
+(defn- modal-use [ gs card pdata ]
   (let [actions (->> (:action card) (remove :react) (remove :reducer_a))]
     (if (or (-> card :name (= "Guard Dog")) (and (-> card :turned? nil?) (not-empty actions))) ;; GUARD DOG CAN BE STRAIGHTENED
       [:div.px-1
         ;[:div.debug (str card)]
         [:h3.text-center.pt-3 (str "Use " (:name card))]
-        (for [action actions] ^{:key (gensym)}[modal-use-action-ele card action pdata])
+        (for [action actions] ^{:key (gensym)}[modal-use-action-ele card action pdata gs])
         ])))
 
 (defn- useraction-click-handler [ action card useraction ]
@@ -592,7 +597,7 @@
                     [:button.btn-sm.btn-close.ms-auto.bg-light {:on-click #(hidemodal) :style {:position "absolute" :right "5px" :top "5px"}}]
                   (cond   ;; options based on card and game state
                     (= :collect (:phase gs))          (modal-collect-essence card pdata uname)
-                    (:can-use? card)                  (modal-use card pdata)
+                    (:can-use? card)                  (modal-use card pdata gs)
                     (:target? card)                   (modal-target card pdata))]]
         
         discard [:div.modalcontent.p-2.rounded.d-flex.flex-wrap.w-100.justify-content-center
