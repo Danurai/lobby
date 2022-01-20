@@ -1,5 +1,6 @@
 (ns lobby.pages
   (:require 
+    [clojure.data.json :as json]
     [lobby.radata :as radata]
     [hiccup.page :as h]
     [cemerick.friend :as friend]
@@ -80,32 +81,12 @@
           [:div.loader.mx-auto]]]]
     (h/include-js "/js/compiled/lobby.js")))
     
-(def symbols
-  [:h4.d-flex.justify-content-around.p-2
-    (for [icon [:gold :calm :elan :life :death]] [:span {:class (str "icon-" (name icon))}])])
-		
-(defn testpage [ req ]
-  (let [q (-> req :query-string)
-        artifacts (-> @radata/data :artifacts)]
-    (h/html5
-      header
-      [:body
-        (navbar req)
-        symbols
-        ;; Res Arcana Card Reference
-        [:div.container
-          [:div.d-flex.mb-2
-            [:div.btn-group 
-              (for [ k ["cost" "subtype" "collect" "action" "vp"]]
-                [:a {:href (str "test?" k) :role "button" :class (str "btn btn-outline-secondary" (if (= q k) " active" ""))} k]) ]]
-          [:div.row
-            (for [a artifacts] ;(sort-by :fg artifacts)]
-              [:div.col-2 
-                [:div.d-flex.justify-content-between 
-                  [:b  (:id a) " " (:name a)]
-                  [:b (:fg a)]]
-                [:img.img-fluid {:src (str "/img/ra/" (:type a) "-" (:id a) ".jpg")}]
-                (if q 
-                    [:small q " " (str (get a (keyword q))) ]
-                    (for [k (select-keys a [:cost :subtype :collect :action])]
-                          (if (some? k) [:small (str k)])))])]]])))
+(defn testpagecljs [ req ]
+  (h/html5 
+    header
+    [:body 
+			(navbar req)
+      [:div#app 
+        [:div.d-flex.my-3
+          [:div.loader.mx-auto]]]]
+    (h/include-js "/js/compiled/test.js")))

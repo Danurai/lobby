@@ -21,7 +21,8 @@
     [lobby.pages :as pages]
 		[lobby.users :as users :refer [users]]
 		[lobby.model :as model]
-		))   
+    [lobby.radata :as radata]
+    ))   
         
 ; sente
 (let [{:keys [ch-recv 
@@ -49,7 +50,8 @@
 		(friend/wrap-authorize pages/lobby #{::users/user}))
   (GET "/appdata" [] (json/write-str @model/appstate))
 ;; TESTING
-  (GET "/test"    [] pages/testpage)
+  (GET "/testcljs" [] pages/testpagecljs)
+;; TESTING
   (friend/logout 
 		(ANY "/logout" [] (redirect "/play")))
   (resources "/"))
@@ -95,6 +97,10 @@
 (defmethod event :lobby/reset [req]
   (swap! model/appstate assoc :games {})
   (broadcast))
+
+(defmethod event :lobby/radata [{:as ev-msg :keys [?reply-fn]}]
+  (when ?reply-fn
+    (?reply-fn @radata/data)))
 ;TEST
 
 (defmethod event :lobby/create [{:keys [?data uid ring-req]}]
