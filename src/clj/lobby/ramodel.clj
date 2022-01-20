@@ -517,6 +517,7 @@
       (turn-card (:straighten useraction) nil uname)                                  ; Straighten
       (drawcard uname (:draw useraction))                                             ; Draw
       (turn-card card (:turn useraction) uname)                                       ; Turn
+      (turn-card (:turnextra useraction) true uname)                                  ; Turnextra
       (destroy-card useraction uname)                                                 ; Destroy (react | card action)
       (react-discard ?data uname)                                                     ; Discard
       (lose-life card useraction uname)                                               ; Apply Lose Life :action s

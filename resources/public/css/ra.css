@@ -162,12 +162,6 @@
   transition: height 0.4s
 }
 
-.essence-bar {
-  background-color: rgba(0,0,0,0.15);
-  border-radius: 0.25rem;
-  font-size: 0.9em;
-}
-
 .essence-background {
   background-size: contain;
   background-repeat: no-repeat;
@@ -230,4 +224,50 @@
 }
 .modal-module img.active {
   box-shadow: 0px 0px 0.5em 0px rgba(0,0,255,0.75);
+}
+
+.img-ab {
+  height: 40px;
+} 
+.text-ab {
+  word-wrap: break-word;
+  font-size: 13pt; 
+  font-family: "Pirata One", cursive; 
+  margin-top: auto; 
+  margin-bottom: auto; 
+  line-height: 1.1rem; 
+  white-space: pre-line;
+} 
+.text-ab-lg {
+  font-size: 1.3rem !important; 
+  font-weight: bold;
+}
+.text-ab-sm {
+  font-size: 0.9rem !important;
+  line-height: 0.8rem !important;
+  text-align: center;
+}
+
+.react {
+  background: linear-gradient(
+    to right, orange, palegoldenrod
+  );
+  display: flex;
+}
+
+.react::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 20px 0px 20px 5px;
+  border-color: orange grey orange grey;
+}
+.react::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 20px 0px 20px 10px;
+  border-color: grey grey grey palegoldenrod;
 }

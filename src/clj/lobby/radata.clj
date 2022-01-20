@@ -17,7 +17,7 @@
     {:id 0 :name "Alchemy"        :type "magicitem" :action [{:turn true :cost {:any 4} :gain {:gold 2}}]}
     {:id 1 :name "Calm Elan"      :type "magicitem" :collect [{:calm 1}{:elan 1}]}
     {:id 2 :name "Death Life"     :type "magicitem" :collect [{:death 1}{:life 1}]}
-    {:id 3 :name "Divination"     :type "magicitem" :action [{:turn true :special :divination}]}
+    {:id 3 :name "Divination"     :type "magicitem" :action [{:turn true :divine true}]}
     {:id 4 :name "Protection"     :type "magicitem" :action [{:react true :turn true :ignore :loselife}]}
     {:id 5 :name "Reanimate"      :type "magicitem" :action [{:turn true :cost {:any 1} :straighten true}]}
     {:id 6 :name "Research"       :type "magicitem" :action [{:turn true :cost {:any 1} :draw 1}]}
@@ -30,13 +30,13 @@
     {:id 3 :name "Hanging Gardens"  :type "monument" :cost {:gold 4} :vp 1 :collect [{:any 3 :exclude #{:gold}}]}
     {:id 4 :name "Library"          :type "monument" :cost {:gold 4} :vp 1 :action [{:turn true :draw 1}]}
     {:id 5 :name "Mausoleum"        :type "monument" :cost {:gold 4} :vp 2 :action [{:cost {:any 1} :place {:death 1}}]}
-    {:id 6 :name "Obelisk"          :type "monument" :cost {:gold 4} :vp 1 :bought {:collect {:any 6 :exclude #{:gold}}}}
+    {:id 6 :name "Obelisk"          :type "monument" :cost {:gold 4} :vp 1 :action [{:bought true :gain {:any 6 :exclude #{:gold}}}]}
     {:id 7 :name "Oracle"           :type "monument" :cost {:gold 4} :vp 2 :action [{:turn true :draw3 true}]}
-    {:id 8 :name "Solomon's Mine"   :type "monument" :cost {:gold 4} :vp 1 :action [{:turn true :place {:gold 1}}]}
+    {:id 8 :name "Solomon's Mine"   :type "monument" :cost {:gold 4} :vp 1 :action [{:turn true :gain {:gold 1}}]}
     {:id 9 :name "Temple"           :type "monument" :cost {:gold 4} :vp 2 :collect [{:life 1}] :action [{:react true :ignore :loselife :turn true}]}
   ]
   :placesofpower [
-    {:id 6 :base 6 :name "Sacred Grove"          :type "pop" :fg? true :cost {:life 8 :calm 4} :action [{:turn true :cost {:calm 1} :gain {:life 5}} {:turn #{"Sacred Grove" "Creature"} :place {:life 1}}] :vp 2}
+    {:id 6 :base 6 :name "Sacred Grove"          :type "pop" :fg? true :cost {:life 8 :calm 4} :action [{:turn true :cost {:calm 1} :gain {:life 5}} {:turn true :turnextra {:subtype "Creature"} :place {:life 1}}] :vp 2}
     {:id 0 :base 6 :name "Alchemist's Tower"     :type "pop" :cost {:gold 3} :collect [{:any 3 :exclude #{:gold}}] :action [{:cost {:death 1 :elan 1 :calm 1 :life 1} :place {:gold 1}} {:react true :ignore :loselife :turn true}] :vp 0}
                                                         
     {:id 1 :base 1 :name "Catacombs of the Dead" :type "pop" :fg? true :cost {:death 9} :collect [{:death 1}] :action [{:cost {:death 5} :place {:death 1}} {:turn true :place {:death 1}}] :vp 0}
@@ -46,7 +46,7 @@
     {:id 5 :base 3 :name "Dwarven Mines"         :type "pop" :cost {:elan 4 :life 2 :gold 1} :collect [{:gold 1}] :action [{:turn true :cost {:elan 5} :gain {:gold 3}} {:turn true :cost {:death 3 :elan 3} :place {:gold 2}}] :vp 0}
                                                         
     {:id 2 :base 2 :name "Coral Castle"          :type "pop" :fg? true :cost {:elan 3 :life 3 :calm 3 :death 3} :action [{:turn true :checkvictory true}{:react true :turn true :ignore :loselife}] :vp 3}
-    {:id 9 :base 2 :name "Sunken Reef"           :type "pop" :cost {:calm 5 :elan 2 :life 2} :collect [{:gold 1}] :action [{:cost {:calm 2 :life 2} :place {:calm 1}}] :vp 0}
+    {:id 9 :base 2 :name "Sunken Reef"           :type "pop" :cost {:calm 5 :elan 2 :life 2} :collect [{:gold 1}] :action [{:cost {:calm 2 :life 1} :place {:calm 1}}] :vp 0}
                                                         
     {:id 4 :base 4 :name "Dragon's Lair"         :type "pop" :fg? true :cost {:elan 6 :death 3} :action [{} {:turn true :gain {:gold 2}} {:turn true :turnextra {:subtype "Dragon"} :place {:gold 2}}] :vp 0}
     {:id 8 :base 4 :name "Sorcerer's Bestiary"   :type "pop" :cost {:life 4 :elan 2 :calm 2 :death 2} :action [{:turn true :checkvictory true}{:reducer_p true :turn true :cost {:any 4} :target :anydiscard} ] :vp 0}
@@ -64,8 +64,8 @@
     {:id 8  :type "artifact" :name "Dancing Sword"   :fg 4 :cost {:gold 1 :elan 1} :collect [{:death 1 :elan 1}] :action [{:react true :cost {:elan 1} :place {:death 1} :ignore :loselife}]}
     {:id 9  :type "artifact" :name "Dragon Bridle"         :cost {:elan 1 :life 1 :calm 1 :death 1} :action [{:reducer_a true :restriction {:subtype "Dragon"} :reduction {:any 3}} {:react true :turn true :ignore :loselife :source :dragon}] :vp 1}
                 
-    {:id 10 :type "artifact" :name "Dragon Egg"           :cost {:gold 1} :vp 1 :action [{:reducer_p true :restriction {:subtype "Dragon"} :reduction {:any 4} :cost {:destroy :self}}]}
-    {:id 11 :type "artifact" :name "Dragon Teeth"   :fg 1 :cost {:elan 1 :death 1} :action [{:cost {:elan 2} :place {:elan 3}} {:reducer_p true :cost {:elan 3} :restriction {:subtype "Dragon"} :reduction {:any 99}}]}
+    {:id 10 :type "artifact" :name "Dragon Egg"           :cost {:gold 1} :vp 1 :action [{:reducer_p true :restriction {:subtype "Dragon"} :reduction {:any 4}}]}
+    {:id 11 :type "artifact" :name "Dragon Teeth"   :fg 1 :cost {:elan 1 :death 1} :action [{:cost {:elan 2} :place {:elan 3}} {:turn true :reducer_p true :cost {:elan 3} :restriction {:subtype "Dragon"} :reduction {:any 99}}]}
     {:id 12 :type "artifact" :name "Dwarven Pickaxe"      :cost {:elan 1} :action [{:turn true :cost {:elan 1} :gain {:gold 1}}]}
     {:id 13 :type "artifact" :name "Earth Dragon"         :cost {:elan 4 :life 3} :subtype "Dragon" :vp 1 :action [{:turn true :loselife 2 :ignore {:gold 1} :source :dragon}]}
     {:id 14 :type "artifact" :name "Elemental Spring" :fg 1 :cost {:elan 2 :life 1 :calm 1} :collect [{:calm 1 :life 1 :elan 1}] :action [{:react true :cost {:calm 1} :ignore :loselife}]}
@@ -79,8 +79,8 @@
     {:id 21 :type "artifact" :name "Hand of Glory"  :fg 1 :cost {:life 1 :death 1} :action [{:turn true :gain {:death 2} :rivals {:death 1}}]}
     {:id 22 :type "artifact" :name "Hawk"           :fg 4 :cost {:life 1 :calm 1} :subtype "Creature" :collect [{:calm 1}] :action [{:turn true :draw3 true} {:turn true :cost {:calm 2} :draw 1}]}
     {:id 23 :type "artifact" :name "Horn of Plenty"       :cost {:gold 2} :action [{:turn true :gain {:any 3 :exclude #{:gold}}} {:turn true :gain {:gold 1}}]}
-    {:id 24 :type "artifact" :name "Hypnotic Basin"       :cost {:calm 2 :elan 1 :death 1} :collect [{:calm 2}]}  
-    {:id 25 :type "artifact" :name "Jeweled Statuette"    :cost {:death 2 :gold 1} :vp 1} 
+    {:id 24 :type "artifact" :name "Hypnotic Basin"       :cost {:calm 2 :elan 1 :death 1} :collect [{:calm 2}] :action [{:turn true :gainrivalequal [:calm :elan]}]}  
+    {:id 25 :type "artifact" :name "Jeweled Statuette"    :cost {:death 2 :gold 1} :vp 1 :action [{:turn true :gain {:death 3} :rivals {:death 1}} {:destroy :this :gain {:gold 2 :elan 1}}]} 
     {:id 26 :type "artifact" :name "Magical Shard"  :fg 3 :action [{:turn true :gain {:any 1 :exclude #{:gold}}}] } 
     {:id 27 :type "artifact" :name "Mermaid"              :cost {:life 2 :calm 2} :collect [{:calm 1}] :action [{:turn true :cost {:any 1 :exclude #{:death :elan}} :place {:cost true} :targetany true}] :subtype "Creature"}
     {:id 28 :type "artifact" :name "Nightingale"          :cost {:life 1 :calm 1} :subtype "Creature" :vp 1}
@@ -90,7 +90,7 @@
     {:id 31 :type "artifact" :name "Ring of Midas"        :cost {:life 1 :gold 1} :vp 1 :action [{:cost {:life 2} :place {:gold 1}} {:turn true :place {:gold 1}}]}
     {:id 32 :type "artifact" :name "Sacrificial Dagger"   :cost {:death 1 :gold 1} :action [{:turn true :cost {:life 1} :place {:death 3}} {}] }
     {:id 33 :type "artifact" :name "Sea Serpent"          :cost {:calm 6 :life 3} :subtype "Dragon Creature" :vp 1  :action [{:turn true :loselife 2 :ignore {:destroy 1} :source :dragon}]}
-    {:id 34 :type "artifact" :name "Treant"               :cost {:life 3 :elan 2} :subtype "Creature":collect [{:life 2}]}
+    {:id 34 :type "artifact" :name "Treant"               :cost {:life 3 :elan 2} :subtype "Creature":collect [{:life 2}] :action [{:turn true :gainrivalequal [:elan :death]}]}
     {:id 35 :type "artifact" :name "Tree of Life"   :fg 3 :cost {:any 2 :life 1} :action [{:turn true :gain {:life 3} :rivals {:life 1}} {:react true :ignore :loselife :cost {:life 1}}]}
     {:id 36 :type "artifact" :name "Vault"          :fg 2 :cost {:gold 1 :any 1} :collect [{:special 36}] :action [{:turn true :place {:gold 1}}]}
     {:id 37 :type "artifact" :name "Water Dragon"         :cost {:calm 6} :subtype "Dragon" :vp 1 :action [{:turn true :loselife 2 :ignore {:elan 1} :source :dragon}]}

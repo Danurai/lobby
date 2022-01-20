@@ -44,11 +44,12 @@
 
 ;;;; Sente send functions
 
-;(defn load-data! []
-;  (chsk-send! [:gkv2/data] 
-;              5000
-;              (fn [cb-reply] 
-;                 (prn cb-reply))))
+(defn load-data! [ radata ]
+  (chsk-send! [:lobby/radata] 
+              5000
+              (fn [cb-reply] 
+                (if (sente/cb-success? cb-reply)
+                    (reset! radata cb-reply)))))
                  
 ;;;; Sente event handlers
 
