@@ -88,5 +88,5 @@
 			(navbar req)
       [:div#app 
         [:div.d-flex.my-3
-          [:div.loader.mx-auto]]]]
+          [:div "Loading..."]]]]
     (h/include-js "/js/compiled/test.js")))

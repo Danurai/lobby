@@ -4,6 +4,7 @@
     [lobby.ragames :refer [gs playerdata] :as ragames]))
 
 (defonce verbose? false)
+(defonce veryverbose? false)
 
 ;;;;; FUNCTIONS ;;;;;
 
@@ -260,7 +261,7 @@
 ;;;;; ASSIGN MAGIC ITEMS ;;;;;       
 
 (defn assignmagicitem [ gamestate ?data uname ]
-  (if verbose? (println "assignmagicitem:" ?data uname))
+  (if veryverbose? (println "assignmagicitem:" ?data uname))
     (-> gamestate
         (set-player-action uname :pass)
         (assoc :magicitems (mapv #(if (= (:owner %) uname)
@@ -277,7 +278,7 @@
         (drawcard uname))))
         
 (defn ai-choose-magicitem [ gs uname ]
-  (if verbose? (println "ai-choose-magicitem:" uname ))
+  (if veryverbose? (println "ai-choose-magicitem:" uname ))
   (assignmagicitem
     gs 
     {:card (->> gs :magicitems (filter #(-> % :owner nil?)) first :uid)}
@@ -305,7 +306,7 @@
       gs (:players gs))))
 
 (defn- new-round-check [ gamestate ]
-  (if verbose? (println "new round check:" (-> gamestate :plyr-to empty?)))
+  (if veryverbose? (println "new round check:" (-> gamestate :plyr-to empty?)))
   (if (-> gamestate :plyr-to empty?)
       (-> gamestate
           (assoc :plyr-to (:pass-to gamestate))
@@ -331,7 +332,7 @@
         nextp     (if (empty? nextplyrs) (-> gamestate :plyr-to first) (first nextplyrs))
         loselife? (->> gamestate :players vals (map :loselife) (remove nil?) not-empty)
         draw3?    (->> gamestate :players vals (map :draw3) (remove nil?) not-empty)]
-    (if verbose? (println "end-action:" uname "nextplayer" nextp loselife? (empty? loselife?)))
+    (if veryverbose? (println "end-action:" uname "nextplayer" nextp loselife? (empty? loselife?)))
     (if (or loselife? draw3?)  ; Don't advance if there are :loselife or :draw3 or :divine actions live
         gamestate
         (-> gamestate
@@ -348,7 +349,7 @@
         newto     (if (-> gamestate :pass-to empty?) 
                       (->> nextplyrs (take (-> gamestate :players keys count)) vec) 
                       (:pass-to gamestate))]
-    (if verbose? (println "Pass:" uname "status/phase" (:status gamestate) (:phase gamestate) "can-pass?"  can-pass?))
+    (if veryverbose? (println "Pass:" uname "status/phase" (:status gamestate) (:phase gamestate) "can-pass?"  can-pass?))
     (if can-pass? 
         (-> gamestate                                     
           (set-player-action uname :selectmagicitem)
@@ -388,7 +389,7 @@
   ; TODO - Add some AI logic here
   (let [all-ai?    (= (-> gamestate :players keys count) (->> gamestate :players keys (map is-ai?) (remove false?) count))
         activeplyr (get-active-player gamestate)]
-    (if verbose? (println "ai-action-check: all-ai?" all-ai? "activeplayer" activeplyr))
+    (if veryverbose? (println "ai-action-check: all-ai?" all-ai? "activeplayer" activeplyr))
     (if (or (nil? activeplyr) all-ai? (-> gamestate :phase (= :collect))) ; prevent infinite loops during develoment
         gamestate 
         (if (is-ai? activeplyr)
@@ -459,28 +460,22 @@
                   %) (-> gamestate :players (get uname) :public :artifacts)))
       gamestate)))
 
-(defn- react-discard [ gs {:keys [card useraction]} uname ]
-  (if (:discard useraction) (println "react-discard:" useraction))
-  (if (:discard useraction)
+(defn- react-discard [ gs {:keys [discard]} uname ]
+  (if (and verbose? discard) (println "react-discard:" discard))
+  (if (some? discard)
       (-> gs 
-        (update-in [:players uname :public :discard] conj card)
-        (assoc-in [:players uname :private :artifacts] (vec (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :private :artifacts))))
-        (add-chat (str "Discard " (:name card)) uname))
+        (update-in [:players uname :public :discard] conj discard)
+        (assoc-in [:players uname :private :artifacts] (vec (remove  #(= (:uid %) (:uid discard)) (-> gs :players (get uname) :private :artifacts))))
+        (add-chat (str "Discard " (:name discard)) uname))
       gs))
 
-(defn- destroy-card [ gs {:keys [card destroy]} uname]
-  (if (and destroy card verbose?) (println "destroy-card:" destroy card uname))
-  (if (and destroy card)
+(defn- destroy-card [ gs {:keys [destroycard destroy]} uname]
+  (if (and destroy destroycard verbose?) (println "destroy-card:" destroy destroycard uname))
+  (if (and destroy destroycard)
     (-> gs 
-        (assoc-in [:players uname :public :artifacts] (vec (remove  #(= (:uid %) (:uid card)) (-> gs :players (get uname) :public :artifacts))))
-        (add-chat (str "Destroyed " (:name card)) uname))
+        (assoc-in [:players uname :public :artifacts] (vec (remove  #(= (:uid %) (:uid destroycard)) (-> gs :players (get uname) :public :artifacts))))
+        (add-chat (str "Destroyed " (:name destroycard)) uname))
     gs))
-
-;(defn- react-destroy [ gs {:keys [card useraction]} uname ]
-;  (if (:destroy useraction) (println "react-destroy:" card useraction uname))
-;  (if (:destroy useraction)
-;      (destroy-card gs (assoc useraction :card card) uname)
-;      gs))
 
 (defn- lose-life [ gamestate card action uname ]
   (if (and verbose? (:loselife action)) (println "lose-life:" card action uname))
@@ -500,7 +495,7 @@
       gamestate))
 
 ;;; USE A CARD ;;;
-;; Request: {:action :usecard, :useraction {:turn true, :cost {}, :gain {:death 2}, :rivals {:death 1}}, :gid :gm93866} dan
+;; Request: {:action :usecard, :useraction {:turn true, :cost {}, :gain {:death 2}, :rivals {:death 1} :destroy <card>}, :gid :gm93866} dan
 (defn- use-card [ gamestate {:keys [card useraction] :as ?data} uname] 
   (if verbose? (println "use-card:" card useraction uname))
   (-> gamestate
@@ -519,7 +514,7 @@
       (turn-card card (:turn useraction) uname)                                       ; Turn
       (turn-card (:turnextra useraction) true uname)                                  ; Turnextra
       (destroy-card useraction uname)                                                 ; Destroy (react | card action)
-      (react-discard ?data uname)                                                     ; Discard
+      (react-discard useraction uname)                                                ; Discard
       (lose-life card useraction uname)                                               ; Apply Lose Life :action s
       (draw3 useraction uname)                                                        ; Apply draw3 action
   ))
@@ -667,12 +662,12 @@
 
 ;;;;; Parse Action Error Handlers ;;;;;
 (defn- can-place-card [ gs {:keys [card]} uname]
-; Conditions / Codes
-; - 1  player action is play
-; - 2  Artifact card is in hand
-; - 4  Place of Power card is in pops
-; - 8  Monument is in Monument pool
-; - 16 Not an Artifact, Pop, or Monument
+  ; Conditions / Codes
+  ; - 1  player action is play
+  ; - 2  Artifact card is in hand
+  ; - 4  Place of Power card is in pops
+  ; - 8  Monument is in Monument pool
+  ; - 16 Not an Artifact, Pop, or Monument
   (let [pdata (-> gs :players (get uname))]
     (apply + [
       (if (= :play (:action pdata)) 0 1)
@@ -683,9 +678,9 @@
             16) ])))
 
 (defn- draw3-handler [ gs ?data uname ]
-; Step0 use-card :draw3
-; Step1 set deck ?data {:deck "x"}
-; Step2 apply choices
+  ; Step0 use-card :draw3
+  ; Step1 set deck ?data {:deck "x"}
+  ; Step2 apply choices
   (let []
     (if verbose? (println "draw3-handler:" ?data uname))
     (if-let [deckname (:deck ?data)] ; Driven by ?data
@@ -714,6 +709,8 @@
             (update-in [:players uname :private] dissoc :draw3)
             (end-action uname))
         gs))))
+
+;; ACTIONS ;;
 ; PLACE an artifact
 ; CLAIM a place of power or Monument
 ; DISCARD a card for 1g or 2other
