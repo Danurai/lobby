@@ -176,9 +176,15 @@
 					(render-essence-list (invert-essences (zipmap (remove #(contains? excl %) essence-list) (repeat 1))) {:or true})
 					(render-essence-list (invert-essences acost))))
 			(if (:destroy action)
-				(cond
-					(= :this (:destroy action)) [:div.d-flex.me-1 [:div.text-ab.mx-1 "Destroy"] [:img.img-ab {:src "/img/ra/rae/place.png"}]]
-					))
+				[:div.d-flex 
+					(cond
+						(= :this (:destroy action)) [:div.d-flex.me-1 [:div.text-ab.me-1 "Destroy"] [:img.img-ab {:src "/img/ra/rae/place.png"}]]
+						(= :anyartifact (:destroy action)) [:div.d-flex.me-1 [:div.text-ab.text-ab-sm "destroy " [:em "any\none "] "of your\nartifacts"]]
+						(= :otherartifact (:destroy action)) [:div.d-flex.me-1 [:div.text-ab.text-ab-sm "destroy " [:em "\nanother "] "of\nyour artifacts"]]
+						(set? (:destroy action)) [:div.d-flex (text_svg "+") [:div.text-ab.text-ab-sm.mx-1 (str "Destroy one of\nyour " (->> action :destroy (map #(str % "s")) (clojure.string/join "\nor ") ))]])
+					(if (:discard action) [:div.d-flex (text_svg "+") [:div.text-ab.mx-1 "discard\na card"]])
+
+				])
 
 			(if (> acount 0) [:img.my-auto.mx-1 {:style {:height "25px"} :src "/img/ra/rae/then.png"}])
 		
@@ -195,6 +201,10 @@
 			(if-let [gain (:gain action)] (render-essence-list gain))
 			(if-let [gre (:gainrivalequal action)] [:div.text-ab.text-ab-sm.mx-1 "gain" (essence-svg (first gre) "?") "equal to" (essence-svg (last gre) "?") "of one rival"	])
 			(if-let [rg (:rivals action)] [:div.d-flex (text_svg "+") [:span.text-ab.mx-1 "all rivals gain"] (render-essence-list rg) ])
+			(if-let [ct (:convertto action)]
+					(if (:destroy action)
+							(let [convertto_plus (reduce-kv (fn [m k v] (assoc m k (if-let [cp (:convertplus action)] (str "+" cp) 1))) ct (dissoc ct :exclude))   ]
+								[:div.d-flex [:div.text-ab.mx-1 (if (:discard action) "gain the\ndiscard's" "gain")] (place-cost-svg "?") [:div.text-ab.mx-1 "in"] (render-essence-list convertto_plus) ])))
 			(if (:straighten action) 
 				(let [restriction (:restriction action)]
 					[:img.img-ab {:title (str restriction) :src (str "/img/ra/rae/straighten" (if (= "Creature" (:subtype restriction)) "_creature") ".png")}]))
@@ -214,5 +224,6 @@
 				[:div.text-ab.text-ab-sm.mx-1
 					"draw" [:span.text-ab-lg.mx-1 "3"] "cards, reorder, put back\n" [:em "(may also use on Monument deck)"]])
 			(if (:divine action) [:div.text-ab "draw" [:span.text-ab-lg.mx-1 "3"] "cards, add\nto hand, discard" [:span.text-ab-lg.ms-1 "3"]])
+			
 		]))
 		

@@ -40,7 +40,7 @@
     {:id 0 :base 6 :name "Alchemist's Tower"     :type "pop" :cost {:gold 3} :collect [{:any 3 :exclude #{:gold}}] :action [{:cost {:death 1 :elan 1 :calm 1 :life 1} :place {:gold 1}} {:react true :ignore :loselife :turn true}] :vp 0}
                                                         
     {:id 1 :base 1 :name "Catacombs of the Dead" :type "pop" :fg? true :cost {:death 9} :collect [{:death 1}] :action [{:cost {:death 5} :place {:death 1}} {:turn true :place {:death 1}}] :vp 0}
-    {:id 7 :base 1 :name "Sacrificial Pit"       :type "pop" :cost {:elan 8 :death 4} :action [{:turn true :cost {:life 3} :place {:death 1}} {:turn true :cost {:death 1 :destroy #{"Dragon" "Creature"} :gain {:gold 99}}}] :vp 0}
+    {:id 7 :base 1 :name "Sacrificial Pit"       :type "pop" :cost {:elan 8 :death 4} :action [{:turn true :cost {:life 3} :place {:death 1}} {:turn true :cost {:death 1} :destroy #{"Dragon" "Creature"} :convertto {:gold 1}}] :vp 0}
                                                         
     {:id 3 :base 3 :name "Cursed Forge"          :type "pop" :fg? true :cost {:elan 5 :death 3} :collect-mandatory true :collect [{:death -1} {:turn true}] :action [{:cost {:elan 2 :gold 1} :place {:gold 1}}] :vp 1}
     {:id 5 :base 3 :name "Dwarven Mines"         :type "pop" :cost {:elan 4 :life 2 :gold 1} :collect [{:gold 1}] :action [{:turn true :cost {:elan 5} :gain {:gold 3}} {:turn true :cost {:death 3 :elan 3} :place {:gold 2}}] :vp 0}
@@ -58,7 +58,7 @@
     {:id 2  :type "artifact" :name "Celestial Horse" :fg 3 :cost {:calm 2 :elan 1} :subtype "Creature" :collect [{:any 2 :exclude #{:gold :death}}]}
     {:id 3  :type "artifact" :name "Chalice of Fire"       :cost {:gold 1 :elan 1} :collect [{:elan 2}] :action [{:turn true :cost {:elan 1} :straighten true}]}
     {:id 4  :type "artifact" :name "Chalice of Life" :fg 2 :cost {:gold 1 :life 1 :calm 1} :collect [{:calm 1 :life 1}] :action [{:cost {:calm 2} :place {:calm 2 :life 1}} {:react true :turn true :ignore :loselife}]}
-    {:id 5  :type "artifact" :name "Corrupt Altar"         :cost {:any 3 :death 2} :collect [{:life 1 :death 1}] :action [{:cost {:life 2} :place {:elan 3}} {:turn true :special 5}]}
+    {:id 5  :type "artifact" :name "Corrupt Altar"         :cost {:any 3 :death 2} :collect [{:life 1 :death 1}] :action [{:cost {:life 2} :place {:elan 3}} {:turn true :destroy :anyartifact :convertto {:any 1 :exclude #{:gold}} :convertplus 2}]}
     {:id 6  :type "artifact" :name "Crypt"                 :cost {:any 3 :death 2} :action [{:turn true :gain {:death 2}} {:reducer_p true :target :discard :reduction {:any 2 :exclude #{:gold}}}]}
     {:id 7  :type "artifact" :name "Cursed Skull"          :cost {:death 2} :action [{:turn true :cost {:life 1} :place {:any 3 :exclude #{:gold :life}}}]}
     {:id 8  :type "artifact" :name "Dancing Sword"   :fg 4 :cost {:gold 1 :elan 1} :collect [{:death 1 :elan 1}] :action [{:react true :cost {:elan 1} :place {:death 1} :ignore :loselife}]}
@@ -70,7 +70,7 @@
     {:id 13 :type "artifact" :name "Earth Dragon"         :cost {:elan 4 :life 3} :subtype "Dragon" :vp 1 :action [{:turn true :loselife 2 :ignore {:gold 1} :source :dragon}]}
     {:id 14 :type "artifact" :name "Elemental Spring" :fg 1 :cost {:elan 2 :life 1 :calm 1} :collect [{:calm 1 :life 1 :elan 1}] :action [{:react true :cost {:calm 1} :ignore :loselife}]}
     {:id 15 :type "artifact" :name "Elvish Bow"           :cost {:elan 2 :life 1} :action [{:turn true :loselife 1} {:turn true :draw 1}]}
-    {:id 16 :type "artifact" :name "Fiery Whip"           :cost {:elan 2 :death 2} :action [{:turn true :gain {:elan 3} :rivals {:elan 1} }]}
+    {:id 16 :type "artifact" :name "Fiery Whip"           :cost {:elan 2 :death 2} :action [{:turn true :gain {:elan 3} :rivals {:elan 1} } {:turn true :destroy :otherartifact :convertto {:any 1 :exclude #{:gold}} :convertplus 2}]}
     {:id 17 :type "artifact" :name "Fire Dragon"          :cost {:elan 6} :subtype "Dragon" :vp 1 :action [{:turn true :loselife 2 :ignore {:calm 1} :source :dragon}]}
     {:id 18 :type "artifact" :name "Flaming Pit"    :fg 2 :cost {:elan 2} :collect [{:elan 1}] :action [{:turn true :cost {:life 1} :gain {:elan 1 :death 1}}]}
     {:id 19 :type "artifact" :name "Fountain of Youth" :fg 4 :cost {:calm 1 :death 1} :collect [{:life 1}] :action [{:cost {:death 2} :place {:calm 2 :life 1}}]}
@@ -88,7 +88,7 @@
     
     {:id 30 :type "artifact" :name "Prism"                :action [{:turn true :cost {:any 1} :gain {:any 2 :exclude #{:gold}}} {:turn true :convertfrom {:any :equal} :converto {:any :equal :exclude #{:gold}}}]}
     {:id 31 :type "artifact" :name "Ring of Midas"        :cost {:life 1 :gold 1} :vp 1 :action [{:cost {:life 2} :place {:gold 1}} {:turn true :place {:gold 1}}]}
-    {:id 32 :type "artifact" :name "Sacrificial Dagger"   :cost {:death 1 :gold 1} :action [{:turn true :cost {:life 1} :place {:death 3}} {}] }
+    {:id 32 :type "artifact" :name "Sacrificial Dagger"   :cost {:death 1 :gold 1} :action [{:turn true :cost {:life 1} :place {:death 3}} {:destroy :this :discard true :convertto {:any 1 :exclude #{:gold}}}] }
     {:id 33 :type "artifact" :name "Sea Serpent"          :cost {:calm 6 :life 3} :subtype "Dragon Creature" :vp 1  :action [{:turn true :loselife 2 :ignore {:destroy 1} :source :dragon}]}
     {:id 34 :type "artifact" :name "Treant"               :cost {:life 3 :elan 2} :subtype "Creature":collect [{:life 2}] :action [{:turn true :gainrivalequal [:elan :death]}]}
     {:id 35 :type "artifact" :name "Tree of Life"   :fg 3 :cost {:any 2 :life 1} :action [{:turn true :gain {:life 3} :rivals {:life 1}} {:react true :ignore :loselife :cost {:life 1}}]}

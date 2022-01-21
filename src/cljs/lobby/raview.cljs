@@ -12,7 +12,7 @@
   (r/atom {
     ;:modal {
     ;  :show? true
-    ;  :card {:uid "card267709", :name "Treant", :type "artifact", :collect [{:life 2}], :can-use? true, :id 34, :action [{:turn true, :gainrivalequal [:elan :death]}], :cost {:life 3, :elan 2}, :target? true, :subtype "Creature"}
+    ;  :card {:uid "pop214281", :name "Sacrificial Pit", :type "pop", :vp 0, :can-use? true, :id 7, :action [{:turn true, :cost {:life 3}, :place {:death 1}} {:turn true, :cost {:death 1}, :destroy #{"Creature" "Dragon"}, :convertto {:gold 1}}], :cost {:elan 8, :death 4}, :base 1, :target? true}
     ;}
     :settings {
       :cardsize {
@@ -370,29 +370,40 @@
     [:div.h5.text-center (str "Select essence to " (name k))]
     ;[:div.debug (str @thisuseraction)]
     [:div.d-flex.justify-content-center 
-      (doall (for [ess (remove #(contains? (-> cardaction k :exclude) %) essence-list)]
+      (doall (for [ess (remove #(contains? (set (apply conj (-> cardaction k :exclude) (-> cardaction :convertto :exclude))) %) essence-list)]
         [:div.essence.clickable.px-1 {:key (gensym) :on-click #(swap! thisuseraction update-in [k ess] inc)}
           (essence-svg ess 1)]))
       (reset-essences thisuseraction k)]])
 
-(defn- target-component [ thisuseraction pdata ]
+(defn- target-component [ thisuseraction pdata card ]
   (let [target-action     (cond (:straighten @thisuseraction) :straighten 
                                 (:turnextra @thisuseraction)  :turnextra
+                                (:discard @thisuseraction)    :discard
+                                (:destroy @thisuseraction)    :destroycard
                                 :default :targetany)
         target-components (cond 
                               (:straighten @thisuseraction) (filter-components (filter :turned? (pdata-public-cards pdata) ) (:restriction @thisuseraction))
                               (:turnextra @thisuseraction)  (remove :turned? (filter #(= (:subtype %) (-> @thisuseraction :turnextra :subtype)) (pdata-public-cards pdata)))
+                              (set? (:destroy @thisuseraction)) (->> pdata :public :artifacts (filter #(contains? (:destroy @thisuseraction) (:subtype %))))
+                              (= :anyartifact (:destroy @thisuseraction)) (-> pdata :public :artifacts)
+                              (= :otherartifact (:destroy @thisuseraction)) (->> pdata :public :artifacts (remove #(= (:uid %) (:uid card))))
+                              (:discard @thisuseraction) (-> pdata :private :artifacts)
                               :default (pdata-public-cards pdata))]
     [:div.py-2.modal-module
       [:div.h5.text-center "Select target component"]
-      ;[:div.debug (str @thisuseraction)]
       [:div.d-flex.justify-content-center
         (doall (for [component target-components]
           [:img.clickable.mx-1 {
             :key (gensym)
             :src (imgsrc component) 
             :class (if (= (-> @thisuseraction target-action :uid) (:uid component)) "active") 
-            :on-click #(swap! thisuseraction assoc target-action (select-keys component [:uid :type :subtype] ))}]))]]))
+            :on-click #(
+              (swap! thisuseraction assoc target-action component) ; (select-keys component [:uid :type :subtype :name] ))
+              (if (:destroy @thisuseraction) 
+                  (let [ga (->> component :cost vals (apply +) (+ (:convertplus @thisuseraction 0)))]
+                    (if (-> @thisuseraction :convertto :any) (swap! thisuseraction assoc-in [:gainany :any] ga))
+                    (if (-> @thisuseraction :convertto :gold) (swap! thisuseraction assoc-in [:gain :gold] ga))))
+              )}]))]]))
 
 (defn- target-rival [ plyrs thisuseraction [g eq] ]
   [:div.py-2.modal-module
@@ -411,15 +422,21 @@
 
 (defn- modal-use-action-ele [ card a pdata gs ]
   (let [thisuseraction (r/atom (assoc a 
-                                  :cost (default-payment (-> a :cost (dissoc :exclude)) (-> pdata :public :essence)) 
-                                  :gain (-> a :gain (dissoc :any :exclude))
-                                  :place (-> a :place (dissoc :any :exclude)) ))] ; should be payable amount. Use @ra-app? or universal atom
+                                  :destroycard (case (:destroy a) :this (select-keys card [:name :uid]) nil)
+                                  :cost     (default-payment (-> a :cost (dissoc :exclude)) (-> pdata :public :essence)) 
+                                  :gainany  (if (:destroy a) (select-keys (:convertto a) [:exclude]) (select-keys (:convertto a) [:any]))
+                                  :gain     (cond (:gain a) (-> a :gain (dissoc :any :exclude)) (:destroy a) {})
+                                  :place    (-> a :place (dissoc :any :exclude)) ))] ; should be payable amount. Use @ra-app? or universal atom
     (fn []
       (let [{:keys [cost gain place target]} @thisuseraction 
             canpay        (can-pay-cost? (:cost a) (:cost @thisuseraction)) 
             cante         (or (-> a :turnextra nil?) (-> @thisuseraction :turnextra :uid some?))
+            candestroy    (if (:destroy a) (-> @thisuseraction :destroycard some?) true)
+            candiscard    (if (:discard a) (-> @thisuseraction :discard :uid some?) true)
             cangainrival  (if (:gainrivalequal a) (some? (:gain @thisuseraction)) true)
-            cangain       (or cangainrival (can-pay-cost? (:gain a) (:gain @thisuseraction)))
+            cangain       (if (:gain a) (and cangainrival (can-pay-cost? (:gain a) (:gain @thisuseraction))) true)
+            cangainany    (if (-> @thisuseraction :gainany :any) (can-pay-cost? (:gainany @thisuseraction) (:gain @thisuseraction)) true)
+            canconvert    (if (:destroy a) (:gain a))
             canplace      (can-pay-cost? (:place a) (:place @thisuseraction))
             canstraighten (or (-> a :straighten nil?) (-> @thisuseraction :straighten :uid some?))]
         [:div.mb-2.modal-action 
@@ -428,29 +445,39 @@
           (action-bar a)
           (if (-> a :cost :any)
               (pay-module pdata a thisuseraction))
-          (if (-> a :gain :any)
+          (if (:discard a)
+              (target-component thisuseraction pdata card))
+          (if (and (:destroy a) (not= :this (:destroy a)))
+              (target-component thisuseraction pdata card))
+          (if (or (-> a :gain :any) (-> a :convertto :any))
               (gain-module a thisuseraction :gain))
           (if (-> a :place :any)
               (gain-module a thisuseraction :place))
           (if (:straighten a)
-              (target-component thisuseraction pdata))
+              (target-component thisuseraction pdata card))
           (if (:targetany a)
-              (target-component thisuseraction pdata))
+              (target-component thisuseraction pdata card))
           (if-let [gre (:gainrivalequal a)]
               (target-rival (-> gs :players (dissoc @uname)) thisuseraction gre))
           (if (:turnextra a)
-              (target-component thisuseraction pdata))
+              (target-component thisuseraction pdata card))
           [:div.d-flex.justify-content-around.mb-1.py-2
-            (if (:cost a)  [:div.d-flex [:div "Pay:"]   (render-essence-list (if (empty? cost)  (:cost a)  cost))])
-            (if (or (:gainrivalequal a) (:gain a))  
-              [:div.d-flex [:div.my-auto "Gain:"]  (render-essence-list (if (empty? gain)  (:gain a)  gain))])
+            (if (:cost a)  [:div.d-flex [:div.my-auto "Pay:"]   (render-essence-list (if (empty? cost)  (:cost a)  cost))])
+            (if (:destroy a) [:div.my-auto (str "Destroy: " (-> @thisuseraction :destroycard :name))])
+            (if (:discard a) [:div.my-auto (str "Discard: " (-> @thisuseraction :discard :name))])
+            (if (or (:gainrivalequal a) (:gain a) (:destroy a))  
+              [:div.d-flex 
+                (if-let [ga (-> @thisuseraction :gainany :any)]
+                  [:div.d-flex [:div.my-auto.me-1 "Gain"] (essence-svg :any ga) [:div.my-auto.mx-1 ":"]]
+                  [:div.my-auto "Gain:"] )
+                (render-essence-list (if (empty? gain)  (:gain a)  gain))])
             (if (:place a) [:div.d-flex [:div "Place:"] (render-essence-list (cond (empty? place) (:place a) (:cost place) (:cost @thisuseraction) :default place))])
             (if (:target a) [:div.d-flex [:div "Target"] ])
           ]
-          ;[:div.debug (str "canpay " canpay " cangain " cangain " canplace " canplace " canstraighten " canstraighten " cangainrival " cangainrival)]
+          ;[:div.debug (str "canpay:" canpay " cangain:" cangain " canplace:" canplace " canstraighten:" canstraighten " cangainrival:" cangainrival " candestroy:" candestroy " cangainany:" cangainany)]
           [:div.d-flex.mb-1
             [:button.btn.btn-primary.ms-auto {
-                :disabled (not (and canpay cangain canplace canstraighten cangainrival cante))
+                :disabled (not (and canpay cangain canplace canstraighten cangainrival cante candestroy candiscard cangainany))
                 :on-click #((comms/ra-send! {:action :usecard :useraction @thisuseraction :card card}) (hidemodal))
               } "Use Action"]]
         ]))))
@@ -608,6 +635,7 @@
                     (:target? card)                   (modal-target card pdata))]]
         
         discard [:div.modalcontent.p-2.rounded.d-flex.flex-wrap.w-100.justify-content-center
+                  [:div (str discard)]
                   (for [c discard] 
                     [:div.m-1 {:key (gensym) :style {:width "20%" :height "auto"}}
                       [:img.img-fluid { :src (imgsrc c)}]]
@@ -693,7 +721,7 @@
                             (for [card (-> pdata :private :artifacts)]
                               [:div.mx-1.clickable {
                                   :key (gensym)
-                                  :on-click #(comms/ra-send! {:action :react :card (select-keys card [:name :uid]) :useraction {:discard true}})
+                                  :on-click #(comms/ra-send! {:action :react :useraction {:discard card}})
                                 }
                                 [:img.modal-reaction {:src (imgsrc card) :title (str "Discard " (:name card))}]
                               ])]]
@@ -704,7 +732,7 @@
                             (for [card (-> pdata :public :artifacts)]
                               [:div.mx-1.clickable {
                                   :key (gensym)
-                                  :on-click #(comms/ra-send! {:action :react :useraction {:destroy true :card (select-keys card [:name :uid])}})
+                                  :on-click #(comms/ra-send! {:action :react :useraction {:destroy true :destroycard (select-keys card [:name :uid])}})
                                 }
                                 [:img.modal-reaction {:src (imgsrc card) :title (str "Destroy " (:name card))}]
                               ])]]

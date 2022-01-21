@@ -4,13 +4,14 @@
 		[lobby.comms :as comms]
 		[lobby.raessence :refer [action-bar lose-life-svg place-cost-svg]]))
 
-(def radata (r/atom nil))
+(defonce radata (r/atom nil))
 
 (defn main []
 	[:div.container.py-3 
-		[:style ".img-ab {height: 40px;} .text-ab {font-size: 13pt; font-family: \"Pirata One\", cursive; margin-top: auto; margin-bottom: auto; line-height: 1.1rem; white-space: pre;} .text-ab-lg {font-size: 1.3rem; font-weight: bold;}"]
+		;[:style ".img-ab {height: 40px;} .text-ab {font-size: 13pt; font-family: \"Pirata One\", cursive; margin-top: auto; margin-bottom: auto; line-height: 1.1rem; white-space: pre;} .text-ab-lg {font-size: 1.3rem; font-weight: bold;}"]
+		[:div [:button.btn.btn-outline-secondary {:on-click #(comms/load-data! radata)} "Load Data"] ]
 		[:div 
-			;[:div.bg-secondary.p-2 
+			;[:div.bg-secondary.p-2
 			;	(lose-life-svg "?" {:size :lg})
 			;	(place-cost-svg "?" {:size :lg})]
 			;[:div (str @radata)]
@@ -20,10 +21,11 @@
 					(if (contains? #{:placesofpower :artifacts} k) ; :mages y  :magicitems y  :artifacts x  :monuments 1  :placesofpower 2
 						[:div.row 
 							(for [c v]
-								[:div.col-sm-3.mb-3 {:key (gensym) :style {:display "flex" :flex-flow "column"}}
+								[:div.col-sm-4.mb-3 {:key (gensym) :style {:display "flex" :flex-flow "column"}}
 									[:img.img-fluid {:src (str "/img/ra/" (:type c) "-" (:id c) ".jpg")}]
 									(for [a (:action c)] (action-bar a))
 								])])])]])
 
 (r/render [main] (.getElementById js/document "app"))
-(comms/load-data! radata)
+(defonce start 
+	(comms/load-data! radata))

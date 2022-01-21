@@ -140,7 +140,7 @@
   position: fixed;
   bottom: 5px;
   right: 5px;
-  z-index: 100;
+  z-index: 98;
   height: 15%;
   min-height: 4rem;
   width: 20rem;
@@ -230,6 +230,7 @@
   height: 40px;
 } 
 .text-ab {
+  text-align: center;
   word-wrap: break-word;
   font-size: 13pt; 
   font-family: "Pirata One", cursive; 
