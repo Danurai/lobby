@@ -1257,7 +1257,7 @@
         wd  (-> gs :players (get p1) :public :artifacts first)] ; P1 starts with Sea serpent
     (-> gs 
         (ramodel/parseaction {:action :usecard :card wd :useraction (-> wd :action first)} p1)
-        (ramodel/parseaction {:action :react :card (-> gs :players (get p2) :private :artifacts first) :useraction {:discard true}} p2)
+        (ramodel/parseaction {:action :react :useraction {:discard  (-> gs :players (get p2) :private :artifacts first)}} p2)
         :players (get p2) :private :artifacts count)))
 
 ;; Destroy response test
@@ -1268,7 +1268,7 @@
         ss  (-> gs :players (get p1) :public :artifacts first)] ; P1 starts with Sea serpent
     (-> gs 
         (ramodel/parseaction {:action :usecard :card ss :useraction (-> ss :action first)} p1)
-        (ramodel/parseaction {:action :react :useraction {:destroy true :card (-> gs :players (get p2) :public :artifacts first)}} p2)
+        (ramodel/parseaction {:action :react :useraction {:destroy true :destroycard (-> gs :players (get p2) :public :artifacts first)}} p2)
         :players (get p2) :public :artifacts count)))
 
 ; do not end turn until all :loselife responses are completed
@@ -1667,3 +1667,22 @@
         (ramodel/parseaction {:action :draw3   :deck "artifact"} p1)
         (ramodel/parseaction {:action :draw3   :useraction [(nth arts 2) (second arts) (first arts)]} p1)
         :players (get p1) :action)))
+; Turnextra
+(expect true
+  (let [p1 (-> g1 :plyr-to first)
+        sg (-> g1 :pops first)
+        gs (-> g1 (ramodel/chat-handler "/playcard Mermaid" p1))
+        mm (-> gs :players (get p1) :public :artifacts first)]
+    (-> gs
+        (ramodel/parseaction {:action :place :card sg :cost (:cost sg)} p1)
+        (ramodel/parseaction {:action :usecard :card sg :useraction {:turnextra mm :turn true :place {:life 1}}} p1)
+        :players (get p1) :public :artifacts first :turned?)))
+
+; destroy as part of card action (Jeweled Statuette)
+(expect []
+  (let [p1 (-> g1 :plyr-to first)
+        gs (ramodel/chat-handler g1 "/playcard Jeweled Statuette" p1)
+        js (-> gs :players (get p1) :public :artifacts first)]
+    (-> gs
+        (ramodel/parseaction {:action :usecard :card js :useraction (assoc (-> js :action last) :destroycard js)} p1)
+        :players (get p1) :public :artifacts)))
