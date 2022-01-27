@@ -46,6 +46,15 @@
   
   :cljsbuild {
     :builds {
+      :test {
+        :source-paths ["src/cljs"]
+        :figwheel true
+        :compiler {:main lobby.test
+                   :asset-path "js/compiled/testout"
+                   :output-to  "resources/public/js/compiled/test.js"
+                   :output-dir "resources/public/js/compiled/testout"
+                   :source-map-timestamp true
+                   :preloads [devtools.preload]}}
       :dev {
         :source-paths ["src/cljs"]
         ;; The presence of a :figwheel configuration here
