@@ -48,7 +48,7 @@
 			(assoc :action (if (= n 1 ) :play :waiting))
 		))
 (def game1 
-	(let [monuments (mapv #(assoc % :uid (gensym "mon")) (:monuments @data))
+	(let [monuments	(mapv #(assoc % :uid (gensym "mon")) (:monuments @data))
 				pops			(mapv #(assoc % :uid (gensym "pop")) (:placesofpower @data))]
 		(assoc gs
 			:status :play 
@@ -64,15 +64,18 @@
 			)))
 
 (def game2 
-	(-> game1
-			(assoc :magicitems 
-				(map 
-					(fn [mi] 
-						(cond (= (:owner mi) "p1")			(dissoc mi :owner)
-									(= (:name mi) "Research") (assoc mi :owner "p1")
-									:default 									mi))
-					(:magicitems game1)))
-			(assoc-in [:chat 0 :msg] "Swap to predefined Game2")))
+	(let [monmap 		(mapv #(assoc % :uid (gensym "mon")) (:monuments @data))
+				monuments	(-> (filter #(= (:name %) "Obelisk") monmap) (concat (remove #(= (:name %) "Obelisk") monmap)) vec)]
+		(-> game1
+				(assoc :monuments (hash-map :public (take 2 monuments) :secret (nthrest monuments 2)))
+				(assoc :magicitems 
+					(map 
+						(fn [mi] 
+							(cond (= (:owner mi) "p1")			(dissoc mi :owner)
+										(= (:name mi) "Research") (assoc mi :owner "p1")
+										:default 									mi))
+						(:magicitems game1)))
+				(assoc-in [:chat 0 :msg] "Swap to predefined Game2"))))
 
 (def game3
 	(-> game1

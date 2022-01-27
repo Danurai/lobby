@@ -122,24 +122,24 @@
     gamestate 
     essence))
 
-(defn- remove-card-essence [ gs card attr uname ]
+(defn- remove-card-attr [ gs card attr uname ]
   (case (:type card)
     "mage"      (update-in gs [:players uname :public :mage] dissoc attr)
     "magicitem" (assoc gs :magicitems (map #(if (= (:uid %) (:uid card)) (dissoc % attr) %) (:magicitems gs)))
     ("artifact" "monument" "pop")
                 (assoc-in gs [:players uname :public :artifacts] (map #(if (= (:uid %) (:uid card)) (dissoc % attr) %) (-> gs :players (get uname) :public :artifacts)))
     gs))
-
+    
 (defn- collect-essence [ gamestate {:keys [essence card] :as ?data} uname ]
   ;(println "collect-essence:" essence card uname)
   (if (:turn essence)
       (-> gamestate
           (turn-card card true uname)
-          (remove-card-essence card :collect-essence uname)
+          (remove-card-attr card :collect-essence uname)
           (add-chat (str "Turned " (:name card)) uname))
       (-> gamestate
           (update-player-essence ?data uname)
-          (remove-card-essence card :collect-essence uname)
+          (remove-card-attr card :collect-essence uname)
           (add-chat 
             (str "Collected " (clojure.string/join ", " (map #(str (val %) " " (-> % key name)) essence)) " from " (:name card))
             uname))))
@@ -149,7 +149,7 @@
   (if verbose? (println "take-essence:" uname card))
   (-> gamestate 
       (update-player-essence {:essence (:take-essence card)} uname)
-      (remove-card-essence card :take-essence uname)))
+      (remove-card-attr card :take-essence uname)))
 
 (defn- generate-essence [ gamestate ]
   ; copy from :collect to :collect-essence
@@ -373,12 +373,13 @@
       gamestate))
     
 
-(defn- playcard [ gamestate {:keys [card essence]} uname ]
-  (if verbose? (println "playcard:" uname card "paid" essence ))
+(defn- playcard [ gamestate {:keys [card essence gain]} uname ]
+  (if verbose? (println "playcard:" uname card gain "paid" essence ))
   (-> gamestate
     (assoc-in [:players uname :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> gamestate :players (get uname) :private :artifacts))) ; Artifact
     (assoc :pops (->> gamestate :pops (remove #(= (:uid %) (:uid card)))))                                                                     ; Place of power
     (assoc-in [:monuments :public] (->> gamestate :monuments :public (remove #(= (:uid %) (:uid card))) vec))                                  ; Monument 
+    (update-player-essence {:essence gain} uname)                                                                                              ; Gain essence (Obelisk)
     (replacemonument (= "monument" (:type card)))
     (update-in [:players uname :public :artifacts] conj card)
     (add-chat (str (case (:type card) "artifact" "Played " "Claimed ") (:name card)) uname)
@@ -494,6 +495,34 @@
       (assoc-in gamestate [:players uname :draw3] true)
       gamestate))
 
+(defn- add-essence [ e1 e2 ]
+  (let [res (reduce-kv 
+              (fn [m k v]
+                (if (k m)
+                    (if (= 0 (+ (k m) v))
+                        (dissoc m k)
+                        (update m k + v))
+                    (assoc m k v)))
+              e1 e2)]
+    (if (empty? res) nil res)))
+
+(defn- remove-card-essence [ gs card essence uname ]
+  (let [ne (add-essence (:take-essence card) (invert-essence essence))]
+    (if (and verbose? essence) (println "remove-card-essence:" (:name card) essence ne))
+    (if essence
+        (assoc-in gs [:players uname :public :artifacts] (map #(if (= (:uid %) (:uid card)) (assoc % :take-essence ne) %) (-> gs :players (get uname) :public :artifacts))) ; 'Artifact' - placed artifact, monument, pop
+        gs)))
+
+(defn- convert-essence [ gs {:keys [convertfrom convertto]} uname]
+  (let [cfkey (-> convertfrom keys first)
+        ctkey (-> convertto keys first)
+        cfval (-> convertfrom vals first)]
+    (if (and convertfrom convertto)  
+      (-> gs 
+          (update-player-essence {:essence {cfkey (- 0 cfval)}} uname)
+          (update-player-essence {:essence {ctkey cfval}} uname))
+      gs)))
+
 ;;; USE A CARD ;;;
 ;; Request: {:action :usecard, :useraction {:turn true, :cost {}, :gain {:death 2}, :rivals {:death 1} :destroy <card>}, :gid :gm93866} dan
 (defn- use-card [ gamestate {:keys [card useraction] :as ?data} uname] 
@@ -507,6 +536,8 @@
                 (update-player-essence m {:essence (:rivals useraction)} k)
                 m)) gamestate (:players gamestate))))
       (update-player-essence {:essence (invert-essence (:cost useraction))} uname)    ; Pay cost
+      (convert-essence useraction uname)                                              ; Pay / gain conversion cost
+      (remove-card-essence card (:remove useraction) uname)                           ; Remove Essence from card
       (update-player-essence {:essence (:gain useraction)} uname)                     ; Gain essence
       (place-essence (or (:targetany useraction) card) useraction uname)              ; Place essence
       (turn-card (:straighten useraction) nil uname)                                  ; Straighten
@@ -518,7 +549,6 @@
       (lose-life card useraction uname)                                               ; Apply Lose Life :action s
       (draw3 useraction uname)                                                        ; Apply draw3 action
   ))
-
 
 ;;; REACT ;;;
 (defn- react [ gamestate {:keys [card useraction] :as ?data} uname]
