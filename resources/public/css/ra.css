@@ -234,11 +234,13 @@
   word-wrap: break-word;
   font-size: 13pt; 
   font-family: "Pirata One", cursive; 
-  margin-top: auto; 
-  margin-bottom: auto; 
   line-height: 1.1rem; 
   white-space: pre-line;
 } 
+[class*="-ab"] {
+  margin-top: auto; 
+  margin-bottom: auto; 
+}
 .text-ab-lg {
   font-size: 1.3rem !important; 
   font-weight: bold;

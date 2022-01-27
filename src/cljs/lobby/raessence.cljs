@@ -251,11 +251,12 @@
 					[:div.me-1 (place-cost-svg "?")]
 					(render-essence-list (reduce-kv #(if (number? %3) (assoc %1 %2 (str "- " %3)) %1) (:reduction action) (:reduction action)))])
 			(if-let [draw (:draw action)]
-				[:div.text-ab.mx-1
+				[:div.d-flex.text-ab.mx-1
 					"draw" [:div.text-ab-lg.mx-1 draw] "card" ])
 			(if (:draw3 action)
-				[:div.text-ab.text-ab-sm.mx-1
-					"draw" [:div.text-ab-lg.mx-1 "3"] "cards, reorder, put back\n" [:em "(may also use on Monument deck)"]])
+				[:div.my-auto
+					[:div.d-flex.text-ab.text-ab-sm.mx-1 "draw" [:div.text-ab-lg.mx-1 "3"] "cards, reorder, put back"]
+					[:div.text-ab.text-ab-sm "(may also use on Monument deck)"]])
 			(if (:divine action) [:div.text-ab "draw" [:div.text-ab-lg.mx-1 "3"] "cards, add\nto hand, discard" [:div.text-ab-lg.ms-1 "3"]])
 			
 		]))
