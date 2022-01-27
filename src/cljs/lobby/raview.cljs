@@ -10,10 +10,10 @@
 
 (def ra-app (let [scale (or (.getItem js/localStorage "cardscale") 4)]
   (r/atom {
-    ;:modal {
-    ;  :show? true
-    ;  :card {:uid "pop214281", :name "Sacrificial Pit", :type "pop", :vp 0, :can-use? true, :id 7, :action [{:turn true, :cost {:life 3}, :place {:death 1}} {:turn true, :cost {:death 1}, :destroy #{"Creature" "Dragon"}, :convertto {:gold 1}}], :cost {:elan 8, :death 4}, :base 1, :target? true}
-    ;}
+    :modal {
+      :show? true
+      :card {:id 6, :name "Obelisk", :type "monument", :cost {:gold 4}, :vp 1, :action [{:bought true, :gain {:any 6, :exclude #{:gold}}}], :uid "mon33365", :target? true}
+    }
     :settings {
       :cardsize {
         :scale scale
@@ -32,27 +32,6 @@
   ([ card back? ]
     (str "/img/ra/" (:type card) "-" (if back? "back" (:id card)) ".jpg"))
   ([ card ] (imgsrc card (and (:passed? card) (= "magicitem" (:type card))))))
-
-;(defn- essence-icon [ type n ]
-;  (let [color (case type (:elan :death) "white" "black")
-;        scale 1]
-;    (if (and (not= n 0) (some? n))
-;        [:div.text-center.mx-1.mt-1 {
-;            :key (gensym)
-;            :style {
-;              :position "relative"
-;              :background-image (str "url(img/ra/res-" (name type) ".png")
-;              :background-size "contain"
-;              :background-repeat "no-repeat"
-;              :background-position-y "0%"
-;              :color (if (< -2 n 2) "rgba(0,0,0,0)" color)
-;              :width     (str (* scale 1.1) "em")
-;            }
-;          }
-;          (if (number? n) (if (< n 0) [:div {:style {:color (case type :elan "black" "darkred") :position "absolute" :left "-4px" :bottom "-6px" :font-size "1em"}} "x"]))
-;          (if (number? n)
-;              (Math.abs n)
-;              n)])))
 
 (defn- select-btn-handler [ action card ]
   (comms/ra-send! {:action action :card (:uid card)}))
@@ -175,7 +154,7 @@
           :class (cond (:turned? card) "disabled" (-> card :collect-essence some?) "collect" (:target? card) "target" (:disabled? card) "disabled" :else nil)
           }]
         [:div {:style {:position :absolute :right "3px" :top "3px"}}
-          (for [[k v] (-> card :take-essence)] (essence-svg k v {:size :sm}))
+          (for [[k v] (-> card :take-essence)] [:div (essence-svg k v {:size :sm})])
         ]]))
   ([ card ]
     (render-card card nil)))
@@ -415,6 +394,25 @@
           (essence-svg eq (-> v :public :essence eq))
           ])]])
 
+(defn- target-convert [ thisuseraction pdata action ]
+  (let [cfkey  (-> @thisuseraction :convertfrom keys first) ctkey (-> @thisuseraction :convertto keys first) cfval (-> @thisuseraction :convertfrom cfkey)]
+    [:div.py-2.modal-module
+      [:h4.text-center "Convert"]
+      [:div.d-flex.justify-content-center
+        [:div.d-flex 
+          (doall (for [e essence-list] 
+            [:div.p-1.clickable.essence {:key (gensym) :class (if (-> @thisuseraction :convertfrom e) "active") :on-click #(swap! thisuseraction assoc :convertfrom {e :equal})} 
+              (essence-svg e 1 {:size :sm})])) ]
+        [:div.text-ab.mx-1 "x"]
+        [:select.form-control.mx-1 {:style {:width "fit-content"} :value (str cfval) :on-change #(swap! thisuseraction assoc-in [:convertfrom cfkey] (-> % .-target .-value int))}
+            (for [n (range (-> pdata :public :essence cfkey inc))] [:option {:key (gensym "opt") :value n} n])]
+        [:div.text-ab.mx-1 "to"]
+        (if (-> action :convertto :gold)
+            (essence-svg :gold (if (= cfval :equal) "?" cfval))
+            (doall (for [e (remove #(contains? (-> action :convertto :exclude) %) essence-list)] 
+              [:div.p-1.clickable.essence {:key (gensym) :class (if (-> @thisuseraction :convertto e) "active") :on-click #(swap! thisuseraction assoc :convertto {e :equal})} 
+                (essence-svg e (if (= cfval :equal) "?" cfval) {:size :sm})])))]]))
+
 (defn- render-remaining-essence [ pdata cost ]
   [:div.d-flex.justify-content-center.mt-2
     [:div.me-2.mt-auto "Remaining Essence:"]
@@ -424,24 +422,33 @@
   (let [thisuseraction (r/atom (assoc a 
                                   :destroycard (case (:destroy a) :this (select-keys card [:name :uid]) nil)
                                   :cost     (default-payment (-> a :cost (dissoc :exclude)) (-> pdata :public :essence)) 
-                                  :gainany  (if (:destroy a) (select-keys (:convertto a) [:exclude]) (select-keys (:convertto a) [:any]))
+                                  :gainany  (if (:destroy a) (select-keys (:convertto a) [:exclude]) nil) ;(select-keys (:convertto a) [:any]))
                                   :gain     (cond (:gain a) (-> a :gain (dissoc :any :exclude)) (:destroy a) {})
                                   :place    (-> a :place (dissoc :any :exclude)) ))] ; should be payable amount. Use @ra-app? or universal atom
     (fn []
       (let [{:keys [cost gain place target]} @thisuseraction 
-            canpay        (can-pay-cost? (:cost a) (:cost @thisuseraction)) 
-            cante         (or (-> a :turnextra nil?) (-> @thisuseraction :turnextra :uid some?))
+            canpay        (and  (can-pay-cost? (:cost a) (:cost @thisuseraction)) (if (:remove a) (can-pay-cost? (:remove a) (:take-essence card)) true))
+            cante         (or (-> a :turnextra nil?) 
+                              (-> @thisuseraction :turnextra :uid some?))
+            canconvert    (if (:destroy a) 
+                              (:gain a) 
+                              (if (:convertfrom a)  
+                                  (and (->> @thisuseraction :convertfrom keys first (contains? (set essence-list)))
+                                       (->> @thisuseraction :convertto keys first (contains? (->> essence-list (remove #(contains? (-> a :convertto :exclude) %)) set)))
+                                       (-> @thisuseraction :convertfrom vals first number?)
+                                  )
+                                  true))
             candestroy    (if (:destroy a) (-> @thisuseraction :destroycard some?) true)
             candiscard    (if (:discard a) (-> @thisuseraction :discard :uid some?) true)
             cangainrival  (if (:gainrivalequal a) (some? (:gain @thisuseraction)) true)
             cangain       (if (:gain a) (and cangainrival (can-pay-cost? (:gain a) (:gain @thisuseraction))) true)
             cangainany    (if (-> @thisuseraction :gainany :any) (can-pay-cost? (:gainany @thisuseraction) (:gain @thisuseraction)) true)
-            canconvert    (if (:destroy a) (:gain a))
             canplace      (can-pay-cost? (:place a) (:place @thisuseraction))
-            canstraighten (or (-> a :straighten nil?) (-> @thisuseraction :straighten :uid some?))]
+            canstraighten (or (-> a :straighten nil?) 
+                              (-> @thisuseraction :straighten :uid some?))]
         [:div.mb-2.modal-action 
           ;[:div.debug (str a)]
-          [:div.debug (str @thisuseraction)]
+          ;[:div.debug (str @thisuseraction)]
           (action-bar a)
           (if (-> a :cost :any)
               (pay-module pdata a thisuseraction))
@@ -449,7 +456,7 @@
               (target-component thisuseraction pdata card))
           (if (and (:destroy a) (not= :this (:destroy a)))
               (target-component thisuseraction pdata card))
-          (if (or (-> a :gain :any) (-> a :convertto :any))
+          (if (or (-> a :gain :any) (and (-> a :convertfrom nil?) (-> a :convertto :any)))
               (gain-module a thisuseraction :gain))
           (if (-> a :place :any)
               (gain-module a thisuseraction :place))
@@ -461,31 +468,34 @@
               (target-rival (-> gs :players (dissoc @uname)) thisuseraction gre))
           (if (:turnextra a)
               (target-component thisuseraction pdata card))
-          [:div.d-flex.justify-content-around.mb-1.py-2
-            (if (:cost a)  [:div.d-flex [:div.my-auto "Pay:"]   (render-essence-list (if (empty? cost)  (:cost a)  cost))])
-            (if (:destroy a) [:div.my-auto (str "Destroy: " (-> @thisuseraction :destroycard :name))])
-            (if (:discard a) [:div.my-auto (str "Discard: " (-> @thisuseraction :discard :name))])
-            (if (or (:gainrivalequal a) (:gain a) (:destroy a))  
-              [:div.d-flex 
-                (if-let [ga (-> @thisuseraction :gainany :any)]
-                  [:div.d-flex [:div.my-auto.me-1 "Gain"] (essence-svg :any ga) [:div.my-auto.mx-1 ":"]]
-                  [:div.my-auto "Gain:"] )
-                (render-essence-list (if (empty? gain)  (:gain a)  gain))])
-            (if (:place a) [:div.d-flex [:div "Place:"] (render-essence-list (cond (empty? place) (:place a) (:cost place) (:cost @thisuseraction) :default place))])
-            (if (:target a) [:div.d-flex [:div "Target"] ])
-          ]
-          ;[:div.debug (str "canpay:" canpay " cangain:" cangain " canplace:" canplace " canstraighten:" canstraighten " cangainrival:" cangainrival " candestroy:" candestroy " cangainany:" cangainany)]
-          [:div.d-flex.mb-1
-            [:button.btn.btn-primary.ms-auto {
-                :disabled (not (and canpay cangain canplace canstraighten cangainrival cante candestroy candiscard cangainany))
+          (if (:convertfrom a) ; {:any equal}
+              (target-convert thisuseraction pdata a))
+          ;[:div.debug (str "canpay:" canpay " cangain:" cangain " canplace:" canplace " canstraighten:" canstraighten " cangainrival:" cangainrival " candestroy:" candestroy " cangainany:" cangainany " canconvert:" canconvert) ]
+          [:div.d-flex.justify-content-between.mb-1.py-2
+            [:div.d-flex.justify-content-center
+              (if (:cost a)         [:div.d-flex [:div.my-auto "Pay: "] (render-essence-list (if (empty? cost)  (:cost a)  cost))])
+              ;(if (:convertfrom @thisuseraction) [:div.d-flex [:div.my-auto "Pay: "] (render-essence-list (if (empty? cost)  (:convertfrom @thisuseraction)  cost))])
+              (if (:destroy a)      [:div.my-auto (str "Destroy: " (-> @thisuseraction :destroycard :name))])
+              (if (:discard a)      [:div.my-auto (str "Discard: " (-> @thisuseraction :discard :name))])
+              (if (or (:gainrivalequal a) (:gain a) (:destroy a))  
+                [:div.d-flex 
+                  (if-let [ga (-> @thisuseraction :gainany :any)]
+                    [:div.d-flex [:div.my-auto.me-1 "Gain"] (essence-svg :any ga) [:div.my-auto.mx-1 ":"]]
+                    [:div.my-auto "Gain:"] )
+                  (render-essence-list (if (empty? gain)  (:gain a)  gain))])
+              (if (:place a) [:div.d-flex [:div "Place:"] (render-essence-list (cond (empty? place) (:place a) (:cost place) (:cost @thisuseraction) :default place))])
+              (if (:target a) [:div.d-flex [:div "Target"] ])]
+            [:button.btn.btn-primary {
+                :disabled (not (and canpay cangain canplace canstraighten cangainrival cante candestroy candiscard cangainany canconvert))
                 :on-click #((comms/ra-send! {:action :usecard :useraction @thisuseraction :card card}) (hidemodal))
-              } "Use Action"]]
+              } "Use Action"]
+          ] 
         ]))))
 
 (defn- modal-use [ gs card pdata ]
   (let [actions (->> (:action card) (remove :react) (remove :reducer_a))]
     (if (or (-> card :name (= "Guard Dog")) (and (-> card :turned? nil?) (not-empty actions))) ;; GUARD DOG CAN BE STRAIGHTENED
-      [:div.px-1 
+      [:div.px-1
         ;[:div.debug (str card)]
         [:h3.text-center.pt-3 (str "Use " (:name card))]
         (for [action actions] ^{:key (gensym)}[modal-use-action-ele card action pdata gs])])))
@@ -543,7 +553,9 @@
         essence (r/atom (default-payment (:cost card) (-> pdata :public :essence)))]
     (fn []
       (let [card (-> @ra-app :modal :card) 
-            label (if (= "artifact" (:type card)) "Place" "Claim")] 
+            label   (if (= "artifact" (:type card)) "Place" "Claim")
+            canpay  (can-pay-cost? (:cost card) (:cost @thisuseraction) (:reducers @thisuseraction) )
+            cangain (if (-> card :action first :bought) (can-pay-cost? (-> card :action first :gain) (:gain @thisuseraction)) true)] 
         [:div.pt-3.pb-2.mb-3.ps-2 {:style {:border-bottom "1px solid #222222"}}
           [:h3 (str label " " (:name card))]
           ;[:div.debug (str card)]
@@ -553,12 +565,21 @@
             [:div
               (reducer-module card pdata thisuseraction)
               [:div.bg-essence.mb-2 (render-essence-list (:cost card) "h5")]  ;; TODO REDUCED COST?
+              (if (-> card :action first :bought)
+                [:div 
+                  (action-bar (-> card :action first))
+                  (gain-module (-> card :action first) thisuseraction :gain)])
               [:div.d-flex.my-2
-                [:div.h4.me-3 "Pay:"]
-                (render-essence-list (:cost @thisuseraction) )
+                [:div.d-flex.me-3
+                  [:div.h4.me-3 "Pay:"]
+                  (render-essence-list (:cost @thisuseraction) )]
+                (if (-> card :action first :bought)
+                  [:div.d-flex 
+                    [:div.h4.me-3 "Gain:"]
+                    (render-essence-list (:gain @thisuseraction))])
                 [:button.btn.btn-primary.ms-auto {
-                  :on-click #((comms/ra-send! {:action :place :card card :essence (-> @thisuseraction :cost (dissoc :any))}) (hidemodal))
-                  :disabled (not (can-pay-cost? (:cost card) (:cost @thisuseraction) (:reducers @thisuseraction) )) } label]]
+                  :on-click #((comms/ra-send! {:action :place :card card :essence (-> @thisuseraction :cost (dissoc :any)) :gain (:gain @thisuseraction)}) (hidemodal))
+                  :disabled (not (and canpay cangain)) } label]]
               (if (-> card :cost :any) 
                   (pay-module pdata nil thisuseraction)
                   (render-remaining-essence pdata (:cost @thisuseraction)))
@@ -625,9 +646,12 @@
       (cond 
         info    [modal-info info]
         card    [:div.modalcontent.p-2.rounded.d-flex {:on-click #(.stopPropagation %)}
-                  [:div.h-100.text-center
-                    [:img.card.h-100 {:src (imgsrc card) :class (cond (:turned? card) "disabled")}]]
-                  [:div
+                  [:div.h-100.text-center {:style {:position "relative"}}
+                    [:img.card.h-100 {:src (imgsrc card) :class (cond (:turned? card) "disabled")}]
+                    (if-let [te (:take-essence card)] 
+                        [:div.p-1.rounded {:style {:position "absolute" :top "10px" :right "10px" :background "rgba(0,0,0,0.3)"}}
+                          (for [[k v] te] [:div {:key (gensym)} (essence-svg k v {:size :lg})])])]
+                  [:div  {:style {:width "500px"}}
                     [:button.btn-sm.btn-close.ms-auto.bg-light {:on-click #(hidemodal) :style {:position "absolute" :right "5px" :top "5px"}}]
                   (cond   ;; options based on card and game state
                     (= :collect (:phase gs))          (modal-collect-essence card pdata uname)

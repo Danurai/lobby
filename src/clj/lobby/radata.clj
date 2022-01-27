@@ -86,7 +86,7 @@
     {:id 28 :type "artifact" :name "Nightingale"          :cost {:life 1 :calm 1} :subtype "Creature" :vp 1}
     {:id 29 :type "artifact" :name "Philosopher's Stone"  :cost {:elan 2 :life 2 :calm 2 :death 2} :vp 1 :action [{:turn true :cost {:any 2} :convertfrom {:any :equal} :convertto {:gold :equal} }]}
     
-    {:id 30 :type "artifact" :name "Prism"                :action [{:turn true :cost {:any 1} :gain {:any 2 :exclude #{:gold}}} {:turn true :convertfrom {:any :equal} :converto {:any :equal :exclude #{:gold}}}]}
+    {:id 30 :type "artifact" :name "Prism"                :action [{:turn true :cost {:any 1} :gain {:any 2 :exclude #{:gold}}} {:turn true :convertfrom {:any :equal} :convertto {:any :equal :exclude #{:gold}}}]}
     {:id 31 :type "artifact" :name "Ring of Midas"        :cost {:life 1 :gold 1} :vp 1 :action [{:cost {:life 2} :place {:gold 1}} {:turn true :place {:gold 1}}]}
     {:id 32 :type "artifact" :name "Sacrificial Dagger"   :cost {:death 1 :gold 1} :action [{:turn true :cost {:life 1} :place {:death 3}} {:destroy :this :discard true :convertto {:any 1 :exclude #{:gold}}}] }
     {:id 33 :type "artifact" :name "Sea Serpent"          :cost {:calm 6 :life 3} :subtype "Dragon Creature" :vp 1  :action [{:turn true :loselife 2 :ignore {:destroy 1} :source :dragon}]}

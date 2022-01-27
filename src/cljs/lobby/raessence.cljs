@@ -33,14 +33,19 @@
 	}
 	:any {
 		:path "m6.5,1.5 6.09157,4.63784 -2.314465,7.52199 -7.521989,0.011 -2.334379,-7.51518 z"
-		:path-fill 	 "#ffffff"
-		:font-stroke "#606060"
+		:path-fill 	 "#b0b0b0"
+		:font-stroke "#808080"
 		:y "60%" 
 	}})
 
+(def remove_essence_svg 
+	[:g {:style {:font ".5rem Pirata One"}}
+		[:text {:y "97%" :x "3%" :style {:fill "none" :stroke "white" :stroke-width ".5px"}} "x"]
+		[:text {:y "97%" :x "3%" :style {:fill "url('#gradx')"}} "x"]])
+
 (defn essence-svg 
 	([ type val tags ]
-		(let [n (if (number? val) (if (< -2 val 2) nil (Math.abs val)) val)
+		(let [n (if (number? val) (if (< -2 val 2) nil (Math.abs val)) (if (= :equal val) "?" val))
 					size (case (:size tags) :lg 60 :sm 30 40)]
 			[:svg.mt-auto {:key (gensym "esvg") :height (str (if (:exclude tags) (/ size 2) size) "px") :view-box "0 0 13 14.6"}
 				[:defs 
@@ -50,10 +55,14 @@
 					[:radialGradient#gradx {:cx "0%" :cy "100%" :r "100%"}
 						[:stop {:offset "0%"    :stop-color "black"}]
 						[:stop {:offset "100%"  :stop-color "red"}]
-					]]
+					]
+					[:radialGradient#gradzero {:cx "50%" :cy "50%" :r "50%"}
+						[:stop {:offset "0%"		:stop-color "#ddd"}]
+						[:stop {:offset "100%"	:stop-color "#aaa"}]
+						]]
 				[:path {
 					:d (-> essence-icon-hash type :path)
-					:fill (str "url('#grad" (name type) "')")
+					:fill (if (= 0 val) "url('#gradzero')" (str "url('#grad" (name type) "')"))
 					:stroke "white"
 					:stroke-width "0.6px"
 					:stroke-linejoin "round"
@@ -62,15 +71,12 @@
 					[:text {:y "67%" :x "50%" :text-anchor "middle" :alignment-baseline "middle" :style {:fill "none" :stroke (-> essence-icon-hash type :font-stroke) :stroke-width "1.5px" }} n]
 					[:text {:y "67%" :x "50%" :text-anchor "middle" :alignment-baseline "middle" :style {:fill "white"}} n]]
 				(if (number? val)
-					(if (< val 0)
-						[:g {:style {:font ".5rem Pirata One"}}
-							[:text {:y "97%" :x "3%" :style {:fill "none" :stroke "white" :stroke-width ".5px"}} "x"]
-							[:text {:y "97%" :x "3%" :style {:fill "url('#gradx')"}} "x"]]
-						))
-				(if (:equal tags)
-					[:g {:style {:font-size ".7rem"}}
-						[:text {:y "18%" :x "97%" :style {:text-anchor "end" :alignment-baseline "middle" :fill "none" :stroke "white" :stroke-width ".75px"}} "="]
-						[:text {:y "18%" :x "97%" :style {:text-anchor "end" :alignment-baseline "middle" :fill "#0080cc"}} "="]])
+					(if (< val 0) remove_essence_svg)
+					(if (:remove tags) remove_essence_svg))
+				(if (or (= :equal val) (:equal tags))
+					[:g {:style {:font-size ".6rem" :font-weight "bold"}}
+						[:text {:y "20%" :x "100%" :style {:text-anchor "end" :alignment-baseline "middle" :fill "none" :stroke "white" :stroke-width ".5px"}} "="]
+						[:text {:y "20%" :x "100%" :style {:text-anchor "end" :alignment-baseline "middle" :fill "#0080cc"}} "="]])
 				(if (:exclude tags)
 					[:g
 						[:circle {:cx "2.8" :cy "11.5" :r "2.5" :style {:fill "url('#gradx')" :stroke "white" :stroke-width ".5px"}} ]
@@ -156,55 +162,82 @@
 (defonce essence-list [:calm :life :elan :death :gold])
 
 (defn action-bar [ action ]
-	(let [acount (->> [(:turn action) (-> action :cost some?) (:bought action) (-> action :destroy some?)] (filter true?) count)]
-		[:div.d-flex.justify-content-center.py-2.rounded.mb-1 {:key (gensym "ab") :style {:background "grey"}}
-			(if (:bought action) [:div.text-ab.me-1 "When bought"])
-			(if (:react action)
-				[:div.react
-					(cond
-						(= :loselife (:ignore action)) [:div.d-flex.mx-2 [:div.text-ab.text-center "React\nto"] (lose-life-svg "?")]
-						(= :victory (:react action))   [:div.text-ab.text-ab-sm.text-center.me-1  "React to\nchecking\nvictory"])])
-			(if (:turn action) [:img.img-ab {:src "/img/ra/rae/turn.png"}])
-			(if (:turnextra action)
-				[:div
-					(if (:turn action) (text_svg "+"))
-					[:img.img-ab {:src (str "/img/ra/rae/turn_" (-> action :turnextra :subtype clojure.string/lower-case) ".png")}]
-				])
-			(if (> acount 1) (text_svg "+"))
-			(if-let [acost (:cost action)]
-				(if-let [excl (:exclude acost)]
-					(render-essence-list (invert-essences (zipmap (remove #(contains? excl %) essence-list) (repeat 1))) {:or true})
-					(render-essence-list (invert-essences acost))))
-			(if (:destroy action)
-				[:div.d-flex 
-					(cond
-						(= :this (:destroy action)) [:div.d-flex.me-1 [:div.text-ab.me-1 "Destroy"] [:img.img-ab {:src "/img/ra/rae/place.png"}]]
-						(= :anyartifact (:destroy action)) [:div.d-flex.me-1 [:div.text-ab.text-ab-sm "destroy " [:em "any\none "] "of your\nartifacts"]]
-						(= :otherartifact (:destroy action)) [:div.d-flex.me-1 [:div.text-ab.text-ab-sm "destroy " [:em "\nanother "] "of\nyour artifacts"]]
-						(set? (:destroy action)) [:div.d-flex (text_svg "+") [:div.text-ab.text-ab-sm.mx-1 (str "Destroy one of\nyour " (->> action :destroy (map #(str % "s")) (clojure.string/join "\nor ") ))]])
-					(if (:discard action) [:div.d-flex (text_svg "+") [:div.text-ab.mx-1 "discard\na card"]])
+	(let [acount (->> [(:turn action) (-> action :cost some?) (:bought action) (-> action :destroy some?) (-> action :remove some?)] (filter true?) count)]
+		[:div.d-flex.justify-content-center.py-1.rounded.mb-1 {:key (gensym "ab") :style {:background "tan"}}
+			[:div.d-flex.p-1.rounded {:style {:background "rgba(0,0,0,0.2)"}}
+				(if (:bought action) [:div.text-ab.me-1 "When bought"])
+				(if (:react action)
+					[:div.react
+						(cond
+							(= :loselife (:ignore action)) [:div.d-flex.mx-2 [:div.text-ab.text-center "React\nto"] (lose-life-svg "?")]
+							(= :victory (:react action))   [:div.text-ab.text-ab-sm.text-center.me-1  "React to\nchecking\nvictory"])])
+				(if (:turn action) [:img.img-ab {:src "/img/ra/rae/turn.png"}])
+				(if (:turnextra action)
+					[:div
+						(if (:turn action) (text_svg "+"))
+						[:img.img-ab {:src (str "/img/ra/rae/turn_" (-> action :turnextra :subtype clojure.string/lower-case) ".png")}]
+					])
+				(if (> acount 1) (text_svg "+"))
+				(if-let [acost (:cost action)]
+					(if-let [excl (:exclude acost)]
+						(render-essence-list (invert-essences (zipmap (remove #(contains? excl %) essence-list) (repeat 1))) {:or true})
+						(render-essence-list (invert-essences acost))))
+				(if-let [remove (:remove action)] 
+								[:div.d-flex 
+									(render-essence-list (invert-essences remove))
+									[:div.text-ab.mx-1 "on"]
+									[:img.img-ab.me-1 {:src "/img/ra/rae/place.png"}]])
+				(if-let [cf (:convertfrom action)]
+					[:div.d-flex (text_svg "+") (essence-svg :any "?" {:equal true :remove true})])
+				(if (:destroy action)
+					[:div.d-flex 
+						(cond
+							(= :this (:destroy action)) [:div.d-flex.me-1 [:div.text-ab.me-1 "Destroy"] [:img.img-ab {:src "/img/ra/rae/place.png"}]]
+							(= :anyartifact (:destroy action)) [:div.d-flex.me-1 [:div.text-ab.text-ab-sm "destroy " [:em "any\none "] "of your\nartifacts"]]
+							(= :otherartifact (:destroy action)) [:div.d-flex.me-1 [:div.text-ab.text-ab-sm "destroy " [:em "\nanother "] "of\nyour artifacts"]]
+							(set? (:destroy action)) [:div.d-flex (text_svg "+") [:div.text-ab.text-ab-sm.mx-1 (str "Destroy one of\nyour " (->> action :destroy (map #(str % "s")) (clojure.string/join "\nor ") ))]])
+						(if (:discard action) [:div.d-flex (text_svg "+") [:div.text-ab.mx-1 "discard\na card"]])
 
-				])
-
+					])
+			]
 			(if (> acount 0) [:img.my-auto.mx-1 {:style {:height "25px"} :src "/img/ra/rae/then.png"}])
-		
-			(if (:ignore action) 
+
+			(if-let [ll (:loselife action)]
+				[:div.d-flex 
+					[:div.text-ab "all\nrivals"]
+					(lose-life-svg ll)
+					[:div.react.d-flex
+						(case (-> action :ignore keys first)
+							:destroy [:div.text-ab.text-ab-sm "rivals may\n" [:em "destroy\n"] [:b.me-1 (-> action :ignore :destroy)] "artifact"]
+							:discard [:div.text-ab.text-ab-sm "rivals may\n" [:em.me-1 "discard"] [:b.me-1 (-> action :ignore :discard)] "card\nfrom hand"]
+							[:div.d-flex
+								[:div.text-ab.text-ab-sm "rivals\nmay\nchoose"]
+								(render-essence-list (invert-essences (:ignore action)))]) ]
+					])
+			(if (:ignore action)
 				(if (:place action)
 						[:div.text-ab.text-ab-sm "ignore\nand\ngain"]
-						[:div.text-ab "ignore"]))
+						(if (:loselife action)
+								[:div.text-ab.ms-1 "to\nignore"]
+								[:div.text-ab "ignore"])))
 			(if (:checkvictory action) [:div.text-ab.ms-1 "check victory now!"])
 			(if-let [place (:place action)]
 				[:div.d-flex
 					(render-essence-list (dissoc place :cost))
-					[:div.text-ab.mx-1 "on"]
+					[:div.text-ab.mx-1 (if (:cost place) "put it on" "on")]
 					[:img.img-ab {:src "img/ra/rae/place.png"}]])
 			(if-let [gain (:gain action)] (render-essence-list gain))
 			(if-let [gre (:gainrivalequal action)] [:div.text-ab.text-ab-sm.mx-1 "gain" (essence-svg (first gre) "?") "equal to" (essence-svg (last gre) "?") "of one rival"	])
-			(if-let [rg (:rivals action)] [:div.d-flex (text_svg "+") [:span.text-ab.mx-1 "all rivals gain"] (render-essence-list rg) ])
+			(if-let [rg (:rivals action)] [:div.d-flex (text_svg "+") [:div.text-ab.mx-1 "all rivals gain"] (render-essence-list rg) ])
 			(if-let [ct (:convertto action)]
 					(if (:destroy action)
 							(let [convertto_plus (reduce-kv (fn [m k v] (assoc m k (if-let [cp (:convertplus action)] (str "+" cp) 1))) ct (dissoc ct :exclude))   ]
-								[:div.d-flex [:div.text-ab.mx-1 (if (:discard action) "gain the\ndiscard's" "gain")] (place-cost-svg "?") [:div.text-ab.mx-1 "in"] (render-essence-list convertto_plus) ])))
+								[:div.d-flex [:div.text-ab.mx-1 (if (:discard action) "gain the\ndiscard's" "gain")] (place-cost-svg "?") [:div.text-ab.mx-1 "in"] (render-essence-list convertto_plus) ])
+							;(render-essence-list (reduce-kv #(if (= :equal %3) (assoc %1 %2 "?")) ct ct))
+							(render-essence-list ct)
+							;[:div.text-ab (str ct)]
+							))
+								
 			(if (:straighten action) 
 				(let [restriction (:restriction action)]
 					[:img.img-ab {:title (str restriction) :src (str "/img/ra/rae/straighten" (if (= "Creature" (:subtype restriction)) "_creature") ".png")}]))
@@ -219,11 +252,11 @@
 					(render-essence-list (reduce-kv #(if (number? %3) (assoc %1 %2 (str "- " %3)) %1) (:reduction action) (:reduction action)))])
 			(if-let [draw (:draw action)]
 				[:div.text-ab.mx-1
-					"draw" [:span.text-ab-lg.mx-1 draw] "card" ])
+					"draw" [:div.text-ab-lg.mx-1 draw] "card" ])
 			(if (:draw3 action)
 				[:div.text-ab.text-ab-sm.mx-1
-					"draw" [:span.text-ab-lg.mx-1 "3"] "cards, reorder, put back\n" [:em "(may also use on Monument deck)"]])
-			(if (:divine action) [:div.text-ab "draw" [:span.text-ab-lg.mx-1 "3"] "cards, add\nto hand, discard" [:span.text-ab-lg.ms-1 "3"]])
+					"draw" [:div.text-ab-lg.mx-1 "3"] "cards, reorder, put back\n" [:em "(may also use on Monument deck)"]])
+			(if (:divine action) [:div.text-ab "draw" [:div.text-ab-lg.mx-1 "3"] "cards, add\nto hand, discard" [:div.text-ab-lg.ms-1 "3"]])
 			
 		]))
 		
