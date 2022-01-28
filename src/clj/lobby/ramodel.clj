@@ -97,7 +97,8 @@
   (if take-essence
       (essence take-essence 0)
       0))
-(defn- vpfn [ card ]
+
+(defn- vpfn [ card artifacts ]
   (let [te (:take-essence card)]
     (case (:name card)
       "Alchemist's Tower"     (vpfn-essence te :gold)
@@ -108,7 +109,9 @@
       "Sacred Grove"          (+ 2 (vpfn-essence te :life))
       "Sacrificial Pit"       (+ 2 (vpfn-essence te :death))
       "Sunken Reef"           (vpfn-essence te :calm)
-      "Sorcerer's Bestiary"   0
+      "Sorcerer's Bestiary"   (+  (->> artifacts (filter #(clojure.string/includes? (:subtype % "") "Creature")) count)
+                                  (->> artifacts (filter #(clojure.string/includes? (:subtype % "") "Dragon")) count (* 2)))
+      ;"Coral Castle"         3
       (:vp card) ; mostly monuments and artifacts
     )))
 
@@ -299,7 +302,7 @@
         (assoc-in m [:players k :vp]
           (->>  (player-public-components m k)
                 (filter :vp)
-                (map #(hash-map (:name %) (vpfn %)))
+                (map #(hash-map (:name %) (vpfn % (-> v :public :artifacts))))
                 (concat (if (= p1 k) [{"First Player" 1}]))
                 (apply conj )
           )))
