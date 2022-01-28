@@ -730,11 +730,11 @@
 (expect ["p2" "p1"] (-> g4 :players keys vec))
 (expect 5 (-> g4 :pops count))
 
-(defn- end-turn [gs p1 ]
+(defn- end-turn [ gs pl ]
   (-> gs 
-      (ramodel/parseaction {:action :pass} p1)
-      (ramodel/parseaction {:action :selectmagicitem :card (->> gs :magicitems (remove :owner) first :uid)} p1)
-      (ramodel/parseaction {:action :collected} p1)))
+      (ramodel/parseaction {:action :pass} pl)
+      (ramodel/parseaction {:action :selectmagicitem :card (->> gs :magicitems (remove :owner) first :uid)} pl)
+      (ramodel/parseaction {:action :collected} pl)))
 
 ;; PLACE and CLAIM actions
 ;; PLACE a card  ;;
@@ -1658,3 +1658,15 @@
     (-> g2
         (ramodel/parseaction {:action :place :card ob :gain {:life 6}} p1)
         :players (get p1) :public :essence :life)))
+  
+; Sorcerer's bestiary VP
+(expect {"Bone Dragon" 1 "Sorcerer's Bestiary" 3} ; g3
+  (let [sb (->> g3 :pops (filter #(= (:name %) "Sorcerer's Bestiary")) first)
+        gs (->  g3 
+                (ramodel/chat-handler "/playcard Mermaid" p1)     ; Creature
+                (ramodel/chat-handler "/playcard Bone Dragon" p1) ; Dragon
+            )]
+    (-> gs
+        (ramodel/parseaction {:action :place :card sb} p1)
+        ;(end-turn p1)
+        :players (get p1) :vp)))
