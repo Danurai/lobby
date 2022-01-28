@@ -31,7 +31,7 @@
   ;; and are not spread across different lein profiles
 
   ;; otherwise you can pass a configuration into start-figwheel! manually
-  (f/start-figwheel!)) ; "dev" "test"))
+  (f/start-figwheel! "dev" "test"))
 
 (defn fig-stop
   "Stop the figwheel server and watch based auto-compiler."
