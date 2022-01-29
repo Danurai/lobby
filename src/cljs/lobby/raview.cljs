@@ -10,10 +10,10 @@
 
 (def ra-app (let [scale (or (.getItem js/localStorage "cardscale") 4)]
   (r/atom {
-    :modal {
-      :show? true
-      :card {:id 6, :name "Obelisk", :type "monument", :cost {:gold 4}, :vp 1, :action [{:bought true, :gain {:any 6, :exclude #{:gold}}}], :uid "mon33365", :target? true}
-    }
+    ;:modal {
+    ;  :show? true
+    ;  :card {:id 6, :name "Obelisk", :type "monument", :cost {:gold 4}, :vp 1, :action [{:bought true, :gain {:any 6, :exclude #{:gold}}}], :uid "mon33365", :target? true}
+    ;}
     :settings {
       :cardsize {
         :scale scale
@@ -523,12 +523,15 @@
               ;[:div.debug (str a)]
               ;[:div.debug (str ur)]
               ;[:div.debug (str r)]
-              [:div.me-1 (:name r) ":"]
+              [:div.d-flex
+                [:div.me-1.my-auto (:name r)]
+                (render-essence-list (reduce-kv #(if (number? %3) (assoc %1 %2 (str "- " %3)) %1) (:reduction a) (:reduction a)))
+                [:div.my-auto ":"]]
               (render-essence-list (->> @thisuseraction :reducers re_key ) "small")
               (if (= (rk card) rv)
                 (if (not= remaining-reductions 0) 
                   [:div.d-flex.ms-auto
-                    (render-essence-list (-> a :reduction (assoc :any remaining-reductions)) "h5")
+                    ;(render-essence-list (-> a :reduction (assoc :any remaining-reductions)) "h5")
                     [:div.d-flex.justify-content-center.mx-2
                       (for [[k v] (reduce #(dissoc %1 %2) (:cost @thisuseraction) (-> a :reduction :exclude) )]
                         (if (not= v 0) [:div.essence.clickable.px-1 {
@@ -563,15 +566,18 @@
           ;[:div.debug (str @thisuseraction)]
           (if (:cost card) 
             [:div
-              (reducer-module card pdata thisuseraction)
               [:div.bg-essence.mb-2 (render-essence-list (:cost card) "h5")]  ;; TODO REDUCED COST?
+              (reducer-module card pdata thisuseraction)
+              (if (-> card :cost :any) 
+                (pay-module pdata nil thisuseraction)
+                (render-remaining-essence pdata (:cost @thisuseraction)))
               (if (-> card :action first :bought)
                 [:div 
                   (action-bar (-> card :action first))
                   (gain-module (-> card :action first) thisuseraction :gain)])
               [:div.d-flex.my-2
                 [:div.d-flex.me-3
-                  [:div.h4.me-3 "Pay:"]
+                  [:div.h4.me-3.my-auto "Pay:"]
                   (render-essence-list (:cost @thisuseraction) )]
                 (if (-> card :action first :bought)
                   [:div.d-flex 
@@ -579,11 +585,7 @@
                     (render-essence-list (:gain @thisuseraction))])
                 [:button.btn.btn-primary.ms-auto {
                   :on-click #((comms/ra-send! {:action :place :card card :essence (-> @thisuseraction :cost (dissoc :any)) :gain (:gain @thisuseraction)}) (hidemodal))
-                  :disabled (not (and canpay cangain)) } label]]
-              (if (-> card :cost :any) 
-                  (pay-module pdata nil thisuseraction)
-                  (render-remaining-essence pdata (:cost @thisuseraction)))
-            ]
+                  :disabled (not (and canpay cangain)) } label]]]
             [:div.d-flex.my-2 [:button.btn.btn-primary.ms-auto {:on-click #((comms/ra-send! {:action :place :card card}) (hidemodal))} label]])
         ]))))
 
@@ -651,7 +653,7 @@
                     (if-let [te (:take-essence card)] 
                         [:div.p-1.rounded {:style {:position "absolute" :top "10px" :right "10px" :background "rgba(0,0,0,0.3)"}}
                           (for [[k v] te] [:div {:key (gensym)} (essence-svg k v {:size :lg})])])]
-                  [:div  {:style {:width "500px"}}
+                  [:div ; {:style {:width "500px"}}
                     [:button.btn-sm.btn-close.ms-auto.bg-light {:on-click #(hidemodal) :style {:position "absolute" :right "5px" :top "5px"}}]
                   (cond   ;; options based on card and game state
                     (= :collect (:phase gs))          (modal-collect-essence card pdata uname)
@@ -705,16 +707,20 @@
         ll-plyr (->> gs :players vals (filter :loselife) first :loselife :plyr)
         ll-plyrs (reduce (fn [m k] (if (= k ll-plyr) (dissoc m k) m)) (:players gs) (-> gs :plyr-to))]
     [:div.modal.ra-main {:hidden (not ll-active?)}
-      [:div.modalcontent.p-2.rounded {:style {:min-width "400px"}}
+      [:div.modalcontent.p-2.rounded {:style {:min-width "400px" :height "80%"}}
         [:div.row
           [:div.col
             [:h4 "Waiting for players to react to " (->> gs :players vals (filter :loselife) first :loselife :name str)]
-            (for [[llp-k llp-v] ll-plyrs]
-              [:div.d-flex.mb-2 {:key (gensym)} 
-                [:div.h4.me-2.my-auto llp-k]
-                (if-let [loselife (:loselife llp-v)]
-                        (essence-svg :life (- 0 (:loselife loselife)))
-                        [:div {:key (gensym)} (str llp-k)])])]
+            [:div.row
+              [:div.col-7
+                [:img.img-fluid {:src (->> gs :players vals (filter :loselife) first :loselife imgsrc)}]]
+              [:div.col-5
+                (for [[llp-k llp-v] ll-plyrs]
+                  [:div.d-flex.mb-2 {:key (gensym)} 
+                    [:div.h4.me-2.my-auto llp-k]
+                    (if-let [loselife (:loselife llp-v)]
+                            (essence-svg :life (- 0 (:loselife loselife)))
+                            [:div {:key (gensym)} (str llp-k)])])]]]
           (if (-> pdata :loselife)
             (let [reactions   (->>  (pdata-public-cards pdata) 
                                     (remove :turned?) 
@@ -729,7 +735,7 @@
                 [:div.d-flex.justify-content-between.mb-2
                   [:div.h4 "Choose how to react"]
                   [:i.fas.fa-info-circle.text-secondary {:title "Each rival must lose the indicated number of Life essences from their pool. For each Life essence a rival does not have, they must instead, if possible, lose any 2 other essences in their pool (including Gold)."}]]
-                [:div.debug (-> pdata :loselife :source str)]
+                ;[:div.debug (-> pdata :loselife :source str)]
                 [:button.btn.btn-outline-secondary.w-100.me-1.mb-1 {
                     :disabled (not (can-pay-cost? cost {:life (min (:life cost) (:life ess))})) 
                     :on-click #(comms/ra-send! {:action :react :card nil :useraction {:cost cost}})} 
@@ -737,7 +743,8 @@
                     [:div.me-2.text-dark "Lose Life"] 
                     (essence-svg :life (-> cost :life (* -1)))]]
               ; ignore option(s)
-                (case (-> pdata :loselife :ignore first key)
+                (if (some? ignorecost)
+                    (case (-> pdata :loselife :ignore first key)
                       :discard 
                         [:div.modal-module.mb-2 
                           [:div.text-center "Ignore: Discard 1"]
@@ -765,7 +772,7 @@
                           :on-click #(comms/ra-send! {:action :react :card nil :useraction {:cost ignorecost}})}
                         [:div.d-flex.justify-content-center
                           [:div.me-2.text-dark "Ignore"] 
-                          (essence-svg (-> ignorecost first key) (-> ignorecost first val (* -1)))]])
+                          (essence-svg (-> ignorecost first key) (-> ignorecost first val (* -1)))]]))
                 [pay-essence-module pdata cost]
                 (if (not-empty reactions)
                   [:div.p-2.mt-2.modal-module

@@ -69,7 +69,7 @@
     {:id 12 :type "artifact" :name "Dwarven Pickaxe"      :cost {:elan 1} :action [{:turn true :cost {:elan 1} :gain {:gold 1}}]}
     {:id 13 :type "artifact" :name "Earth Dragon"         :cost {:elan 4 :life 3} :subtype "Dragon" :vp 1 :action [{:turn true :loselife 2 :ignore {:gold 1} :source :dragon}]}
     {:id 14 :type "artifact" :name "Elemental Spring" :fg 1 :cost {:elan 2 :life 1 :calm 1} :collect [{:calm 1 :life 1 :elan 1}] :action [{:react true :cost {:calm 1} :ignore :loselife}]}
-    {:id 15 :type "artifact" :name "Elvish Bow"           :cost {:elan 2 :life 1} :action [{:turn true :loselife 1} {:turn true :draw 1}]}
+    {:id 15 :type "artifact" :name "Elvish Bow"           :cost {:elan 2 :life 1} :action [{:turn true :loselife 1 :ignore nil :source :artifact} {:turn true :draw 1}]}
     {:id 16 :type "artifact" :name "Fiery Whip"           :cost {:elan 2 :death 2} :action [{:turn true :gain {:elan 3} :rivals {:elan 1} } {:turn true :destroy :otherartifact :convertto {:any 1 :exclude #{:gold}} :convertplus 2}]}
     {:id 17 :type "artifact" :name "Fire Dragon"          :cost {:elan 6} :subtype "Dragon" :vp 1 :action [{:turn true :loselife 2 :ignore {:calm 1} :source :dragon}]}
     {:id 18 :type "artifact" :name "Flaming Pit"    :fg 2 :cost {:elan 2} :collect [{:elan 1}] :action [{:turn true :cost {:life 1} :gain {:elan 1 :death 1}}]}

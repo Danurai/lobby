@@ -1670,3 +1670,12 @@
         (ramodel/parseaction {:action :place :card sb} p1)
         ;(end-turn p1)
         :players (get p1) :vp)))
+
+; Elvish Bow
+(expect #(some? %)
+  (let [p2  (-> g5 :plyr-to last)
+        gs  (-> g5 (ramodel/chat-handler "/playcard Elvish Bow" p1))
+        eb  (-> gs :players (get p1) :public :artifacts first)]
+    (-> gs 
+        (ramodel/parseaction {:action :usecard :card eb :useraction (-> eb :action first)} p1)
+        :players (get p2) :loselife)))

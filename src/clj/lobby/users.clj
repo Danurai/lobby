@@ -10,8 +10,14 @@
     :pin "1234" ;; only used by multi-factor
     :roles #{::user}}
 	"p1" {
-		:uid 1001
+		:uid 1011
 		:username "p1"
+		:password (hash-bcrypt "user")
+    :pin "1234" ;; only used by multi-factor
+    :roles #{::user}}
+	"p2" {
+		:uid 1012
+		:username "p2"
 		:password (hash-bcrypt "user")
     :pin "1234" ;; only used by multi-factor
     :roles #{::user}}

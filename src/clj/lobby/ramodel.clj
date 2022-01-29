@@ -482,7 +482,8 @@
     gs))
 
 (defn- lose-life [ gamestate card action uname ]
-  (if (and verbose? (:loselife action)) (println "lose-life:" card action uname))
+  ;(if (and verbose? (:loselife action)) 
+    (println "lose-life:" card action uname);)
   (if (:loselife action)
     (assoc gamestate :players
       (reduce
@@ -530,6 +531,7 @@
 ;; Request: {:action :usecard, :useraction {:turn true, :cost {}, :gain {:death 2}, :rivals {:death 1} :destroy <card>}, :gid :gm93866} dan
 (defn- use-card [ gamestate {:keys [card useraction] :as ?data} uname] 
   (if verbose? (println "use-card:" card useraction uname))
+  ;(println (lose-life gamestate card useraction uname) )
   (-> gamestate
       (add-chat (str "Used " (:type card) " " (:name card)) uname)                    ; Chat
       (assoc :players                                                                 ; Rivals gain 

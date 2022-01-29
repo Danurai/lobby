@@ -153,8 +153,9 @@
 				[:div.d-flex.mt-auto 
 					[:span "("]
 					(for [k excl]
-						;(essence-svg k 1 {:exclude true}) Actual Code
-						(essence-svg (keyword k) 1 {:exclude true}) ; handle json->clj translation of set
+						[:div (str k)]
+						;(essence-svg k 1 {:exclude true}) ;Actual Code
+						;(essence-svg (keyword k) 1 {:exclude true}) ; handle json->clj translation of set
 						)
 					[:span ")"]])])
 	([ essence-list ] (render-essence-list essence-list nil)))
