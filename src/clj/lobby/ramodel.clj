@@ -912,7 +912,7 @@
                     (add-chat "Updated essence" uname :usercmd)
                     (update-player-essence rer uname))
       "setessence" (-> gs-ch 
-                    (add-chat "Set Card Essence")
+                    (add-chat "Set Card Essence" uname :usercm)
                     (usercmd-cardessence rer uname))
       "playcard" (usercmd-playcard gs-ch rer uname)
       "loselife" (let [ll-essence-match (re-seq   #"(death|calm|elan|gold|destroy|discard)\s(\-?\d+)"  msg)
