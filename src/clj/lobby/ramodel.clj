@@ -308,25 +308,40 @@
           )))
       gs (:players gs))))
 
+(defn- check-victory [ gs ]
+  (sort-by :score #(> %1 %2)
+    (reduce-kv 
+      (fn [m k v]
+        (conj m 
+          (hash-map 
+            :player k
+            :breakdown (:vp v)
+            :score (->> v :vp vals (apply +))
+            :tiebreaker (reduce-kv (fn [m k v] (+ m (if (= k :gold) (* v 2) v))) 0 (-> v :public :essence))
+            ))) []  (:players gs))))
+
 (defn- new-round-check [ gamestate ]
-  (if veryverbose? (println "new round check:" (-> gamestate :plyr-to empty?)))
-  (if (-> gamestate :plyr-to empty?)
-      (-> gamestate
-          (assoc :plyr-to (:pass-to gamestate))
-          (assoc :display-to (:pass-to gamestate))
-          (assoc :pass-to [])
-          (assoc :players 
-            (reduce-kv 
-              (fn [m k v]
-                (-> m 
-                    (assoc-in [k :action] :waiting)
-                    (update-in [k :public :mage] dissoc :turned?)
-                    (assoc-in [k :public :artifacts] (->> v :public :artifacts (mapv #(dissoc % :turned?)))))) 
-              (:players gamestate) (:players gamestate)))
-          (set-player-action (-> gamestate :pass-to first) :play)
-          (update :round inc)
-          collect-phase)
-      (add-chat gamestate "Start turn" (get-active-player gamestate))))
+  (let [checkvictory (check-victory gamestate)]
+    (if veryverbose? (println "new round check:" (-> gamestate :plyr-to empty?)))  
+      (if (-> gamestate :plyr-to empty?) 
+          (if (-> checkvictory first :score (> 9))
+              (assoc gamestate :status :gameover :scores checkvictory)
+              (-> gamestate
+                  (assoc :plyr-to (:pass-to gamestate))
+                  (assoc :display-to (:pass-to gamestate))
+                  (assoc :pass-to [])
+                  (assoc :players 
+                    (reduce-kv 
+                      (fn [m k v]
+                        (-> m 
+                            (assoc-in [k :action] :waiting)
+                            (update-in [k :public :mage] dissoc :turned?)
+                            (assoc-in [k :public :artifacts] (->> v :public :artifacts (mapv #(dissoc % :turned?)))))) 
+                      (:players gamestate) (:players gamestate)))
+                  (set-player-action (-> gamestate :pass-to first) :play)
+                  (update :round inc)
+                  collect-phase))
+          (add-chat gamestate "Start turn" (get-active-player gamestate)))))
 
 (defn end-action [ gamestate uname ]
   (let [nextplyrs (if (-> gamestate :players (get uname) :action (= :pass))
@@ -482,8 +497,7 @@
     gs))
 
 (defn- lose-life [ gamestate card action uname ]
-  ;(if (and verbose? (:loselife action)) 
-    (println "lose-life:" card action uname);)
+  (if (and verbose? (:loselife action)) (println "lose-life:" card action uname))
   (if (:loselife action)
     (assoc gamestate :players
       (reduce
@@ -531,7 +545,6 @@
 ;; Request: {:action :usecard, :useraction {:turn true, :cost {}, :gain {:death 2}, :rivals {:death 1} :destroy <card>}, :gid :gm93866} dan
 (defn- use-card [ gamestate {:keys [card useraction] :as ?data} uname] 
   (if verbose? (println "use-card:" card useraction uname))
-  ;(println (lose-life gamestate card useraction uname) )
   (-> gamestate
       (add-chat (str "Used " (:type card) " " (:name card)) uname)                    ; Chat
       (assoc :players                                                                 ; Rivals gain 

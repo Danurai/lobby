@@ -1679,3 +1679,19 @@
     (-> gs 
         (ramodel/parseaction {:action :usecard :card eb :useraction (-> eb :action first)} p1)
         :players (get p2) :loselife)))
+
+; Victory Check
+(expect :gameover
+  (let [sg (-> g1 :pops second)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card sg} p1)
+        (ramodel/parseaction {:action :usecard :card sg :useraction {:place {:death 10}}} p1)
+        (end-turn p1)
+        :status)))
+(expect (+ (* 4 99) 91 95)
+  (let [sg (-> g1 :pops second)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card sg :essence {:life 8 :calm 4}} p1)
+        (ramodel/parseaction {:action :usecard :card sg :useraction {:place {:death 10}}} p1)
+        (end-turn p1)
+        :scores first :tiebreaker)))

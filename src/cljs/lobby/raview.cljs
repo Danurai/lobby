@@ -154,7 +154,7 @@
           :class (cond (:turned? card) "disabled" (-> card :collect-essence some?) "collect" (:target? card) "target" (:disabled? card) "disabled" :else nil)
           }]
         [:div {:style {:position :absolute :right "3px" :top "3px"}}
-          (for [[k v] (-> card :take-essence)] [:div (essence-svg k v {:size :sm})])
+          (for [[k v] (-> card :take-essence)] [:div {:key (gensym)} (essence-svg k v {:size :sm})])
         ]]))
   ([ card ]
     (render-card card nil)))
@@ -787,6 +787,21 @@
                           [:img.modal-reaction.clickable {:src (imgsrc react)} ]])]])
               ]))]]]))
 
+(defn- winner-modal [ gs ]
+  [:div#winnermodal.modal.ra-main {:hidden (not= (:status gs) :gameover) }
+    [:div.modalcontent.p-2.rounded {:style {:min-width "300px"}}
+      [:div.h3.text-center "GAME OVER"]
+      ;[:div.debug (-> gs :scores)]
+      (for [s (map-indexed #(assoc %2 :place %1) (:scores gs))]
+        [:div.d-flex {:key (gensym)}
+          [:div.d-flex {:class (if (> (:score s) 9) "h4" "h5")}
+            [:div.me-2.my-auto (get ["1st" "2nd" "3rd" "4th"] (:place s))]
+            [:div.h4.vp.me-3  (:score s)]
+            [:div.me-2.my-auto (:player s)]
+            ]])
+      ;[:div.debug (-> gs str)]
+      [:div.d-flex [:button.btn.btn-primary.ms-auto {:on-click #(comms/leavegame @gid)} "Quit"]]
+    ]])
 
 ;;; Main
 (defn- divine-modal [ ]
@@ -826,6 +841,8 @@
                   )
           ]]
     ))))
+
+
 ;; Main View
 ;;; Modules
 (defn- pop-mon-mi-row [ status phase action ] 
@@ -965,10 +982,8 @@
   ])
 
 (defn- page-banner [ gs ] 
-  [:div.d-flex.justify-content-between.ra-main.m-1
-    [:h2.mt-auto.mb-0 "Res Arcana - " (if (= (:status gs) :setup) "Setup" (-> gs :phase name clojure.string/capitalize (str " phase")))]
-    ;[:div#debug (-> gs :chat str)]
-    ;[icon-select]
+  [:div.d-flex.justify-content-between.ra-main.m-1 
+    [:h2.mt-auto.mb-0 (str "Res Arcana - " (case (:status gs) :setup "Setup" :gameover "Game Over" (-> gs :phase name clojure.string/capitalize (str " phase"))))]
     [:div.d-flex
       (for [p (:display-to gs) 
               :let [plyr (-> gs :players (get p))  
@@ -1008,6 +1023,7 @@
       (react-modal gs pdata @uname)
       [divine-modal gs pdata @uname]
       (modal gs pdata @uname)
+      (winner-modal gs)
       [chat gs]
       [page-banner gs]
       (case (-> @gm :state :status)
