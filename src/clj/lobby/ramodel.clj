@@ -832,6 +832,9 @@
       gamestate)))
 
 ;; CHAT HANDLER ;;
+(defn- get-card-by-name [ cards cardname ]
+  (->> cards (filter #(->> (:name %) (re-matches (re-pattern (str "(?i)" cardname))))) first))
+
 (defn- essence-match-handler [ gs uname k v ]
   (if verbose? (println "essence-match-handler:" uname k v))
   (-> gs 
@@ -840,7 +843,7 @@
 
 (defn- usercmd-playcard [ gs {:keys [cardname essence] :as rer} uname ] ;; IMPORTANT FOR TESTING ONLY  TODO: LIMIT BY ENV VARIABLE
   (if verbose? (println "PLAYING" cardname))
-  (if-let [card (->> @data :artifacts (filter #(= (:name %) cardname)) first)]
+  (if-let [card (get-card-by-name (:artifacts @data) cardname)]
     (-> gs
         (update-in [:players uname :public :artifacts] conj (assoc card :uid (gensym "card")))
         (add-chat (str "Played " cardname " OUT OF NOWHERE!") uname :usercmd)
@@ -867,6 +870,16 @@
           #(if (= (:name %) (:cardname rer)) 
               (if (:turned? %) (dissoc % :turned?) (assoc % :turned? true)) %) (:magicitems gs)))
     )))
+
+(defn- usercmd-cardessence [ gs {:keys [cardname essence] :as rer} uname ]
+  (let [card (get-card-by-name (:artifacts @data) cardname)]
+    ;(println "usercmd-cardessence" (:name card) cardname essence)
+    (assoc-in gs [:players uname :public :artifacts] 
+      (map 
+        #(if (= (:name %) (:name card))
+          (reduce-kv (fn [m k v] (assoc-in m [:take-essence k] v)) % essence)
+          %)
+        (-> gs :players (get uname) :public :artifacts)))))
 
 ;; parse message into variables
 ;; /<command>
@@ -898,6 +911,9 @@
       "essence"  (-> gs-ch 
                     (add-chat "Updated essence" uname :usercmd)
                     (update-player-essence rer uname))
+      "setessence" (-> gs-ch 
+                    (add-chat "Set Card Essence" uname :usercm)
+                    (usercmd-cardessence rer uname))
       "playcard" (usercmd-playcard gs-ch rer uname)
       "loselife" (let [ll-essence-match (re-seq   #"(death|calm|elan|gold|destroy|discard)\s(\-?\d+)"  msg)
                       ll-essence        (apply conj (map #(hash-map (-> % second keyword) (-> % last read-string)) ll-essence-match))
