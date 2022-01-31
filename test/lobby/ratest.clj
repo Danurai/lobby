@@ -1081,12 +1081,20 @@
 
 (expect "Celestial Horse"
    (-> g1 (ramodel/chat-handler "/playcard Celestial Horse" p1) :players (get p1) :public :artifacts first :name))
+(expect "Celestial Horse"
+   (-> g1 (ramodel/chat-handler "/playcard celestial horse" p1) :players (get p1) :public :artifacts first :name))
 
 (expect 1
   (let [ar (-> g1 :players (get p1) :private :artifacts first)] 
     (-> g1 
         (ramodel/chat-handler (str "/discard " (:name ar)) p1)
         :players (get p1) :public :discard count)))
+
+(expect {:gold 99}
+  (let [gs (ramodel/chat-handler g1 (str "/playcard Celestial Horse") p1)]
+    (-> gs
+        (ramodel/chat-handler (str "/setessence Celestial Horse :gold 99") p1)
+        :players (get p1) :public :artifacts first :take-essence)))
 ;;; Bug Tests ;;;
 ;; Remove essence from Place of Power / Monument
 ; Fixed in defn- remove-card-essence
@@ -1695,3 +1703,4 @@
         (ramodel/parseaction {:action :usecard :card sg :useraction {:place {:death 10}}} p1)
         (end-turn p1)
         :scores first :tiebreaker)))
+

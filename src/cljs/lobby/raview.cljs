@@ -634,7 +634,8 @@
             [:ul 
               [:li "/essence (name) (amount) - Set your current Essence (name) to Value (amount)" ]
               [:li "/endturn - End your turn" ]
-              [:li [:i "/turn (card name) - Turn or Straighten Card (card name) (case sensitive)" ]]
+              [:li "/turn (card name) - Turn or Straighten Card (card name)" ]
+              [:li "/setessence (card name) (essence name) (essence amount) - Set essence on card name to essence name/amount" ]
               ]]]]
       [:button.carousel-control-prev {:type "button" :on-click (fn [] (swap! ra-app update-in [:modal :info] #(max (dec %) 0)))} [:span.carousel-control-prev-icon]]    
       [:button.carousel-control-next {:type "button" :on-click (fn [] (swap! ra-app update-in [:modal :info] #(min (inc %) 4)))} [:span.carousel-control-next-icon]]    
