@@ -393,16 +393,28 @@
 
 (defn- playcard [ gamestate {:keys [card essence gain]} uname ]
   (if verbose? (println "playcard:" uname card gain "paid" essence ))
-  (-> gamestate
-    (assoc-in [:players uname :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> gamestate :players (get uname) :private :artifacts))) ; Artifact
-    (assoc :pops (->> gamestate :pops (remove #(= (:uid %) (:uid card)))))                                                                     ; Place of power
-    (assoc-in [:monuments :public] (->> gamestate :monuments :public (remove #(= (:uid %) (:uid card))) vec))                                  ; Monument 
-    (update-player-essence {:essence gain} uname)                                                                                              ; Gain essence (Obelisk)
-    (replacemonument (= "monument" (:type card)))
-    (update-in [:players uname :public :artifacts] conj card)
-    (add-chat (str (case (:type card) "artifact" "Played " "Claimed ") (:name card)) uname)
-    (update-player-essence {:essence (invert-essence essence)} uname)
-    ))
+  (if card 
+      (-> gamestate
+          (assoc :players 
+            (reduce-kv 
+              (fn [m k v] 
+                (-> m
+                    (assoc-in [k :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> v :private :artifacts))) ; remove from player artifacts
+            ; Remove from player discard
+            ; Remove from another player discard
+                  ))
+              (-> gamestate :players) (-> gamestate :players)))
+            
+          ;(assoc-in [:players uname :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> gamestate :players (get uname) :private :artifacts))) ; Remove Artifact 
+          (assoc :pops (->> gamestate :pops (remove #(= (:uid %) (:uid card)))))                                                                     ; Remove Place of power
+          (assoc-in [:monuments :public] (->> gamestate :monuments :public (remove #(= (:uid %) (:uid card))) vec))                                  ; Remove Monument 
+          (update-player-essence {:essence gain} uname)                                                                                              ; Gain essence (Obelisk)
+          (replacemonument (= "monument" (:type card)))                                                                                              ; Draw new Monument
+          (update-in [:players uname :public :artifacts] conj card)                                                                                  ; Add to artifacts
+          (add-chat (str (case (:type card) "artifact" "Played " "Claimed ") (:name card)) uname)
+          (update-player-essence {:essence (invert-essence essence)} uname)
+          )
+      gamestate))
 
 (defn ai-action [ gamestate ]
   ; TODO - Add some AI logic here
@@ -566,6 +578,7 @@
       (react-discard useraction uname)                                                ; Discard
       (lose-life card useraction uname)                                               ; Apply Lose Life :action s
       (draw3 useraction uname)                                                        ; Apply draw3 action
+      (playcard (assoc useraction :card (:playcard useraction)) uname)                ; Play Card
   ))
 
 ;;; REACT ;;;
@@ -832,8 +845,11 @@
       gamestate)))
 
 ;; CHAT HANDLER ;;
+(defn- text-match-anycase [ t1 t2 ]
+  (re-matches (re-pattern (str "(?i)" t2)) t1))
+
 (defn- get-card-by-name [ cards cardname ]
-  (->> cards (filter #(->> (:name %) (re-matches (re-pattern (str "(?i)" cardname))))) first))
+  (->> cards (filter #(text-match-anycase (:name %) cardname)) first))
 
 (defn- essence-match-handler [ gs uname k v ]
   (if verbose? (println "essence-match-handler:" uname k v))
@@ -850,24 +866,24 @@
         (update-player-essence rer uname))
     gs))
 
-(defn- usercmd-turn [ gs rer uname ]
-  (let [mage (-> gs :players (get (:player rer)) :public :mage)]
+(defn- usercmd-turn [ gs {:keys [cardname player] :as rer} uname ]
+  (let [mage (-> gs :players (get player) :public :mage)]
     (-> gs
-      (add-chat (str "Turn card " (:cardname rer)) uname :usercmd)
-      (assoc-in [:players (:player rer) :public :artifacts]
+      (add-chat (str "Turn card " cardname) uname :usercmd)
+      (assoc-in [:players player :public :artifacts]
         (mapv 
           (fn [a]
-            (if (= (:name a) (:cardname rer))
+            (if (text-match-anycase (:name a) cardname)
                 (if (:turned? a) (dissoc a :turned?) (assoc a :turned? true))
                 a))
-          (-> gs :players (get (:player rer)) :public :artifacts)))
-      (assoc-in [:players (:player rer) :public :mage]
-        (if (= (:cardname rer) (:name mage))
+          (-> gs :players (get player) :public :artifacts)))
+      (assoc-in [:players player :public :mage]
+        (if (text-match-anycase (:name mage) cardname)
             (if (:turned? mage) (dissoc mage :turned?) (assoc mage :turned? true))
             mage))
       (assoc :magicitems
         (mapv 
-          #(if (= (:name %) (:cardname rer)) 
+          #(if (text-match-anycase (:name %) cardname) 
               (if (:turned? %) (dissoc % :turned?) (assoc % :turned? true)) %) (:magicitems gs)))
     )))
 
@@ -891,7 +907,7 @@
         player-match  (re-find (re-pattern (str "(" (clojure.string/join "|" (-> gs :display-to)) ")" )) msg)
         card-match    (re-find
                         (re-pattern 
-                          (str "(" 
+                          (str "(?i)(" 
                               (clojure.string/join "|" (map :name (concat (:monuments @data) (:placesofpower @data) (:mages @data) (:artifacts @data) (:magicitems @data) )))
                               ")")) 
                         msg)
