@@ -15,7 +15,7 @@
 .clickable {
   cursor: pointer;
 }
-.clickable.essence:hover {
+.clickable.essence:hover, .clickable.essence.active {
   border-radius: 0.25rem;
   box-shadow: 0 0 10px 0 blue;
 }
