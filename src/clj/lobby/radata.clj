@@ -64,7 +64,7 @@
     {:id 8  :type "artifact" :name "Dancing Sword"   :fg 4 :cost {:gold 1 :elan 1} :collect [{:death 1 :elan 1}] :action [{:react true :cost {:elan 1} :place {:death 1} :ignore :loselife}]}
     {:id 9  :type "artifact" :name "Dragon Bridle"         :cost {:elan 1 :life 1 :calm 1 :death 1} :action [{:reducer_a true :restriction {:subtype "Dragon"} :reduction {:any 3}} {:react true :turn true :ignore :loselife :source :dragon}] :vp 1}
                 
-    {:id 10 :type "artifact" :name "Dragon Egg"           :cost {:gold 1} :vp 1 :action [{:reducer_p true :restriction {:subtype "Dragon"} :reduction {:any 4}}]}
+    {:id 10 :type "artifact" :name "Dragon Egg"           :cost {:gold 1} :vp 1 :action [{:destroy :this :reducer_p true :restriction {:subtype "Dragon"} :reduction {:any 4}}]}
     {:id 11 :type "artifact" :name "Dragon Teeth"   :fg 1 :cost {:elan 1 :death 1} :action [{:cost {:elan 2} :place {:elan 3}} {:turn true :reducer_p true :cost {:elan 3} :restriction {:subtype "Dragon"} :reduction {:any 99}}]}
     {:id 12 :type "artifact" :name "Dwarven Pickaxe"      :cost {:elan 1} :action [{:turn true :cost {:elan 1} :gain {:gold 1}}]}
     {:id 13 :type "artifact" :name "Earth Dragon"         :cost {:elan 4 :life 3} :subtype "Dragon" :vp 1 :action [{:turn true :loselife 2 :ignore {:gold 1} :source :dragon}]}
