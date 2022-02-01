@@ -1704,3 +1704,21 @@
         (end-turn p1)
         :scores first :tiebreaker)))
 
+(expect "Earth Dragon"
+  (let [gs (-> g1 
+              (ramodel/chat-handler "/playcard Dragon Teeth" p1)
+              (ramodel/chat-handler "/draw 10" p1))
+        dt (-> gs :players (get p1) :public :artifacts first)
+        ed (-> gs :players (get p1) :private :artifacts first)]
+    (-> gs
+        (ramodel/parseaction {:action :usecard :useraction (-> dt :action last (assoc :playcard ed))} p1) 
+        :players (get p1) :public :artifacts last :name)))
+(expect [99 99 96 99 99]
+  (let [gs (-> g1 
+              (ramodel/chat-handler "/playcard Dragon Teeth" p1)
+              (ramodel/chat-handler "/draw 10" p1))
+        dt (-> gs :players (get p1) :public :artifacts first)
+        ed (-> gs :players (get p1) :private :artifacts first)]
+    (-> gs
+        (ramodel/parseaction {:action :usecard :useraction (-> dt :action last (assoc :playcard ed))} p1) 
+        :players (get p1) :public :essence vals)))
