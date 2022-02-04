@@ -213,13 +213,13 @@
   width: 2.5em;
   height: 3.5em;
 }
-.modal-reaction, .modal-divine {
+.modal-reaction, .modal-divine img {
   width: 5em !important; height: 7em !important;
 }
 .modal-divine.selected {
   filter: grayscale(1);
 }
-.modal-reaction:hover, .modal-divine.active:hover {
+.clickable:hover, .modal-reaction:hover, .modal-divine.active:hover {
   box-shadow: 0px 0px 1em 0px #888;
 }
 .modal-module img.active {
@@ -255,9 +255,12 @@
   background: linear-gradient(
     to right, orange, palegoldenrod
   );
-  display: flex;
+  display:  flex;
+  margin:   0 0.25em;
+  padding:  0 0.35em;
 }
 
+/*
 .react::before {
   content: '';
   width: 0;
@@ -274,3 +277,4 @@
   border-width: 20px 0px 20px 10px;
   border-color: grey grey grey palegoldenrod;
 }
+*/

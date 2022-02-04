@@ -57,7 +57,7 @@
             drawdeck (apply conj artdeck (shuffle discard))]
         (if (> n (count artdeck))
             (-> gamestate
-                (update-in [:players uname :private :artifacts] #(apply conj % (take n drawdeck)))
+                (update-in [:players uname :private :artifacts] #(vec (apply conj % (take n drawdeck))))
                 (assoc-in  [:players uname :secret :artifacts] (nthrest drawdeck n))
                 (assoc-in  [:players uname :public :discard] [])
                 (add-chat (str "Draw " n) uname))
@@ -308,7 +308,7 @@
           )))
       gs (:players gs))))
 
-(defn- check-victory [ gs ]
+(defn- get-scores [ gs ]
   (sort-by :score #(> %1 %2)
     (reduce-kv 
       (fn [m k v]
@@ -320,28 +320,32 @@
             :tiebreaker (reduce-kv (fn [m k v] (+ m (if (= k :gold) (* v 2) v))) 0 (-> v :public :essence))
             ))) []  (:players gs))))
 
+(defn- check-victory [ gs action uname ]
+  (let [gamescores (get-scores gs)]
+    (if (-> gamescores first :score (> 9))
+        (assoc gs :status :gameover :scores gamescores)
+        gs)))
+
 (defn- new-round-check [ gamestate ]
-  (let [checkvictory (check-victory gamestate)]
-    (if veryverbose? (println "new round check:" (-> gamestate :plyr-to empty?)))  
-      (if (-> gamestate :plyr-to empty?) 
-          (if (-> checkvictory first :score (> 9))
-              (assoc gamestate :status :gameover :scores checkvictory)
-              (-> gamestate
-                  (assoc :plyr-to (:pass-to gamestate))
-                  (assoc :display-to (:pass-to gamestate))
-                  (assoc :pass-to [])
-                  (assoc :players 
-                    (reduce-kv 
-                      (fn [m k v]
-                        (-> m 
-                            (assoc-in [k :action] :waiting)
-                            (update-in [k :public :mage] dissoc :turned?)
-                            (assoc-in [k :public :artifacts] (->> v :public :artifacts (mapv #(dissoc % :turned?)))))) 
-                      (:players gamestate) (:players gamestate)))
-                  (set-player-action (-> gamestate :pass-to first) :play)
-                  (update :round inc)
-                  collect-phase))
-          (add-chat gamestate "Start turn" (get-active-player gamestate)))))
+    (if veryverbose? (println "new round check:" (-> gamestate :plyr-to empty?)))
+    (if (-> gamestate :plyr-to empty?) 
+        (-> gamestate
+            (check-victory {:checkvictory true} nil)
+            (assoc :plyr-to (:pass-to gamestate))
+            (assoc :display-to (:pass-to gamestate))
+            (assoc :pass-to [])
+            (assoc :players 
+              (reduce-kv 
+                (fn [m k v]
+                  (-> m 
+                      (assoc-in [k :action] :waiting)
+                      (update-in [k :public :mage] dissoc :turned?)
+                      (assoc-in [k :public :artifacts] (->> v :public :artifacts (mapv #(dissoc % :turned?)))))) 
+                (:players gamestate) (:players gamestate)))
+            (set-player-action (-> gamestate :pass-to first) :play)
+            (update :round inc)
+            collect-phase)
+        (add-chat gamestate "Start turn" (get-active-player gamestate))))
 
 (defn end-action [ gamestate uname ]
   (let [nextplyrs (if (-> gamestate :players (get uname) :action (= :pass))
@@ -349,9 +353,10 @@
                       (->> gamestate :plyr-to (drop-while #(not= % uname)) rest))
         nextp     (if (empty? nextplyrs) (-> gamestate :plyr-to first) (first nextplyrs))
         loselife? (->> gamestate :players vals (map :loselife) (remove nil?) not-empty)
-        draw3?    (->> gamestate :players vals (map :draw3) (remove nil?) not-empty)]
+        draw3?    (->> gamestate :players vals (map :draw3) (remove nil?) not-empty)
+        divine?   (->> gamestate :players vals (map :divine) (remove nil?) not-empty)]
     (if veryverbose? (println "end-action:" uname "nextplayer" nextp loselife? (empty? loselife?)))
-    (if (or loselife? draw3?)  ; Don't advance if there are :loselife or :draw3 or :divine actions live
+    (if (or loselife? draw3? divine?)  ; Don't advance if there are :loselife or :draw3 or :divine actions live
         gamestate
         (-> gamestate
             (set-player-action uname (if (-> gamestate :plyr-to set (contains? uname)) :waiting :pass))
@@ -390,30 +395,42 @@
             (assoc-in  [:monuments :secret] (-> mondeck rest vec))))
       gamestate))
     
+(defn- getcardfromstub [ gamestate {:keys [uid]} ] ; look in all artifacts and discards
+  (->>  (reduce-kv 
+          (fn [ m k v ]
+            (reduce 
+              #(apply conj %1 %2)
+              [ m
+                (-> v :private :artifacts)
+                (-> v :public :artifacts)
+                (-> v :public :discard)
+                (-> gamestate :pops) 
+                (-> gamestate :monuments :public) ])
+            ) [] (:players gamestate))
+        (filter #(= (:uid %) uid))
+        first))
 
 (defn- playcard [ gamestate {:keys [card essence gain]} uname ]
   (if verbose? (println "playcard:" uname card gain "paid" essence ))
-  (if card 
+  (if card
+    (let [cardtoplay (getcardfromstub gamestate card)] 
       (-> gamestate
           (assoc :players 
             (reduce-kv 
               (fn [m k v] 
                 (-> m
-                    (assoc-in [k :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> v :private :artifacts))) ; remove from player artifacts
-            ; Remove from player discard
-            ; Remove from another player discard
+                    (assoc-in [k :private :artifacts] (remove #(= (:uid %) (:uid cardtoplay)) (-> v :private :artifacts)))  ; remove from ANY players artifacts
+                    (assoc-in [k :public  :discard]   (remove #(= (:uid %) (:uid cardtoplay)) (-> v :public  :discard)))    ; remove from ANY players discard
                   ))
               (-> gamestate :players) (-> gamestate :players)))
-            
-          ;(assoc-in [:players uname :private :artifacts] (remove #(= (:uid %) (:uid card)) (-> gamestate :players (get uname) :private :artifacts))) ; Remove Artifact 
-          (assoc :pops (->> gamestate :pops (remove #(= (:uid %) (:uid card)))))                                                                     ; Remove Place of power
-          (assoc-in [:monuments :public] (->> gamestate :monuments :public (remove #(= (:uid %) (:uid card))) vec))                                  ; Remove Monument 
+          (assoc :pops (->> gamestate :pops (remove #(= (:uid %) (:uid cardtoplay)))))                                                                     ; Remove Place of power
+          (assoc-in [:monuments :public] (->> gamestate :monuments :public (remove #(= (:uid %) (:uid cardtoplay))) vec))                                  ; Remove Monument 
           (update-player-essence {:essence gain} uname)                                                                                              ; Gain essence (Obelisk)
-          (replacemonument (= "monument" (:type card)))                                                                                              ; Draw new Monument
-          (update-in [:players uname :public :artifacts] conj card)                                                                                  ; Add to artifacts
-          (add-chat (str (case (:type card) "artifact" "Played " "Claimed ") (:name card)) uname)
+          (replacemonument (= "monument" (:type cardtoplay)))                                                                                              ; Draw new Monument
+          (update-in [:players uname :public :artifacts] conj cardtoplay)                                                                                  ; Add to artifacts
+          (add-chat (str (case (:type cardtoplay) "artifact" "Played " "Claimed ") (:name cardtoplay)) uname)
           (update-player-essence {:essence (invert-essence essence)} uname)
-          )
+          ))
       gamestate))
 
 (defn ai-action [ gamestate ]
@@ -525,6 +542,19 @@
       (assoc-in gamestate [:players uname :draw3] true)
       gamestate))
 
+(defn- divine [ gamestate action uname ]
+  (if (:divine action)
+      (if (-> gamestate :players (get uname) :divine)
+          (let [dcuid (->> action :divine-discard)]
+              (-> gamestate
+                  (assoc-in   [:players uname :private :artifacts] (->> (-> gamestate :players (get uname) :private :artifacts) (remove #(contains? dcuid (:uid %))) vec))
+                  (update-in  [:players uname :public :discard] #(apply conj % (vec (filter (fn [a] (contains? dcuid (:uid a))) (-> gamestate :players (get uname) :private :artifacts)))))
+                  (update-in  [:players uname] dissoc :divine)))
+          (-> gamestate
+              (assoc-in [:players uname :divine] true)
+              (drawcard uname 3)))
+      gamestate))
+
 (defn- add-essence [ e1 e2 ]
   (let [res (reduce-kv 
               (fn [m k v]
@@ -579,6 +609,8 @@
       (lose-life card useraction uname)                                               ; Apply Lose Life :action s
       (draw3 useraction uname)                                                        ; Apply draw3 action
       (playcard (assoc useraction :card (:playcard useraction)) uname)                ; Play Card
+      (divine useraction uname)                                                       ; Handle divine draw 3 and discard 3
+      (check-victory useraction uname)                                                ; Check Victory Now!
   ))
 
 ;;; REACT ;;;
@@ -848,8 +880,9 @@
 (defn- text-match-anycase [ t1 t2 ]
   (re-matches (re-pattern (str "(?i)" t2)) t1))
 
-(defn- get-card-by-name [ cards cardname ]
-  (->> cards (filter #(text-match-anycase (:name %) cardname)) first))
+(defn- get-card-by-name [ cardname ]
+  (let [cards (reduce-kv #(apply conj %1 %3) [] (select-keys @data [:artifacts :mages :monuments :placesofpower]))]
+    (->> cards (filter #(text-match-anycase (:name %) cardname)) first)))
 
 (defn- essence-match-handler [ gs uname k v ]
   (if verbose? (println "essence-match-handler:" uname k v))
@@ -859,7 +892,7 @@
 
 (defn- usercmd-playcard [ gs {:keys [cardname essence] :as rer} uname ] ;; IMPORTANT FOR TESTING ONLY  TODO: LIMIT BY ENV VARIABLE
   (if verbose? (println "PLAYING" cardname))
-  (if-let [card (get-card-by-name (:artifacts @data) cardname)]
+  (if-let [card (get-card-by-name cardname)]
     (-> gs
         (update-in [:players uname :public :artifacts] conj (assoc card :uid (gensym "card")))
         (add-chat (str "Played " cardname " OUT OF NOWHERE!") uname :usercmd)
@@ -888,14 +921,16 @@
     )))
 
 (defn- usercmd-cardessence [ gs {:keys [cardname essence] :as rer} uname ]
-  (let [card (get-card-by-name (:artifacts @data) cardname)]
+  (let [card (get-card-by-name cardname)]
     ;(println "usercmd-cardessence" (:name card) cardname essence)
-    (assoc-in gs [:players uname :public :artifacts] 
-      (map 
-        #(if (= (:name %) (:name card))
-          (reduce-kv (fn [m k v] (assoc-in m [:take-essence k] v)) % essence)
-          %)
-        (-> gs :players (get uname) :public :artifacts)))))
+    (-> gs
+        (assoc-in [:players uname :public :artifacts] 
+          (map 
+            #(if (= (:name %) (:name card))
+              (reduce-kv (fn [m k v] (assoc-in m [:take-essence k] v)) % essence)
+              %)
+            (-> gs :players (get uname) :public :artifacts)))
+        update-vp)))
 
 ;; parse message into variables
 ;; /<command>

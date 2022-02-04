@@ -18,7 +18,7 @@
 			(for [[k v] @radata]
 				[:div  {:key (gensym)}
 					[:h3 (name k)]
-					(if (contains? #{:mages :placesofpower :artifacts} k) ; :mages y  :magicitems y  :artifacts x  :monuments 1  :placesofpower 2
+					(if (contains? #{:artifacts} k) ; :mages y  :magicitems y  :artifacts x  :monuments 1  :placesofpower 2
 						[:div.row 
 							(for [c v]
 								[:div.col-sm-4.mb-3 {:key (gensym) :style {:display "flex" :flex-flow "column"}}
