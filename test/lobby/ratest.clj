@@ -1093,7 +1093,7 @@
 (expect {:gold 99}
   (let [gs (ramodel/chat-handler g1 (str "/playcard Celestial Horse") p1)]
     (-> gs
-        (ramodel/chat-handler (str "/setessence Celestial Horse :gold 99") p1)
+        (ramodel/chat-handler (str "/setessence Celestial Horse gold 99") p1)
         :players (get p1) :public :artifacts first :take-essence)))
 ;;; Bug Tests ;;;
 ;; Remove essence from Place of Power / Monument
@@ -1704,6 +1704,7 @@
         (end-turn p1)
         :scores first :tiebreaker)))
 
+;; Card action: play card with reduced (0) cost
 (expect "Earth Dragon"
   (let [gs (-> g1 
               (ramodel/chat-handler "/playcard Dragon Teeth" p1)
@@ -1713,7 +1714,7 @@
     (-> gs
         (ramodel/parseaction {:action :usecard :useraction (-> dt :action last (assoc :playcard ed))} p1) 
         :players (get p1) :public :artifacts last :name)))
-(expect [99 99 96 99 99]
+(expect {:gold 99 :calm 99 :elan 96 :life 99 :death 99}
   (let [gs (-> g1 
               (ramodel/chat-handler "/playcard Dragon Teeth" p1)
               (ramodel/chat-handler "/draw 10" p1))
@@ -1721,4 +1722,107 @@
         ed (-> gs :players (get p1) :private :artifacts first)]
     (-> gs
         (ramodel/parseaction {:action :usecard :useraction (-> dt :action last (assoc :playcard ed))} p1) 
-        :players (get p1) :public :essence vals)))
+        :players (get p1) :public :essence)))
+
+;; Card Action, play card with reduced (:any x) cost
+(expect {:gold 99 :elan 96 :calm 99 :life 99 :death 90}
+  (let [p2  (-> g5 :plyr-to last)
+        a1  (-> g5 :players (get p1) :private :artifacts first)
+        gs  (-> g5 (ramodel/parseaction "/playcard Crypt" p2))
+        cr  (-> gs :players (get p2) :public :artifacts first)]
+    (-> gs
+        (ramodel/parseaction {:action :discard :card a1 :essence {:gold 1}} p1)
+        (ramodel/parseaction {:action :usecard :card cr :useraction (-> cr :action last (assoc :playcard a1 :cost {:elan 3 :death 9}))} p2)
+        :players (get p2) :public :essence)))
+
+;; Card Action, play card from opponents discard
+(expect 0
+  (let [p2  (-> g5 :plyr-to last)
+        a1  (-> g5 :players (get p1) :private :artifacts first)
+        gs  (-> g5 (ramodel/parseaction "/playcard Crypt" p2))
+        cr  (-> gs :players (get p2) :public :artifacts first)]
+    (-> gs
+        (ramodel/parseaction {:action :discard :card a1 :essence {:gold 1}} p1)
+        (ramodel/parseaction {:action :usecard :card cr :useraction (-> cr :action last (assoc :playcard a1))} p2)
+        :players (get p1) :public :discard count)))
+(expect true
+  (let [p2  (-> g5 :plyr-to last)
+        a1  (-> g5 :players (get p1) :private :artifacts first)
+        gs  (-> g5 (ramodel/parseaction "/playcard Crypt" p2))
+        cr  (-> gs :players (get p2) :public :artifacts first)]
+    (-> gs
+        (ramodel/parseaction {:action :discard :card a1 :essence {:gold 1}} p1)
+        (ramodel/parseaction {:action :usecard :card cr :useraction (-> cr :action last (assoc :playcard a1))} p2)
+        :players (get p2) :public :artifacts last (= a1))))
+
+;; Divination draw3 - action discard
+(expect 6
+  (let [div (->> g5 :magicitems (filter #(= (:name %) "Divination")) first)]
+    (-> g5 
+        (ramodel/parseaction {:action :usecard :card div :useraction (-> div :action first)} p1)
+        :players (get p1) :private :artifacts count)))
+(expect :play
+  (let [div (->> g5 :magicitems (filter #(= (:name %) "Divination")) first)]
+    (-> g5 
+        (ramodel/parseaction {:action :usecard :card div :useraction (-> div :action first)} p1)
+        :players (get p1) :action)))
+;; discard 3
+(expect 3
+  (let [div (->> g5 :magicitems (filter #(= (:name %) "Divination")) first)
+        gs  (ramodel/parseaction g5 {:action :usecard :card div :useraction (-> div :action first)} p1)
+        dc  (->> (-> gs :players (get p1) :private :artifacts) (take 3) (map :uid) set)]
+    (-> gs
+        (ramodel/parseaction {:action :usecard :card div :useraction (-> div :action first (assoc :divine-discard dc))} p1)
+        :players (get p1) :private :artifacts count)))
+(expect 3
+  (let [div (->> g5 :magicitems (filter #(= (:name %) "Divination")) first)
+        gs  (ramodel/parseaction g5 {:action :usecard :card div :useraction (-> div :action first)} p1)
+        dc  (->> (-> gs :players (get p1) :private :artifacts) (take 3) (map :uid) set)]
+    (-> gs
+        (ramodel/parseaction {:action :usecard :card div :useraction (-> div :action first (assoc :divine-discard dc))} p1)
+        :players (get p1) :public :discard count)))
+(expect :waiting
+  (let [div (->> g5 :magicitems (filter #(= (:name %) "Divination")) first)
+        gs  (ramodel/parseaction g5 {:action :usecard :card div :useraction (-> div :action first)} p1)
+        dc  (->> (-> gs :players (get p1) :private :artifacts) (take 3) (map :uid) set)]
+    (-> gs
+        (ramodel/parseaction {:action :usecard :card div :useraction (-> div :action first (assoc :divine-discard dc))} p1)
+        :players (get p1) :action)))
+
+;; Coral Castle - Check Victory
+(expect "Coral Castle"
+  (let [cc (-> g1 :pops (nth 3))]
+    (-> g1 
+        (ramodel/parseaction {:action :place :card cc :essence (:cost cc)} p1)
+        :players (get p1) :public :artifacts first :name)))
+(expect 7
+  (let [cc    (-> g1 :pops (nth 3))
+        cotd  (-> g1 :pops (nth 1))]
+    (-> g1 
+        (ramodel/parseaction {:action :place :card cc   :essence (:cost   cc)} p1)
+        (ramodel/parseaction {:action :place :card cotd :essence (:cost cotd)} p1)
+        (ramodel/chat-handler "/setessence Catacombs of the Dead death 7" p1)
+        :players (get p1) :public :artifacts last :take-essence :death)))
+(expect 7
+  (let [cotd  (-> g1 :pops (nth 1))]
+    (-> g1 
+        (ramodel/parseaction {:action :place :card cotd :essence (:cost cotd)} p1)
+        (ramodel/chat-handler "/setessence Catacombs of the Dead death 7" p1)
+        :players (get p1) :vp (get "Catacombs of the Dead"))))
+
+(expect 10
+  (let [cc    (-> g1 :pops (nth 3))
+        cotd  (-> g1 :pops (nth 1))]
+    (-> g1 
+        (ramodel/parseaction {:action :place :card cc   :essence (:cost   cc)} p1)
+        (ramodel/parseaction {:action :place :card cotd :essence (:cost cotd)} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cc   :useraction (-> cc :action first)} p1)
+        ;(end-turn p1)
+        :scores first :score)))
