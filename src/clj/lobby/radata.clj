@@ -59,7 +59,7 @@
     {:id 3  :type "artifact" :name "Chalice of Fire"       :cost {:gold 1 :elan 1} :collect [{:elan 2}] :action [{:turn true :cost {:elan 1} :straighten true}]}
     {:id 4  :type "artifact" :name "Chalice of Life" :fg 2 :cost {:gold 1 :life 1 :calm 1} :collect [{:calm 1 :life 1}] :action [{:cost {:calm 2} :place {:calm 2 :life 1}} {:react true :turn true :ignore :loselife}]}
     {:id 5  :type "artifact" :name "Corrupt Altar"         :cost {:any 3 :death 2} :collect [{:life 1 :death 1}] :action [{:cost {:life 2} :place {:elan 3}} {:turn true :destroy :anyartifact :convertto {:any 1 :exclude #{:gold}} :convertplus 2}]}
-    {:id 6  :type "artifact" :name "Crypt"                 :cost {:any 3 :death 2} :action [{:turn true :gain {:death 2}} {:turn true :cost {:death 1} :reducer_p true :playfrom :discard :reduction {:any 2 :exclude #{:gold}}}]}
+    {:id 6  :type "artifact" :name "Crypt"                 :cost {:any 3 :death 2} :action [{:turn true :gain {:death 2}} {:turn true :cost {:death 1} :reducer_p true :playfromdiscard true :reduction {:any 2 :exclude #{:gold}}}]}
     {:id 7  :type "artifact" :name "Cursed Skull"          :cost {:death 2} :action [{:turn true :cost {:life 1} :place {:any 3 :exclude #{:gold :life}}}]}
     {:id 8  :type "artifact" :name "Dancing Sword"   :fg 4 :cost {:gold 1 :elan 1} :collect [{:death 1 :elan 1}] :action [{:react true :cost {:elan 1} :place {:death 1} :ignore :loselife}]}
     {:id 9  :type "artifact" :name "Dragon Bridle"         :cost {:elan 1 :life 1 :calm 1 :death 1} :action [{:reducer_a true :restriction {:subtype "Dragon"} :reduction {:any 3}} {:react true :turn true :ignore :loselife :source :dragon}] :vp 1}

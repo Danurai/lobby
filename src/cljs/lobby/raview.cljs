@@ -320,19 +320,19 @@
                                 (:destroy     @thisuseraction)  :destroycard
                                 :default                        :targetany)
         target-components (cond 
-                              (:straighten @thisuseraction)   (filter-components (filter :turned? (pdata-public-cards pdata) ) (:restriction @thisuseraction))
-                              (:turnextra @thisuseraction)    (remove :turned? (filter #(= (:subtype %) (-> @thisuseraction :turnextra :subtype)) (pdata-public-cards pdata)))
-                              (set? (:destroy @thisuseraction))   (->> pdata :public :artifacts (filter #(contains? (:destroy @thisuseraction) (:subtype %))))
+                              (:straighten @thisuseraction)     (filter-components (filter :turned? (pdata-public-cards pdata) ) (:restriction @thisuseraction))
+                              (:turnextra @thisuseraction)      (remove :turned? (filter #(= (:subtype %) (-> @thisuseraction :turnextra :subtype)) (pdata-public-cards pdata)))
+                              (set? (:destroy @thisuseraction)) (->> pdata :public :artifacts (filter #(contains? (:destroy @thisuseraction) (:subtype %))))
                               (= :anyartifact (:destroy @thisuseraction))     (-> pdata :public :artifacts)
                               (= :otherartifact (:destroy @thisuseraction))   (->> pdata :public :artifacts (remove #(= (:uid %) (:uid card))))
                               (:discard @thisuseraction)    (-> pdata :private :artifacts)
                               (:reducer_p @thisuseraction)  (let [r   (:restriction @thisuseraction)
                                                                   src (-> pdata :private :artifacts)]
                                                               (if r 
-                                                                  (if (= :discard r)
+                                                                  (filter #(re-find (-> r vals first re-pattern) (get % (-> r keys first) "")) src)
+                                                                  (if (-> @thisuseraction :playfromdiscard)
                                                                       (reduce-kv (fn [m k v] (apply conj m (-> v :public :discard))) [] (:players gs))
-                                                                      (filter #(re-find (-> r vals first re-pattern) (get % (-> r keys first) "")) src))
-                                                                  src))
+                                                                      src)))
                               :default (pdata-public-cards pdata))]
     [:div.py-2.modal-module
       [:div.h5.text-center "Select target component"]
@@ -346,7 +346,7 @@
               (swap! thisuseraction assoc target-action component) ; (select-keys component [:uid :type :subtype :name] ))
               (if (and (-> @thisuseraction :reduction :any (< 99)) (:reducer_p @thisuseraction)) 
                   (swap! thisuseraction assoc :cost (reduce-kv (fn [m k v] (update m k + v)) (:cost component) (:cost a))))
-              (if (:destroy @thisuseraction) 
+              (if (and (-> @thisuseraction :reducer_p nil?) (:destroy @thisuseraction))
                   (let [ga (->> component :cost vals (apply +) (+ (:convertplus @thisuseraction 0)))]
                     (if (-> @thisuseraction :convertto :any)  (swap! thisuseraction assoc-in [:gainany :any] ga))
                     (if (-> @thisuseraction :convertto :gold) (swap! thisuseraction assoc-in [:gain :gold] ga))))
@@ -405,29 +405,34 @@
   ([ card pdata thisuseraction reducers]
     (if (not-empty reducers)
       [:div.my-3
-        ;[:div.debug (str @thisuseraction)]
+        [:div.debug  (str reducers)]
         [:div.d-flex 
           [:h5.me-2 "Apply Cost Reductions"] ; hide if there are none?
           [:i.fas.fa-info-circle.text-secondary.fa-sm  {:title "Click on the Essence to reduce"}]]
-        
         (doall (for [r  reducers 
                       :let [a       (or (->> r :action (filter :reducer_a) first) (->> r :action (filter :reducer_p) first))
                             re_key  (-> r :uid keyword)                      ; TODO MAKE ALL UIDs into KEYS
-                            [rk rv] (-> a :restriction first)
-                            ur (->> @thisuseraction :reducers re_key vals (apply +)) 
-                            remaining-reductions (-> a :reduction :any (- ur))]]
+                            [rk rv] (if (:restriction a) (-> a :restriction first) [:none nil])
+                            ur (->> @thisuseraction :reducers re_key vals (apply +))
+                            cr (reduce-kv #(+ %1 %3) 0 (:cost card)) 
+                            remaining-reductions (min (- cr ur) (-> a :reduction :any (- ur)))]]
           [:div.d-flex {:key (gensym)}
             [:div.d-flex
               [:div.me-1.my-auto (:name r)]
               (render-essence-list (reduce-kv #(if (number? %3) (assoc %1 %2 (str "- " %3)) %1) (:reduction a) (:reduction a)))
-              [:div.my-auto.me-1 (-> a :restriction first val clojure.string/capitalize (str "s only"))]
+              (if (:restriction a) [:div.my-auto.me-1 (-> a :restriction first val clojure.string/capitalize (str "s only"))])
               [:div.my-auto ":"]]
             (render-essence-list (->> @thisuseraction :reducers re_key ) "small")
             (if (= (rk card) rv)
               (if (not= remaining-reductions 0) 
                 [:div.d-flex.ms-auto
                   [:div.d-flex.justify-content-center.mx-2
-                    (for [[k v] (reduce #(dissoc %1 %2) (:cost @thisuseraction) (-> a :reduction :exclude) )]
+                    (for [[k v] (reduce 
+                                  #(dissoc %1 %2)
+                                    (if (:reducer_p @thisuseraction) 
+                                        (-> @thisuseraction :playcard :cost) 
+                                        (:cost @thisuseraction)) 
+                                    (-> a :reduction :exclude))]
                       (if (not= v 0) [:div.essence.clickable.px-1 {
                         :key (gensym) 
                         :on-click #(
@@ -438,7 +443,7 @@
                   [:div.d-flex.px-2.essence.clickable {
                     :title "Reset" 
                     :on-click #(
-                      (swap! thisuseraction assoc :cost (:cost card))
+                      (swap! thisuseraction assoc :cost (reduce-kv (fn [m k v] (update m k + v)) (:cost card) (if (-> a :reducer_p) (-> a :cost))))
                       (swap! thisuseraction update :reducers dissoc re_key))
                     } [:h4.m-auto "X"]]]))]))]))
   ([card pdata thisuseraction] 
@@ -481,7 +486,7 @@
                               (-> @thisuseraction :straighten :uid some?))]
         [:div.mb-2.modal-action {:style {:min-width "500px"}}
           ;[:div.debug (str a)]
-          ;[:div.debug (str (dissoc @thisuseraction :playcard))]
+          ;[:div.debug (str @thisuseraction)]
           (action-bar a)
           (if (-> a :cost :any)
               (pay-module pdata a thisuseraction))
@@ -512,9 +517,9 @@
                   (pay-module pdata nil thisuseraction)
                   (render-remaining-essence pdata (:cost @thisuseraction)))])
           
-          (let [x [["pay:" canpay]["te:" cante]["convert:" canconvert]["destroy:" candestroy]["discard:" candiscard]["gainrival:" cangainrival]["gain:" cangain]["gainany:" cangainany]["place:" canplace]["playcard:" canplaycard]["straighten:" canstraighten]]]
-            [:div.debug.d-flex 
-              [:div.me-1 (apply str (map #(str (first %) (last %) " ") (remove #(last %) x)))]])
+          ;(let [x [["pay:" canpay]["te:" cante]["convert:" canconvert]["destroy:" candestroy]["discard:" candiscard]["gainrival:" cangainrival]["gain:" cangain]["gainany:" cangainany]["place:" canplace]["playcard:" canplaycard]["straighten:" canstraighten]]]
+          ;  [:div.debug.d-flex 
+          ;    [:div.me-1 (apply str (map #(str (first %) (last %) " ") (remove #(last %) x)))]])
           
           [:div.d-flex.justify-content-between.mb-1.py-2
             [:div.d-flex.justify-content-center
