@@ -213,7 +213,7 @@
   width: 2.5em;
   height: 3.5em;
 }
-.modal-reaction, .modal-divine img {
+.modal-reaction img, .modal-divine img {
   width: 5em !important; height: 7em !important;
 }
 .modal-divine.selected {
