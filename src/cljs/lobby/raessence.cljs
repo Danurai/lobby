@@ -143,7 +143,7 @@
 			[:text {:x "50%" :y "50%" :text-anchor "middle" :alignment-baseline "middle" :style {:stroke "white" :stroke-width ".25px"}} txt]
 			[:text {:x "50%" :y "50%" :text-anchor "middle" :alignment-baseline "middle" :style {:fill "black"}} txt]]])
 	
-(defn- render-essence-list 
+(defn render-essence-list 
 	([ essence-list tags ]
 		[:div.d-flex.justify-content-center {:key (gensym "rel")}
 			(rest (apply concat 
