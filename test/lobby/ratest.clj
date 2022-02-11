@@ -1826,3 +1826,115 @@
         (ramodel/parseaction {:action :usecard :card cc   :useraction (-> cc :action first)} p1)
         ;(end-turn p1)
         :scores first :score)))
+
+;; React to Victory Check
+;; Before new round (use card)
+;;          V
+;; Check Victory - flag reaction
+;;          V
+;; Use Reaction or Pass or No Reaction
+;; ---^ (Check Victory)  V
+;; New Round (End Turn) 
+
+; baseline
+(expect :collect
+  (let [mi1 (->> g1 :magicitems (remove :owner) first)]
+    (-> g1
+        (ramodel/parseaction {:action :pass} p1)
+        (ramodel/parseaction {:action :selectmagicitem :card (:uid mi1)} p1)
+        :phase)))
+; claim Golden Statue
+(expect "Golden Statue"
+  (let [mon1 (-> g1 :monuments :public last)
+        mi   (->> g1 :magicitems (remove :owner) first :uid)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        :players (get p1) :public :artifacts first :name)))
+(expect nil
+  (let [mon1 (-> g1 :monuments :public last)
+        mi   (->> g1 :magicitems (remove :owner) first :uid)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        :scores)))
+(expect :selectmagicitem
+  (let [mon1 (-> g1 :monuments :public last)
+        mi1 (->> g1 :magicitems (remove :owner) first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        (ramodel/parseaction {:action :pass} p1)
+        :players (get p1) :action)))
+; now pause before before collect
+(expect :action
+  (let [mon1 (-> g1 :monuments :public last)
+        mi1 (->> g1 :magicitems (remove :owner) first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        (ramodel/parseaction {:action :pass} p1)
+        (ramodel/parseaction {:action :selectmagicitem :card (:uid mi1)} p1)
+        :phase)))
+; pass action
+(expect :collect
+  (let [mon1 (-> g1 :monuments :public last)
+        mi1 (->> g1 :magicitems (remove :owner) first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        (ramodel/parseaction {:action :pass} p1)
+        (ramodel/parseaction {:action :selectmagicitem :card (:uid mi1)} p1)
+        (ramodel/parseaction {:action :reactvictory :card mon1} p1)
+        :phase)))
+(expect nil
+  (let [mon1 (-> g1 :monuments :public last)
+        mi1 (->> g1 :magicitems (remove :owner) first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        (ramodel/parseaction {:action :pass} p1)
+        (ramodel/parseaction {:action :selectmagicitem :card (:uid mi1)} p1)
+        (ramodel/parseaction {:action :reactvictory :card mon1} p1)
+        :players (get p1) :public :artifacts first :rvpass)))
+
+; use action
+(expect 92
+  (let [mon1 (-> g1 :monuments :public last)
+        mi1 (->> g1 :magicitems (remove :owner) first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        (ramodel/parseaction {:action :pass} p1)
+        (ramodel/parseaction {:action :selectmagicitem :card (:uid mi1)} p1)
+        (ramodel/parseaction {:action :reactvictory :card mon1 :useraction (-> mon1 :action first)} p1)
+        :players (get p1) :public :essence :gold)))
+(expect :collect
+  (let [mon1 (-> g1 :monuments :public last)
+        mi1 (->> g1 :magicitems (remove :owner) first)]
+    (-> g1
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        (ramodel/parseaction {:action :pass} p1)
+        (ramodel/parseaction {:action :selectmagicitem :card (:uid mi1)} p1)
+        (ramodel/parseaction {:action :reactvictory :card mon1 :useraction (-> mon1 :action first)} p1)
+        :phase)))
+;(expect true ; only if there's a winner
+;  (let [mon1 (-> g1 :monuments :public last)
+;        mi1 (->> g1 :magicitems (remove :owner) first)]
+;    (-> g1
+;        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+;        (ramodel/parseaction {:action :pass} p1)
+;        (ramodel/parseaction {:action :selectmagicitem :card (:uid mi1)} p1)
+;        (ramodel/parseaction {:action :reactvictory :card mon1 :useraction (-> mon1 :action first)} p1)
+;        :players (get p1) :public :artifacts first :turned?)))
+
+(expect 8
+  (let [cotd  (-> g1 :pops (nth 1))mon1 (-> g1 :monuments :public last)
+        mi1   (->> g1 :magicitems (remove :owner) first)]
+    (-> g1 
+        (ramodel/parseaction {:action :place :card mon1 :essence (:cost mon1)} p1)
+        (ramodel/parseaction {:action :place :card cotd :essence (:cost cotd)} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :usecard :card cotd :useraction {:cost {:death 5} :place {:death 1}}} p1)
+        (ramodel/parseaction {:action :pass} p1)
+        (ramodel/parseaction {:action :selectmagicitem :card (:uid mi1)} p1)
+        ;(ramodel/parseaction {:action :reactvictory :card mon1 :useraction (-> mon1 :action first)} p1)
+        :scores first :score)))

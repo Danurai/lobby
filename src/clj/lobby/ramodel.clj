@@ -111,6 +111,7 @@
       "Sunken Reef"           (vpfn-essence te :calm)
       "Sorcerer's Bestiary"   (+  (->> artifacts (filter #(clojure.string/includes? (:subtype % "") "Creature")) count)
                                   (->> artifacts (filter #(clojure.string/includes? (:subtype % "") "Dragon")) count (* 2)))
+      "Golden Statue"         (+ (:vp card) (if (:turned? card) 3 0))
       ;"Coral Castle"         3
       (:vp card) ; mostly monuments and artifacts
     )))
@@ -121,7 +122,7 @@
   (if verbose? (println "update-player-essence:" essence uname))
   (reduce-kv 
     (fn [m k v] 
-      (update-in m [:players uname :public :essence k] + v)) 
+      (update-in m [:players uname :public :essence k] + v)) ; TODO strip out :any ?
     gamestate 
     essence))
 
@@ -318,45 +319,52 @@
             :breakdown (:vp v)
             :score (->> v :vp vals (apply +))
             :tiebreaker (reduce-kv (fn [m k v] (+ m (if (= k :gold) (* v 2) v))) 0 (-> v :public :essence))
-            ))) []  (:players gs))))
+            :reactvictory (->> v :public :artifacts (remove :turned?) (remove :rvpass) (remove :rvused) (filter #(->> % :action (map :reactvictory) (remove nil?) count (= 1))) first)
+            ))) 
+      []  (-> gs update-vp :players))))
 
 (defn- check-victory [ gs action uname ]
   (let [gamescores (get-scores gs)]
-    (if (-> gamescores first :score (> 9))
-        (assoc gs :status :gameover :scores gamescores)
-        gs)))
+    (cond
+      (->> gamescores (map :reactvictory) (remove nil?) count (< 0))  (assoc gs :scores gamescores)
+      (-> gamescores first :score (> 9))                              (assoc gs :status :gameover :scores gamescores)
+      :default gs)))
 
-(defn- new-round-check [ gamestate ]
+(defn- new-round-check [ gs ]
+  (let [gamestate (check-victory gs {:checkvictory true} nil)]
     (if veryverbose? (println "new round check:" (-> gamestate :plyr-to empty?)))
-    (if (-> gamestate :plyr-to empty?) 
-        (-> gamestate
-            (check-victory {:checkvictory true} nil)
-            (assoc :plyr-to (:pass-to gamestate))
-            (assoc :display-to (:pass-to gamestate))
-            (assoc :pass-to [])
-            (assoc :players 
-              (reduce-kv 
-                (fn [m k v]
-                  (-> m 
-                      (assoc-in [k :action] :waiting)
-                      (update-in [k :public :mage] dissoc :turned?)
-                      (assoc-in [k :public :artifacts] (->> v :public :artifacts (mapv #(dissoc % :turned?)))))) 
-                (:players gamestate) (:players gamestate)))
-            (set-player-action (-> gamestate :pass-to first) :play)
-            (update :round inc)
-            collect-phase)
-        (add-chat gamestate "Start turn" (get-active-player gamestate))))
+    (if (-> gamestate :plyr-to empty?)
+        (if (:scores gamestate)
+            gamestate
+            (-> gamestate
+                (assoc :plyr-to (:pass-to gamestate))
+                (assoc :display-to (:pass-to gamestate))
+                (assoc :pass-to [])
+                (assoc :players 
+                  (reduce-kv 
+                    (fn [m k v]
+                      (-> m 
+                          (assoc-in [k :action] :waiting)
+                          (update-in [k :public :mage] dissoc :turned?)
+                          (assoc-in [k :public :artifacts] (->> v :public :artifacts (mapv #(dissoc % :turned? :rvpass)))))) 
+                    (:players gamestate) (:players gamestate)))
+                (set-player-action (-> gamestate :pass-to first) :play)
+                (update :round inc)
+                collect-phase))
+        (add-chat gs "Start turn" (get-active-player gamestate)))))
 
 (defn end-action [ gamestate uname ]
   (let [nextplyrs (if (-> gamestate :players (get uname) :action (= :pass))
                       (:plyr-to gamestate)    
                       (->> gamestate :plyr-to (drop-while #(not= % uname)) rest))
         nextp     (if (empty? nextplyrs) (-> gamestate :plyr-to first) (first nextplyrs))
-        loselife? (->> gamestate :players vals (map :loselife) (remove nil?) not-empty)
-        draw3?    (->> gamestate :players vals (map :draw3) (remove nil?) not-empty)
-        divine?   (->> gamestate :players vals (map :divine) (remove nil?) not-empty)]
-    (if veryverbose? (println "end-action:" uname "nextplayer" nextp loselife? (empty? loselife?)))
-    (if (or loselife? draw3? divine?)  ; Don't advance if there are :loselife or :draw3 or :divine actions live
+        loselife? (->> gamestate :players vals (map :loselife)  (remove nil?) not-empty)
+        draw3?    (->> gamestate :players vals (map :draw3)     (remove nil?) not-empty)
+        divine?   (->> gamestate :players vals (map :divine)    (remove nil?) not-empty)
+        ;react?    (->> gamestate :players vals (map :react)     (remove nil?) not-empty)
+        notplyrturn? (not (contains? #{:play :pass} (-> gamestate :players (get uname) :action)))]
+    (if veryverbose? (println "end-action:" uname "nextplayer" nextp loselife? notplyrturn?))
+    (if (or loselife? draw3? divine? notplyrturn?)  ; Don't advance if there are :loselife or :draw3 or :divine actions live
         gamestate
         (-> gamestate
             (set-player-action uname (if (-> gamestate :plyr-to set (contains? uname)) :waiting :pass))
@@ -582,6 +590,22 @@
           (update-player-essence {:essence {cfkey (- 0 cfval)}} uname)
           (update-player-essence {:essence {ctkey cfval}} uname))
       gs)))
+
+;(defn- rvcheck [ gs {:keys [card]} uname ])
+
+(defn- rvcheck [ gamestate {:keys [card useraction] :as ?data} uname]
+  (println "rvcheck:" card useraction)
+  (if (:reactvictory useraction)
+      (-> gamestate
+          (turn-card card (:turn useraction) uname)                                       ; Turn
+          (update-player-essence {:essence (invert-essence (:cost useraction))} uname)    ; Pay cost
+          (assoc-in [:players uname :public :artifacts] (map #(if (= (:uid %) (:uid card)) (assoc % :rvused true) %) (-> gamestate :players (get uname) :public :artifacts)))
+          (dissoc :scores)
+          new-round-check)
+      (-> gamestate
+          (assoc-in [:players uname :public :artifacts] (map #(if (= (:uid %) (:uid card)) (assoc % :rvpass true) %) (-> gamestate :players (get uname) :public :artifacts)))
+          (dissoc :scores)
+          new-round-check)))
 
 ;;; USE A CARD ;;;
 ;; Request: {:action :usecard, :useraction {:turn true, :cost {}, :gain {:death 2}, :rivals {:death 1} :destroy <card>}, :gid :gm93866} dan
@@ -861,6 +885,7 @@
                             (react ?data uname)
                             (end-action (get-active-player gamestate))
                             ai-action)
+      :reactvictory     (rvcheck gamestate ?data uname)
     ; DRAW3 (draw 3 cards and replace in any order)
       :draw3            (-> gamestate 
                             (draw3-handler ?data uname))

@@ -25,7 +25,7 @@
   ]
   :monuments [
     {:id 0 :name "Colossus"         :type "monument" :cost {:gold 4} :vp 2 :action [{:turn true :cost {:any 1} :place {:gold 1}}]}
-    {:id 1 :name "Golden Statue"    :type "monument" :cost {:gold 4} :vp 1 :action [{:react :victory :turn true :cost {:gold 3} :vp 3}]}
+    {:id 1 :name "Golden Statue"    :type "monument" :cost {:gold 4} :vp 1 :action [{:reactvictory true :turn true :cost {:gold 3} :vp 3}]}
     {:id 2 :name "Great Pyramid"    :type "monument" :cost {:gold 4} :vp 3}
     {:id 3 :name "Hanging Gardens"  :type "monument" :cost {:gold 4} :vp 1 :collect [{:any 3 :exclude #{:gold}}]}
     {:id 4 :name "Library"          :type "monument" :cost {:gold 4} :vp 1 :action [{:turn true :draw 1}]}
@@ -48,8 +48,8 @@
     {:id 2 :base 2 :name "Coral Castle"          :type "pop" :fg? true :cost {:elan 3 :life 3 :calm 3 :death 3} :action [{:turn true :checkvictory true}{:react true :turn true :ignore :loselife}] :vp 3}
     {:id 9 :base 2 :name "Sunken Reef"           :type "pop" :cost {:calm 5 :elan 2 :life 2} :collect [{:gold 1}] :action [{:cost {:calm 2 :life 1} :place {:calm 1}}] :vp 0}
                                                         
-    {:id 4 :base 4 :name "Dragon's Lair"         :type "pop" :fg? true :cost {:elan 6 :death 3} :action [{} {:turn true :gain {:gold 2}} {:turn true :turnextra {:subtype "Dragon"} :place {:gold 2}}] :vp 0}
-    {:id 8 :base 4 :name "Sorcerer's Bestiary"   :type "pop" :cost {:life 4 :elan 2 :calm 2 :death 2} :action [{:turn true :checkvictory true}{:reducer_p true :turn true :cost {:any 4} :target :anydiscard} ] :vp 0}
+    {:id 4 :base 4 :name "Dragon's Lair"         :type "pop" :fg? true :cost {:elan 6 :death 3} :action [{:reducer_a true :restriction {:subtype "Dragon"} :reduction {:any 3}} {:turn true :gain {:gold 2}} {:turn true :turnextra {:subtype "Dragon"} :place {:gold 2}}] :vp 0}
+    {:id 8 :base 4 :name "Sorcerer's Bestiary"   :type "pop" :cost {:life 4 :elan 2 :calm 2 :death 2} :action [{:turn true :checkvictory true} {:reducer_p true :turn true :cost {:any 4} :playfromdiscard true :restriction {:subtype "Dragon"}} ] :vp 0}
   ]
   
   :artifacts [
